@@ -1,0 +1,80 @@
+spring:
+  application:
+    name: core-platform
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/digital_demon
+    username: postgres
+    password: password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+    locations: classpath:db/migration
+    out-of-order: true
+
+  # Auth0 OAuth2 Resource Server (JWT validation)
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: https://${AUTH0_DOMAIN:YOUR_AUTH0_DOMAIN.auth0.com}/
+
+server:
+  port: 8080
+
+# gRPC Server Configuration
+grpc:
+  server:
+    port: 9090
+    max-inbound-message-size: 104857600   # 100 MB
+  client:
+    GLOBAL:
+      negotiation-type: PLAINTEXT
+      max-inbound-message-size: 104857600 # 100 MB
+
+# Custom Auth0 config
+auth0:
+  domain: ${AUTH0_DOMAIN:YOUR_AUTH0_DOMAIN.auth0.com}
+  audience: ${AUTH0_AUDIENCE:https://api.digitaldemon.local}
+
+service-auth:
+  n8n:
+    enabled: ${N8N_SERVICE_TOKEN_ENABLED:false}
+    token: ${N8N_SERVICE_TOKEN:}
+    auth0-sub: ${N8N_SERVICE_AUTH0_SUB:service:n8n}
+    email: ${N8N_SERVICE_EMAIL:n8n@digitaldemon.local}
+    display-name: ${N8N_SERVICE_DISPLAY_NAME:n8n Service User}
+    global-role: ${N8N_SERVICE_GLOBAL_ROLE:system_admin}
+
+mqtt:
+  broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
+  client-id: core-platform-evaluator
+  topic: heizung/measurements/processed
+  username: ${MQTT_USERNAME:}
+  password: ${MQTT_PASSWORD:}
+  enabled: ${MQTT_ENABLED:true}
+  discovery:
+    enabled: ${MQTT_DISCOVERY_ENABLED:true}
+    max-sessions-per-tenant: 3
+    session-timeout-seconds: 300
+    max-messages-per-session: 500
+    client-id-prefix: core-platform-discovery
+
+logging:
+  level:
+    com.digitaldemon: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN

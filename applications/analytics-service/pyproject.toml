@@ -1,0 +1,27 @@
+[project]
+name = "analytics-service"
+version = "0.1.0"
+description = "Analytics Microservice — statistical analysis for heating system data"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "asyncpg>=0.30",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "numpy>=2.2",
+    "pandas>=2.2",
+    "scipy>=1.15",
+    "httpx>=0.28",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.25",
+    "ruff>=0.9",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
