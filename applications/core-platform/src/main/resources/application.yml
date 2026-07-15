@@ -31,6 +31,22 @@ spring:
         jwt:
           issuer-uri: https://${AUTH0_DOMAIN:YOUR_AUTH0_DOMAIN.auth0.com}/
 
+  # Kafka broker connection (topic names live under the app-level kafka: block)
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    client-id: core-platform
+    consumer:
+      group-id: core-platform
+      # Only applies when the group has no committed offset yet (first start);
+      # afterwards restarts resume from the committed offset.
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+    producer:
+      # Producer is only used to publish dead letters (raw consumed bytes)
+      key-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+
 server:
   port: 8080
 
@@ -58,10 +74,19 @@ service-auth:
     display-name: ${N8N_SERVICE_DISPLAY_NAME:n8n Service User}
     global-role: ${N8N_SERVICE_GLOBAL_ROLE:system_admin}
 
+# Event topics and provisioning defaults (see docs/architecture/event-catalog.md)
+kafka:
+  enabled: ${KAFKA_ENABLED:true}
+  topics:
+    measurement-ingested: measurement.ingested
+  topic-defaults:
+    partitions: ${KAFKA_TOPIC_PARTITIONS:3}
+    replicas: ${KAFKA_TOPIC_REPLICAS:1}
+
+# MQTT stays for device discovery only — measurements flow via Kafka
 mqtt:
   broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
-  client-id: core-platform-evaluator
-  topic: heizung/measurements/processed
+  client-id: core-platform
   username: ${MQTT_USERNAME:}
   password: ${MQTT_PASSWORD:}
   enabled: ${MQTT_ENABLED:true}

@@ -7,6 +7,7 @@ use serde::Deserialize;
 pub struct AppConfig {
     pub mqtt: MqttConfig,
     pub database: DatabaseConfig,
+    pub kafka: KafkaConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -27,6 +28,15 @@ pub struct DatabaseConfig {
     pub user: String,
     pub password: String,
     pub dbname: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct KafkaConfig {
+    pub bootstrap_servers: String,
+    pub client_id: String,
+    /// Topic for processed measurement batches, `measurement.ingested`
+    /// per docs/architecture/event-catalog.md.
+    pub measurement_topic: String,
 }
 
 impl Default for MqttConfig {
@@ -99,5 +109,14 @@ pub fn load_config() -> Result<AppConfig> {
         dbname: std::env::var("DB_NAME").unwrap_or_else(|_| "digital_demon".to_string()),
     };
 
-    Ok(AppConfig { mqtt, database })
+    let kafka = KafkaConfig {
+        bootstrap_servers: std::env::var("KAFKA_BOOTSTRAP_SERVERS")
+            .unwrap_or_else(|_| "localhost:9092".to_string()),
+        client_id: std::env::var("KAFKA_CLIENT_ID")
+            .unwrap_or_else(|_| "ingestion-service".to_string()),
+        measurement_topic: std::env::var("KAFKA_MEASUREMENT_TOPIC")
+            .unwrap_or_else(|_| "measurement.ingested".to_string()),
+    };
+
+    Ok(AppConfig { mqtt, database, kafka })
 }

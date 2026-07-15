@@ -1,0 +1,87 @@
+// Asset and measurement-read gRPC API served by core-platform (port 9090)
+// and consumed by its own REST gateway over a loopback channel.
+//
+// Reconstructed for the thesis repo from the generated-code usage in
+// core-platform (the original file lives in the decoupled production repo).
+// Field numbers are only guaranteed stable within this repository.
+
+syntax = "proto3";
+
+package core.v1;
+
+import "core/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.digitaldemon.core.proto.v1";
+option java_multiple_files = true;
+option java_outer_classname = "AssetServiceProto";
+
+service AssetService {
+  rpc GetAsset(GetAssetRequest) returns (GetAssetResponse);
+  rpc GetMeasurements(GetMeasurementsRequest) returns (GetMeasurementsResponse);
+  rpc GetLatestMeasurements(GetLatestMeasurementsRequest) returns (GetLatestMeasurementsResponse);
+  rpc RelocateAsset(RelocateAssetRequest) returns (RelocateAssetResponse);
+}
+
+// device_id, type, model_human and signal_map moved to physical_devices /
+// metric_points in schema V12; the fields remain for wire compatibility and
+// are served as empty values.
+message Asset {
+  UUID id = 1;
+  string device_id = 2;
+  UUID site_id = 3;
+  UUID space_id = 4;
+  string name = 5;
+  string type = 6;
+  string model_human = 7;
+  JsonValue signal_map = 8;
+  JsonValue specs = 9;
+}
+
+message GetAssetRequest {
+  UUID asset_id = 1;
+}
+
+message GetAssetResponse {
+  Asset asset = 1;
+}
+
+message GetMeasurementsRequest {
+  UUID asset_id = 1;
+  TimeRange time_range = 2;
+  // 0 or unset = raw values, >0 = time-bucketed averages.
+  int32 bucket_minutes = 3;
+  // Empty = all metrics of the asset.
+  repeated string metric_names = 4;
+}
+
+message Measurement {
+  google.protobuf.Timestamp time = 1;
+  string device_id = 2;
+  int32 metric_id = 3;
+  string metric_name = 4;
+  double value = 5;
+}
+
+message GetMeasurementsResponse {
+  repeated Measurement measurements = 1;
+}
+
+message GetLatestMeasurementsRequest {
+  UUID asset_id = 1;
+  repeated string metric_names = 2;
+}
+
+message GetLatestMeasurementsResponse {
+  repeated Measurement measurements = 1;
+}
+
+message RelocateAssetRequest {
+  UUID asset_id = 1;
+  UUID target_site_id = 2;
+  UUID target_space_id = 3;
+}
+
+message RelocateAssetResponse {
+  Asset asset = 1;
+}

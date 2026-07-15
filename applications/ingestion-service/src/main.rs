@@ -35,8 +35,15 @@ async fn main() -> Result<()> {
     let db_pool = db::create_pool(&cfg.database).await?;
     info!("Database pool created");
 
+    // Initialize Kafka producer for measurement.ingested events
+    let publisher = publisher::MeasurementPublisher::new(&cfg.kafka)?;
+    info!(
+        "Kafka producer created: brokers={}, topic={}",
+        cfg.kafka.bootstrap_servers, cfg.kafka.measurement_topic
+    );
+
     // Initialize MQTT and start processing
-    mqtt::run(&cfg.mqtt, db_pool).await?;
+    mqtt::run(&cfg.mqtt, db_pool, publisher).await?;
 
     Ok(())
 }

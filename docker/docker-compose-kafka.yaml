@@ -1,3 +1,14 @@
+# Local development stack for the heating-monitoring platform.
+#
+# Matches the services' config defaults, so ingestion-service and
+# core-platform run locally without any env overrides:
+#   Kafka       localhost:9092   (inter-service events, see docs/architecture/event-catalog.md)
+#   Kafka UI    localhost:8081
+#   Mosquitto   localhost:1883   (edge device transport)
+#   TimescaleDB localhost:5432   (db digital_demon, schema via core-platform Flyway)
+#
+# Usage: docker compose -f docker/docker-compose-kafka.yaml up -d
+
 services:
   kafka:
     image: apache/kafka:latest
@@ -26,3 +37,24 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     depends_on:
       - kafka
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: digital_demon
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - timescale-data:/var/lib/postgresql/data
+
+volumes:
+  timescale-data:

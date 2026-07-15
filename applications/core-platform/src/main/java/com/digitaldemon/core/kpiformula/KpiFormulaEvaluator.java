@@ -55,7 +55,7 @@ public class KpiFormulaEvaluator {
      * Entry point called from MeasurementBatchListener for each incoming protobuf batch.
      * Resolves the tenant internally so callers need not carry tenant context.
      *
-     * @param batch deserialized MeasurementBatch from the heizung/measurements/processed topic
+     * @param batch deserialized MeasurementBatch from the measurement.ingested Kafka topic
      */
     public void evaluate(MeasurementBatch batch) {
         UUID tenantId = resolveTenantId(batch);

@@ -1,0 +1,40 @@
+// Shared value types for the core.v1 API surface.
+//
+// Reconstructed for the thesis repo from the generated-code usage in
+// core-platform (the original file lives in the decoupled production repo).
+// Field numbers are only guaranteed stable within this repository.
+
+syntax = "proto3";
+
+package core.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.digitaldemon.core.proto.v1";
+option java_multiple_files = true;
+option java_outer_classname = "CommonProto";
+
+// UUID as its canonical string representation. A message (not a bare string)
+// so that absence is distinguishable from empty via the has-accessor.
+message UUID {
+  string value = 1;
+}
+
+// Raw JSON payload passed through without a protobuf schema
+// (signal maps, secrets, metadata).
+message JsonValue {
+  string json = 1;
+}
+
+message PageInfo {
+  int32 total_items = 1;
+  int32 total_pages = 2;
+  int32 current_page = 3;
+  int32 page_size = 4;
+}
+
+// Half-open query time range; either bound may be unset.
+message TimeRange {
+  google.protobuf.Timestamp from = 1;
+  google.protobuf.Timestamp to = 2;
+}

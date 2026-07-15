@@ -32,7 +32,10 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 	implementation("org.springframework.boot:spring-boot-starter-web")
-	
+
+	// Kafka — consumes measurement.ingested from the ingestion service
+	implementation("org.springframework.boot:spring-boot-starter-kafka")
+
 	// gRPC and Protobuf
 	implementation("net.devh:grpc-spring-boot-starter:3.1.0.RELEASE")
 	implementation("io.grpc:grpc-stub:1.63.0")
@@ -56,7 +59,7 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
 	implementation("org.flywaydb:flyway-database-postgresql")
 	
-	// Eclipse Paho MQTT client — subscribes to heizung/measurements/processed for event evaluation
+	// Eclipse Paho MQTT client — shared broker connection for device discovery
 	implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
 
 	// exp4j — safe math expression evaluator for KPI formula builder

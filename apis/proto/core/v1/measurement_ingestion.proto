@@ -1,0 +1,42 @@
+// Inter-service contract: ingestion-service -> Kafka topic `measurement.ingested` -> core-platform.
+//
+// Reconstructed for the thesis repo from the generated-code usage on both sides
+// (the original file lives in the decoupled production repository). Field numbers
+// are only guaranteed stable within this repository.
+
+syntax = "proto3";
+
+package core.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.digitaldemon.core.proto.v1";
+option java_multiple_files = true;
+option java_outer_classname = "MeasurementIngestionProto";
+
+// A batch of parsed measurements from a single device, published by the
+// ingestion service after the TimescaleDB write succeeded. The DB is the
+// source of truth; this event exists so downstream consumers (threshold
+// evaluation, KPI computation) never read the hot path's database.
+message MeasurementBatch {
+  // Device identifier as used on the MQTT topic and in `physical_devices`.
+  // Also the Kafka message key, so one device's batches stay ordered.
+  string device_id = 1;
+
+  // When the ingestion service finished writing the batch.
+  google.protobuf.Timestamp ingested_at = 2;
+
+  repeated IngestedMeasurement measurements = 3;
+}
+
+// One parsed data point, already resolved to a metric via the device's signal map.
+message IngestedMeasurement {
+  // Metric identifier from the device's signal map (`metric_points`).
+  int32 metric_id = 1;
+
+  double value = 2;
+
+  // Measurement time as reported by the device (or ingestion receive time
+  // if the payload carries no timestamp).
+  google.protobuf.Timestamp time = 3;
+}

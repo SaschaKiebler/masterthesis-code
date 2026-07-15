@@ -1,6 +1,5 @@
 package com.digitaldemon.core.common.config;
 
-import com.digitaldemon.core.measurement.MeasurementBatchListener;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
@@ -13,11 +12,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 /**
- * Shared MQTT connection for the entire core-platform.
+ * Shared MQTT connection to the Mosquitto broker, used exclusively for device
+ * discovery: components subscribe/unsubscribe device topics dynamically via
+ * {@link #subscribe} and {@link #unsubscribe}.
  *
- * Connects to Mosquitto on startup and subscribes to heizung/measurements/processed.
- * Other components (e.g. device discovery) can dynamically subscribe/unsubscribe
- * additional topics via {@link #subscribe} and {@link #unsubscribe}.
+ * Measurement batches no longer flow through MQTT — the ingestion service
+ * publishes them to the Kafka topic measurement.ingested, consumed by
+ * {@link com.digitaldemon.core.measurement.MeasurementBatchListener}.
  *
  * Only activated when mqtt.enabled=true (default true) so tests can disable it
  * without a running broker.
@@ -28,7 +29,6 @@ import java.util.function.BiConsumer;
 public class MqttSubscriberConfig {
 
     private final MqttProperties props;
-    private final MeasurementBatchListener listener;
     private volatile MqttAsyncClient client;
     private volatile boolean connectionAttempted = false;
     private volatile String connectionError = null;
@@ -39,9 +39,8 @@ public class MqttSubscriberConfig {
      */
     private final ConcurrentHashMap<String, BiConsumer<String, MqttMessage>> topicHandlers = new ConcurrentHashMap<>();
 
-    public MqttSubscriberConfig(MqttProperties props, MeasurementBatchListener listener) {
+    public MqttSubscriberConfig(MqttProperties props) {
         this.props = props;
-        this.listener = listener;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -65,12 +64,6 @@ public class MqttSubscriberConfig {
                 public void connectComplete(boolean reconnect, String serverURI) {
                     connectionError = null;
                     log.info("MQTT connected to {} (reconnect={})", serverURI, reconnect);
-                    try {
-                        client.subscribe(props.getTopic(), 1 /* QoS AtLeastOnce */);
-                        log.info("Subscribed to MQTT topic: {}", props.getTopic());
-                    } catch (MqttException e) {
-                        log.error("Failed to subscribe to {}: {}", props.getTopic(), e.getMessage());
-                    }
                     // Re-subscribe dynamic topics on reconnect
                     if (reconnect) {
                         resubscribeDynamicTopics();
@@ -79,11 +72,6 @@ public class MqttSubscriberConfig {
 
                 @Override
                 public void messageArrived(String topic, MqttMessage message) {
-                    // Route to measurement listener for the main topic
-                    if (topic.equals(props.getTopic())) {
-                        listener.onMessage(message.getPayload());
-                        return;
-                    }
                     // Route to dynamic handlers
                     for (var entry : topicHandlers.entrySet()) {
                         entry.getValue().accept(topic, message);

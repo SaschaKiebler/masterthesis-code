@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * and fires events via EventService when a rule is breached.
  *
  * Called by MeasurementBatchListener after deserialising a MeasurementBatch
- * protobuf from the heizung/measurements/processed MQTT topic.
+ * protobuf from the measurement.ingested Kafka topic.
  *
  * Each evaluate() call runs in its own transaction so a failure on one metric
  * point does not roll back events already recorded for others in the batch.
@@ -56,7 +56,7 @@ public class MeasurementEventEvaluator {
     private final ConcurrentHashMap<UUID, Double> lastKnownValue = new ConcurrentHashMap<>();
 
     /**
-     * Entry point called from MeasurementBatchListener on the async thread pool.
+     * Entry point called from MeasurementBatchListener on the Kafka listener thread.
      * Loops over each measurement and delegates to evaluatePoint() per metric.
      */
     public void evaluate(MeasurementBatch batch) {

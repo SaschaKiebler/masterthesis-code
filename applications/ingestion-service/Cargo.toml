@@ -7,8 +7,12 @@ edition = "2021"
 # Async runtime
 tokio = { version = "1", features = ["full"] }
 
-# MQTT client
+# MQTT client (edge device transport, subscribe only)
 rumqttc = "0.24"
+
+# Kafka producer (inter-service events, measurement.ingested)
+# cmake-build compiles the bundled librdkafka, so no system install is needed
+rdkafka = { version = "0.36", features = ["cmake-build"] }
 
 # PostgreSQL (async)
 tokio-postgres = { version = "0.7", features = ["with-serde_json-1", "with-chrono-0_4", "with-uuid-1"] }

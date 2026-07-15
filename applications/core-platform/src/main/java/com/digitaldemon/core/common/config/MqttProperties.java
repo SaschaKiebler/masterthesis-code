@@ -9,8 +9,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "mqtt")
 public class MqttProperties {
     private String brokerUrl = "tcp://localhost:1883";
-    private String clientId  = "core-platform-evaluator";
-    private String topic     = "heizung/measurements/processed";
+    private String clientId  = "core-platform";
     private String username  = "";
     private String password  = "";
     private boolean enabled  = true;

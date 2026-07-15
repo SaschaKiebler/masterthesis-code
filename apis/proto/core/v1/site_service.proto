@@ -1,0 +1,97 @@
+// Site management gRPC API served by core-platform (port 9090) and consumed
+// by its own REST gateway over a loopback channel.
+//
+// Reconstructed for the thesis repo from the generated-code usage in
+// core-platform (the original file lives in the decoupled production repo).
+// Field numbers are only guaranteed stable within this repository.
+
+syntax = "proto3";
+
+package core.v1;
+
+import "core/v1/common.proto";
+
+option java_package = "com.digitaldemon.core.proto.v1";
+option java_multiple_files = true;
+option java_outer_classname = "SiteServiceProto";
+
+service SiteService {
+  rpc ListSites(ListSitesRequest) returns (ListSitesResponse);
+  rpc GetSite(GetSiteRequest) returns (GetSiteResponse);
+  rpc CreateSite(CreateSiteRequest) returns (CreateSiteResponse);
+  rpc RegisterAssets(RegisterAssetsRequest) returns (RegisterAssetsResponse);
+}
+
+message ListSitesRequest {
+  int32 page = 1;
+  int32 page_size = 2;
+}
+
+message ListSitesResponse {
+  repeated SiteSummary sites = 1;
+  PageInfo page_info = 2;
+}
+
+message SiteSummary {
+  UUID id = 1;
+  string name = 2;
+  string address = 3;
+  int32 asset_count = 4;
+}
+
+message GetSiteRequest {
+  UUID site_id = 1;
+}
+
+message GetSiteResponse {
+  Site site = 1;
+  repeated AssetSummary assets = 2;
+}
+
+message Site {
+  UUID id = 1;
+  UUID tenant_id = 2;
+  string name = 3;
+  string address = 4;
+}
+
+// device_id, type, model_human and signal_map moved to physical_devices /
+// metric_points in schema V12; the fields remain for wire compatibility and
+// are served as empty values.
+message AssetSummary {
+  UUID id = 1;
+  string device_id = 2;
+  string name = 3;
+  string type = 4;
+  string model_human = 5;
+  JsonValue signal_map = 6;
+}
+
+message CreateSiteRequest {
+  UUID tenant_id = 1;
+  string name = 2;
+  string address = 3;
+  JsonValue metadata = 4;
+}
+
+message CreateSiteResponse {
+  Site site = 1;
+}
+
+message DeviceRegistration {
+  string device_id = 1;
+  string protocol = 2;
+  string type = 3;
+  string name = 4;
+  JsonValue signal_map = 5;
+  JsonValue secrets = 6;
+}
+
+message RegisterAssetsRequest {
+  UUID site_id = 1;
+  repeated DeviceRegistration devices = 2;
+}
+
+message RegisterAssetsResponse {
+  repeated AssetSummary assets = 1;
+}

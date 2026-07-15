@@ -16,10 +16,11 @@ use tracing::{debug, error, info};
 use crate::config::MqttConfig;
 use crate::db::{self, AssetRegistry, AssetRegistryCache, SecretsCache, SignalMapCache};
 use crate::parser;
-use crate::publisher::{self, IngestedPoint};
+use crate::publisher::{IngestedPoint, MeasurementPublisher};
 
 /// Run the MQTT client and message processing loop
-pub async fn run(cfg: &MqttConfig, pool: Pool) -> Result<()> {
+pub async fn run(cfg: &MqttConfig, pool: Pool, publisher: MeasurementPublisher) -> Result<()> {
+    let publisher = Arc::new(publisher);
     let mut mqtt_options = MqttOptions::new(&cfg.client_id, &cfg.host, cfg.port);
     mqtt_options.set_keep_alive(Duration::from_secs(30));
 
@@ -84,10 +85,10 @@ pub async fn run(cfg: &MqttConfig, pool: Pool) -> Result<()> {
                 let pool_clone = pool.clone();
                 let signal_map_cache_clone = signal_map_cache.clone();
                 let registry_clone = asset_registry.clone();
-                
-                let client_clone = client.clone();
+
+                let publisher_clone = publisher.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = process_message(&pool_clone, &signal_map_cache_clone, &registry_clone, &client_clone, &topic, &payload).await {
+                    if let Err(e) = process_message(&pool_clone, &signal_map_cache_clone, &registry_clone, &publisher_clone, &topic, &payload).await {
                         error!("Error processing message on {}: {:?}", topic, e);
                         
                         // Log to ingestion_errors table
@@ -122,7 +123,7 @@ async fn process_message(
     pool: &Pool,
     signal_map_cache: &SignalMapCache,
     asset_registry: &AssetRegistryCache,
-    client: &AsyncClient,
+    publisher: &MeasurementPublisher,
     topic: &str,
     payload: &str,
 ) -> Result<()> {
@@ -164,7 +165,7 @@ async fn process_message(
                 .iter()
                 .map(|m| IngestedPoint { metric_id: m.metric_id, value: m.value, time: m.time })
                 .collect();
-            publisher::publish_batch(client, &shelly_info.device_id, &points).await;
+            publisher.publish_batch(&shelly_info.device_id, &points).await;
         }
         return Ok(());
     }
@@ -203,7 +204,7 @@ async fn process_message(
                 .iter()
                 .map(|m| IngestedPoint { metric_id: m.metric_id, value: m.value, time: m.time })
                 .collect();
-            publisher::publish_batch(client, &tasmota_info.device_id, &points).await;
+            publisher.publish_batch(&tasmota_info.device_id, &points).await;
         }
         return Ok(());
     }
@@ -242,7 +243,7 @@ async fn process_message(
                 .iter()
                 .map(|m| IngestedPoint { metric_id: m.metric_id, value: m.value, time: m.time })
                 .collect();
-            publisher::publish_batch(client, &generic_info.device_id, &points).await;
+            publisher.publish_batch(&generic_info.device_id, &points).await;
         }
         return Ok(());
     }

@@ -11,9 +11,11 @@ WORKDIR /workspace/applications/ingestion-service
 # Limit parallelism to avoid OOM on small VPSes
 ENV CARGO_BUILD_JOBS=2
 
-# Install protoc — required by prost-build to compile .proto files
+# protoc — required by prost-build to compile .proto files
+# cmake — required by rdkafka's cmake-build feature (compiles bundled librdkafka)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     protobuf-compiler \
+    cmake \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy proto definitions (referenced by build.rs via ../../apis/proto/)
