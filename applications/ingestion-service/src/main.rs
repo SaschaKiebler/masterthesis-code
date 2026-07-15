@@ -7,6 +7,7 @@
 
 mod config;
 mod db;
+mod device_state;
 mod mqtt;
 mod proto;
 mod publisher;
@@ -42,8 +43,12 @@ async fn main() -> Result<()> {
         cfg.kafka.bootstrap_servers, cfg.kafka.measurement_topic
     );
 
+    // Replay device.configured into the in-memory projection before accepting
+    // any MQTT traffic, then keep following it live.
+    let device_state = device_state::DeviceStateStore::start(&cfg.kafka).await?;
+
     // Initialize MQTT and start processing
-    mqtt::run(&cfg.mqtt, db_pool, publisher).await?;
+    mqtt::run(&cfg.mqtt, db_pool, publisher, device_state).await?;
 
     Ok(())
 }

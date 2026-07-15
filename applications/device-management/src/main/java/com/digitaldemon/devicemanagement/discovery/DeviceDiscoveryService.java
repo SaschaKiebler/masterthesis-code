@@ -1,7 +1,7 @@
-package com.digitaldemon.core.device;
+package com.digitaldemon.devicemanagement.discovery;
 
-import com.digitaldemon.core.device.MqttDiscoveryProperties;
-import com.digitaldemon.core.common.config.MqttSubscriberConfig;
+import com.digitaldemon.devicemanagement.config.DeviceManagementProperties;
+import com.digitaldemon.devicemanagement.mqtt.MqttConnection;
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,14 +17,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * Interactive payload-sniffing sessions for template creation, ported from
+ * core-platform. Core proxies the REST endpoints and enforces auth; this
+ * service owns the broker tap.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "mqtt.discovery.enabled", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(name = "device-management.discovery.enabled", havingValue = "true", matchIfMissing = true)
 public class DeviceDiscoveryService {
 
-    private final MqttSubscriberConfig mqttSubscriber;
-    private final MqttDiscoveryProperties discoveryProperties;
+    private final MqttConnection mqtt;
+    private final DeviceManagementProperties props;
 
     private final ConcurrentHashMap<UUID, DiscoverySession> sessions = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<UUID, DiscoveryMqttClient> clients = new ConcurrentHashMap<>();
@@ -36,9 +41,9 @@ public class DeviceDiscoveryService {
                 .filter(s -> s.getStatus() == DiscoverySession.Status.LISTENING)
                 .count();
 
-        if (activeSessions >= discoveryProperties.getMaxSessionsPerTenant()) {
+        if (activeSessions >= props.getDiscovery().getMaxSessionsPerTenant()) {
             throw new IllegalStateException(
-                    "Maximum active discovery sessions (" + discoveryProperties.getMaxSessionsPerTenant()
+                    "Maximum active discovery sessions (" + props.getDiscovery().getMaxSessionsPerTenant()
                             + ") reached for this tenant. Stop an existing session first.");
         }
 
@@ -46,14 +51,14 @@ public class DeviceDiscoveryService {
         sessions.put(session.getSessionId(), session);
 
         try {
-            DiscoveryMqttClient client = new DiscoveryMqttClient(mqttSubscriber, discoveryProperties, session);
+            DiscoveryMqttClient client = new DiscoveryMqttClient(mqtt, props.getDiscovery(), session);
             clients.put(session.getSessionId(), client);
         } catch (MqttException e) {
             sessions.remove(session.getSessionId());
             String detail = "reason=" + e.getReasonCode() + " (" + e.getMessage() + ")";
             if (e.getCause() != null) detail += ", cause=" + e.getCause().getMessage();
-            log.error("Failed to subscribe discovery topics for device '{}': {}", deviceId, detail);
-            throw new RuntimeException("Failed to subscribe to MQTT topics: " + detail, e);
+            log.error("Failed to attach discovery listener for device '{}': {}", deviceId, detail);
+            throw new RuntimeException("Failed to attach to MQTT stream: " + detail, e);
         } catch (Exception e) {
             sessions.remove(session.getSessionId());
             log.error("Failed to start discovery for device '{}': {}", deviceId, e.getMessage(), e);
@@ -270,7 +275,7 @@ public class DeviceDiscoveryService {
     @Scheduled(fixedDelay = 30_000)
     public void cleanupSessions() {
         Instant now = Instant.now();
-        int timeoutSeconds = discoveryProperties.getSessionTimeoutSeconds();
+        int timeoutSeconds = props.getDiscovery().getSessionTimeoutSeconds();
 
         for (Map.Entry<UUID, DiscoverySession> entry : sessions.entrySet()) {
             UUID sessionId = entry.getKey();

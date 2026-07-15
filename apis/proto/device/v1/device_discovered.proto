@@ -1,0 +1,30 @@
+// Event published by device-management to the Kafka topic `device.discovered`
+// when a device that has no configuration is seen on the MQTT broker
+// (see docs/architecture/event-catalog.md). Consumed by core-platform to
+// surface discoverable devices in the registry UI.
+
+syntax = "proto3";
+
+package device.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.digitaldemon.device.proto.v1";
+option java_multiple_files = true;
+option java_outer_classname = "DeviceDiscoveredProto";
+
+message DeviceDiscovered {
+  // Device id extracted from the MQTT topic structure.
+  string device_id = 1;
+
+  // Transport the device was seen on (currently always "MQTT").
+  string protocol = 2;
+
+  // The topic the device published on, as a hint for template creation.
+  string sample_topic = 3;
+
+  // Truncated raw payload sample for payload-structure analysis.
+  string sample_payload = 4;
+
+  google.protobuf.Timestamp seen_at = 5;
+}

@@ -1,4 +1,4 @@
-package com.digitaldemon.core.device;
+package com.digitaldemon.devicemanagement.discovery;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import lombok.Data;

@@ -1,4 +1,4 @@
-package com.digitaldemon.core.common.config;
+package com.digitaldemon.devicemanagement.mqtt;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @ConfigurationProperties(prefix = "mqtt")
 public class MqttProperties {
     private String brokerUrl = "tcp://localhost:1883";
-    private String clientId  = "core-platform";
+    private String clientId  = "device-management";
     private String username  = "";
     private String password  = "";
     private boolean enabled  = true;

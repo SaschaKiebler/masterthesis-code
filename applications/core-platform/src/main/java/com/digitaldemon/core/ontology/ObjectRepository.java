@@ -42,7 +42,7 @@ public interface ObjectRepository extends JpaRepository<ObjectEntity, UUID> {
 
     /**
      * Direct tenant_id lookup without loading the full entity graph.
-     * Used by background evaluators (MQTT thread) where lazy-loading proxies
+     * Used by background evaluators (Kafka listener thread) where lazy-loading proxies
      * would fail outside an open Hibernate session.
      */
     @Query(value = "SELECT tenant_id FROM objects WHERE id = :objectId", nativeQuery = true)

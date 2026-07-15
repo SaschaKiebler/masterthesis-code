@@ -1,7 +1,7 @@
-package com.digitaldemon.core.device;
+package com.digitaldemon.devicemanagement.discovery;
 
-import com.digitaldemon.core.device.MqttDiscoveryProperties;
-import com.digitaldemon.core.common.config.MqttSubscriberConfig;
+import com.digitaldemon.devicemanagement.config.DeviceManagementProperties;
+import com.digitaldemon.devicemanagement.mqtt.MqttConnection;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -19,35 +19,31 @@ public class DiscoveryMqttClient {
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final MqttSubscriberConfig mqttSubscriber;
+    private final MqttConnection mqtt;
     private final DiscoverySession session;
-    private final MqttDiscoveryProperties discoveryProps;
+    private final DeviceManagementProperties.Discovery discoveryProps;
     private final String deviceId;
     private final String handlerKey;
-    private final String[] topics;
 
     public DiscoveryMqttClient(
-            MqttSubscriberConfig mqttSubscriber,
-            MqttDiscoveryProperties discoveryProps,
+            MqttConnection mqtt,
+            DeviceManagementProperties.Discovery discoveryProps,
             DiscoverySession session
     ) throws MqttException {
-        this.mqttSubscriber = mqttSubscriber;
+        this.mqtt = mqtt;
         this.session = session;
         this.discoveryProps = discoveryProps;
         this.deviceId = session.getDeviceId();
         this.handlerKey = "discovery-" + session.getSessionId().toString().substring(0, 8);
 
-        this.topics = new String[]{
-                "#",                           // Catch-all — needed for non-Shelly devices
-        };
-        int[] qos = {1};
-
-        mqttSubscriber.subscribe(topics, qos, handlerKey, (topic, message) -> {
+        // The shared connection holds a catch-all subscription; this handler
+        // filters the stream for messages relevant to the target device.
+        mqtt.registerHandler(handlerKey, (topic, message) -> {
             handleMessage(topic, new String(message.getPayload(), StandardCharsets.UTF_8));
         });
 
-        log.info("Discovery subscribed to {} topic patterns for device '{}' (session={})",
-                topics.length, deviceId, session.getSessionId());
+        log.info("Discovery listening for device '{}' (session={})",
+                deviceId, session.getSessionId());
     }
 
     private void handleMessage(String topic, String rawPayload) {
@@ -84,7 +80,7 @@ public class DiscoveryMqttClient {
     }
 
     public void disconnect() {
-        mqttSubscriber.unsubscribe(topics, handlerKey);
-        log.info("Discovery unsubscribed topics for session {}", session.getSessionId());
+        mqtt.unregisterHandler(handlerKey);
+        log.info("Discovery stopped listening for session {}", session.getSessionId());
     }
 }

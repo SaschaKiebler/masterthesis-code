@@ -1,4 +1,4 @@
-package com.digitaldemon.core.common.config;
+package com.digitaldemon.devicemanagement.mqtt;
 
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
@@ -6,19 +6,21 @@ import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 
 /**
- * Shared MQTT connection to the Mosquitto broker, used exclusively for device
- * discovery: components subscribe/unsubscribe device topics dynamically via
- * {@link #subscribe} and {@link #unsubscribe}.
+ * Shared MQTT connection to the Mosquitto broker (moved here from
+ * core-platform, which no longer holds any broker connection).
  *
- * Measurement batches no longer flow through MQTT — the ingestion service
- * publishes them to the Kafka topic measurement.ingested, consumed by
- * {@link com.digitaldemon.core.measurement.MeasurementBatchListener}.
+ * The connection maintains a single catch-all subscription (`#`) and fans
+ * every message out to registered handlers: the always-on broker watcher and
+ * short-lived interactive discovery sessions. Handlers filter for themselves.
+ * The subscription is owned by the connection, so handler churn can never
+ * unsubscribe the stream for the others.
  *
  * Only activated when mqtt.enabled=true (default true) so tests can disable it
  * without a running broker.
@@ -26,24 +28,23 @@ import java.util.function.BiConsumer;
 @Slf4j
 @Component
 @ConditionalOnProperty(name = "mqtt.enabled", havingValue = "true", matchIfMissing = true)
-public class MqttSubscriberConfig {
+public class MqttConnection {
+
+    private static final String CATCH_ALL_TOPIC = "#";
 
     private final MqttProperties props;
     private volatile MqttAsyncClient client;
-    private volatile boolean connectionAttempted = false;
     private volatile String connectionError = null;
 
-    /**
-     * Dynamic topic handlers: handler key → message handler.
-     * Used by discovery and any future component that needs additional subscriptions.
-     */
-    private final ConcurrentHashMap<String, BiConsumer<String, MqttMessage>> topicHandlers = new ConcurrentHashMap<>();
+    /** Message handlers: handler key → consumer of (topic, message). */
+    private final ConcurrentHashMap<String, BiConsumer<String, MqttMessage>> handlers = new ConcurrentHashMap<>();
 
-    public MqttSubscriberConfig(MqttProperties props) {
+    public MqttConnection(MqttProperties props) {
         this.props = props;
     }
 
     @EventListener(ApplicationReadyEvent.class)
+    @Order(0)
     public void connect() {
         try {
             MqttConnectOptions options = new MqttConnectOptions();
@@ -64,17 +65,23 @@ public class MqttSubscriberConfig {
                 public void connectComplete(boolean reconnect, String serverURI) {
                     connectionError = null;
                     log.info("MQTT connected to {} (reconnect={})", serverURI, reconnect);
-                    // Re-subscribe dynamic topics on reconnect
-                    if (reconnect) {
-                        resubscribeDynamicTopics();
+                    try {
+                        client.subscribe(CATCH_ALL_TOPIC, 0);
+                        log.info("Subscribed to catch-all topic ({})", CATCH_ALL_TOPIC);
+                    } catch (MqttException e) {
+                        log.error("Failed to subscribe to {}: {}", CATCH_ALL_TOPIC, e.getMessage());
                     }
                 }
 
                 @Override
                 public void messageArrived(String topic, MqttMessage message) {
-                    // Route to dynamic handlers
-                    for (var entry : topicHandlers.entrySet()) {
-                        entry.getValue().accept(topic, message);
+                    for (var entry : handlers.entrySet()) {
+                        try {
+                            entry.getValue().accept(topic, message);
+                        } catch (Exception e) {
+                            log.warn("MQTT handler '{}' failed on topic {}: {}",
+                                    entry.getKey(), topic, e.getMessage());
+                        }
                     }
                 }
 
@@ -89,14 +96,11 @@ public class MqttSubscriberConfig {
                 }
             });
 
-            // Synchronous connect — wait up to 15s so we know immediately if auth fails
-            log.info("MQTT subscriber connecting to {} (user={})...", props.getBrokerUrl(), props.getUsername());
+            log.info("MQTT connecting to {} (user={})...", props.getBrokerUrl(), props.getUsername());
             client.connect(options).waitForCompletion(15_000);
-            connectionAttempted = true;
-            log.info("MQTT subscriber connected successfully to {}", props.getBrokerUrl());
+            log.info("MQTT connected successfully to {}", props.getBrokerUrl());
 
         } catch (MqttException e) {
-            connectionAttempted = true;
             connectionError = "reason=" + e.getReasonCode() + " (" + e.getMessage() + ")";
             log.warn("Could not connect to MQTT broker at {}: {} — auto-reconnect will keep trying",
                     props.getBrokerUrl(), connectionError);
@@ -104,12 +108,12 @@ public class MqttSubscriberConfig {
     }
 
     /**
-     * Subscribe to additional topics on the shared connection.
-     * Waits up to 5s for the connection if it's still being established.
+     * Register a message handler on the shared catch-all stream. Throws when
+     * the broker is unreachable so interactive callers can surface the error.
      */
-    public void subscribe(String[] topics, int[] qos, String handlerKey, BiConsumer<String, MqttMessage> handler) throws MqttException {
-        // Wait briefly for connection if startup connect hasn't completed yet
+    public void registerHandler(String handlerKey, BiConsumer<String, MqttMessage> handler) throws MqttException {
         if (client != null && !client.isConnected()) {
+            // Wait briefly in case the startup connect is still in progress
             for (int i = 0; i < 10; i++) {
                 if (client.isConnected()) break;
                 try { Thread.sleep(500); } catch (InterruptedException e) {
@@ -126,36 +130,17 @@ public class MqttSubscriberConfig {
             ex.initCause(new Exception(msg));
             throw ex;
         }
-        topicHandlers.put(handlerKey, handler);
-        client.subscribe(topics, qos);
-        log.info("Dynamic subscribe: {} topics (handler={})", topics.length, handlerKey);
+
+        handlers.put(handlerKey, handler);
+        log.info("Registered MQTT handler '{}'", handlerKey);
     }
 
-    /**
-     * Unsubscribe topics and remove the handler.
-     */
-    public void unsubscribe(String[] topics, String handlerKey) {
-        topicHandlers.remove(handlerKey);
-        if (client != null && client.isConnected()) {
-            try {
-                client.unsubscribe(topics);
-                log.info("Dynamic unsubscribe: {} topics (handler={})", topics.length, handlerKey);
-            } catch (MqttException e) {
-                log.warn("Failed to unsubscribe topics (handler={}): {}", handlerKey, e.getMessage());
-            }
-        }
+    public void unregisterHandler(String handlerKey) {
+        handlers.remove(handlerKey);
+        log.info("Unregistered MQTT handler '{}'", handlerKey);
     }
 
     public boolean isConnected() {
         return client != null && client.isConnected();
-    }
-
-    public String getConnectionError() {
-        return connectionError;
-    }
-
-    private void resubscribeDynamicTopics() {
-        if (topicHandlers.isEmpty()) return;
-        log.info("Re-subscribing {} dynamic topic handler(s) after reconnect", topicHandlers.size());
     }
 }

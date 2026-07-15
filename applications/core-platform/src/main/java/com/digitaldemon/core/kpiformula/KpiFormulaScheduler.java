@@ -12,10 +12,10 @@ import java.util.List;
 /**
  * Scheduled fallback for KPI formula evaluation.
  *
- * <p>The primary evaluation path is MQTT-driven ({@link KpiFormulaEvaluator}), but it
- * depends on the MQTT broker being reachable and the ingestion service publishing
+ * <p>The primary evaluation path is Kafka-driven ({@link KpiFormulaEvaluator}), but it
+ * depends on the Kafka broker being reachable and the ingestion service publishing
  * measurement batches. This scheduler provides a guaranteed periodic evaluation of all
- * enabled formulas regardless of MQTT connectivity.</p>
+ * enabled formulas regardless of Kafka connectivity.</p>
  *
  * <p>Runs every 30 seconds. Each formula is evaluated independently — a failure on one
  * formula does not affect others.</p>

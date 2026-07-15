@@ -1,0 +1,53 @@
+// Desired per-device configuration, published by device-management to the
+// COMPACTED Kafka topic `device.configured`, keyed by device_id
+// (see docs/architecture/event-catalog.md).
+//
+// Consumers rebuild full config state by replaying the topic from the
+// beginning; compaction keeps the latest snapshot per device. A tombstone
+// (null payload) removes a device. This replaces the ingestion service's
+// 120s database polling for the asset registry and signal maps.
+
+syntax = "proto3";
+
+package device.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.digitaldemon.device.proto.v1";
+option java_multiple_files = true;
+option java_outer_classname = "DeviceConfigProto";
+
+message DeviceConfig {
+  // Hardware device id as used on the MQTT topics (also the Kafka key).
+  string device_id = 1;
+
+  // Gate flag: ingestion drops messages from devices with accepted = false.
+  // False when the device is decommissioned.
+  bool accepted = 2;
+
+  string protocol = 3;
+
+  // Decode rules: which payload field maps to which metric channel.
+  repeated SignalMapEntry signals = 4;
+
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message SignalMapEntry {
+  int32 metric_id = 1;
+
+  // Human-readable metric name (display name of the metric-point object).
+  string name = 2;
+
+  string unit = 3;
+
+  // Payload component the value comes from (e.g. "temperature:0", "em:0").
+  string source = 4;
+
+  // JSON field path within the component payload (e.g. "tC", "a_act_power").
+  string field = 5;
+
+  // Plausibility bounds; unset = unbounded.
+  optional double min_value = 6;
+  optional double max_value = 7;
+}

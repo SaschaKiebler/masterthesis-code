@@ -24,6 +24,8 @@ public class KafkaTopicsProperties {
     public static class Topics {
         /** Processed measurement batches from the ingestion service. */
         private String measurementIngested = "measurement.ingested";
+        /** Unknown-device events from device-management (topic owned there). */
+        private String deviceDiscovered = "device.discovered";
     }
 
     @Data

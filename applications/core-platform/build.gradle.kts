@@ -59,9 +59,6 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-flyway")
 	implementation("org.flywaydb:flyway-database-postgresql")
 	
-	// Eclipse Paho MQTT client — shared broker connection for device discovery
-	implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
-
 	// exp4j — safe math expression evaluator for KPI formula builder
 	implementation("net.objecthunter:exp4j:0.4.8")
 

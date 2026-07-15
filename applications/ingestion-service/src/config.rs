@@ -37,6 +37,9 @@ pub struct KafkaConfig {
     /// Topic for processed measurement batches, `measurement.ingested`
     /// per docs/architecture/event-catalog.md.
     pub measurement_topic: String,
+    /// Compacted topic carrying desired device configs, `device.configured`
+    /// per docs/architecture/event-catalog.md.
+    pub device_config_topic: String,
 }
 
 impl Default for MqttConfig {
@@ -116,6 +119,8 @@ pub fn load_config() -> Result<AppConfig> {
             .unwrap_or_else(|_| "ingestion-service".to_string()),
         measurement_topic: std::env::var("KAFKA_MEASUREMENT_TOPIC")
             .unwrap_or_else(|_| "measurement.ingested".to_string()),
+        device_config_topic: std::env::var("KAFKA_DEVICE_CONFIG_TOPIC")
+            .unwrap_or_else(|_| "device.configured".to_string()),
     };
 
     Ok(AppConfig { mqtt, database, kafka })
