@@ -1,0 +1,18 @@
+{
+  "prefix": "mock",
+  "sites": 2,
+  "rooms_per_site": 2,
+  "rogue": 1,
+  "interval_s": 5.0,
+  "duration_s": 240.0,
+  "seed": 42,
+  "broker_host": "localhost",
+  "broker_port": 1883,
+  "connections": 2,
+  "mean_outdoor_c": 8.0,
+  "diurnal_amplitude_c": 4.0,
+  "faults": [
+    { "type": "overheat", "count": 1, "at_s": 30.0, "duration_s": 120.0 },
+    { "type": "spread_collapse", "count": 1, "at_s": 30.0, "duration_s": 150.0 }
+  ]
+}

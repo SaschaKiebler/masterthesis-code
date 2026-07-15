@@ -26,6 +26,10 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      # Topics are provisioned exclusively by their owning service's KafkaAdmin.
+      # Auto-creation races the owners and produces wrong partition counts
+      # (observed: a consumer subscription auto-created a 1-partition topic).
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
       CLUSTER_ID: "4L6g3nShT-eMCtK--X86sw"
 
   kafka-ui:

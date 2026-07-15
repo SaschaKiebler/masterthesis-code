@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: notification-service
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    client-id: notification-service
+    consumer:
+      group-id: notification
+      # Alerts are only meaningful live; do not replay history on first start.
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      properties:
+        # Never auto-create subscribed topics; owners provision them.
+        allow.auto.create.topics: false
+    producer:
+      # Producer is only used to publish dead letters (raw consumed bytes)
+      key-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+      value-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
+
+server:
+  port: 8083
+
+notification:
+  # Detection-event topics to consume; every detector added later just
+  # extends this list (or the env var), nothing else changes.
+  topics: ${NOTIFICATION_TOPICS:threshold.breached}
+  policy:
+    # Deliver events at or above this severity: INFO | WARNING | ERROR | CRITICAL
+    min-severity: ${NOTIFICATION_MIN_SEVERITY:INFO}
+    # Suppress repeat notifications per (type, device, metric) within this
+    # window. 0 disables notification-level dedup (detectors already have
+    # per-rule cooldowns).
+    cooldown-minutes: ${NOTIFICATION_COOLDOWN_MINUTES:0}
+  webhook:
+    # POST target for alerts (e.g. an n8n webhook). Empty = log-only delivery.
+    url: ${NOTIFICATION_WEBHOOK_URL:}
+    token: ${NOTIFICATION_WEBHOOK_TOKEN:}
+  topic-defaults:
+    partitions: ${KAFKA_TOPIC_PARTITIONS:3}
+    replicas: ${KAFKA_TOPIC_REPLICAS:1}
+
+logging:
+  level:
+    com.digitaldemon: INFO

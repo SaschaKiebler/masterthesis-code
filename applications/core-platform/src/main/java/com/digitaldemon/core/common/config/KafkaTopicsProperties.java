@@ -26,6 +26,8 @@ public class KafkaTopicsProperties {
         private String measurementIngested = "measurement.ingested";
         /** Unknown-device events from device-management (topic owned there). */
         private String deviceDiscovered = "device.discovered";
+        /** Detection events from core's threshold evaluation (owned here). */
+        private String thresholdBreached = "threshold.breached";
     }
 
     @Data

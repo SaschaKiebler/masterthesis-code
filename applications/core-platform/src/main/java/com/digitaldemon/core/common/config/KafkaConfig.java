@@ -53,6 +53,15 @@ public class KafkaConfig {
                 .build();
     }
 
+    /** Detection events produced by core's threshold evaluation. */
+    @Bean
+    public NewTopic thresholdBreachedTopic() {
+        return TopicBuilder.name(props.getTopics().getThresholdBreached())
+                .partitions(props.getTopicDefaults().getPartitions())
+                .replicas(props.getTopicDefaults().getReplicas())
+                .build();
+    }
+
     /**
      * Error handling for all @KafkaListener containers (picked up by Boot's
      * container factory auto-configuration): two retries with 1s backoff for

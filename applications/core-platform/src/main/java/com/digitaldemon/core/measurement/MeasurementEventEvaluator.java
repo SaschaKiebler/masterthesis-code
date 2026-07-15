@@ -12,6 +12,7 @@ import com.digitaldemon.core.metricpoint.MetricPointRepository;
 import com.digitaldemon.core.thresholdrule.ThresholdRuleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +41,9 @@ public class MeasurementEventEvaluator {
     private final ThresholdRuleRepository thresholdRuleRepository;
     private final EventService eventService;
     private final OntologyService ontologyService;
+
+    /** Provider because the publisher bean only exists when kafka.enabled=true. */
+    private final ObjectProvider<DetectionEventPublisher> detectionEventPublisher;
 
     /**
      * In-memory cooldown tracker: ruleId → time the last event was fired.
@@ -151,6 +155,12 @@ public class MeasurementEventEvaluator {
             lastFired.put(rule.getId(), now);
             log.info("Rule fired: device={} metric_id={} operator={} value={} previous={} severity={}",
                     deviceId, metricId, rule.getOperator(), value, previousValue, rule.getSeverity());
+
+            // Fan out to notification policy via the detection-event envelope.
+            final String detailJson = details;
+            detectionEventPublisher.ifAvailable(publisher ->
+                    publisher.publishThresholdBreached(deviceId, metricId, mp.getId(),
+                            rule.getSeverity(), detailJson));
         }
 
         // Always update last known value after evaluation (even if no rules fired).

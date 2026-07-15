@@ -35,6 +35,9 @@ spring:
       auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
       value-deserializer: org.apache.kafka.common.serialization.ByteArrayDeserializer
+      properties:
+        # Never auto-create subscribed topics; owners provision them.
+        allow.auto.create.topics: false
     producer:
       # Producer is only used to publish dead letters (raw consumed bytes)
       key-serializer: org.apache.kafka.common.serialization.ByteArraySerializer
@@ -76,6 +79,7 @@ kafka:
   topics:
     measurement-ingested: measurement.ingested
     device-discovered: device.discovered
+    threshold-breached: threshold.breached
   topic-defaults:
     partitions: ${KAFKA_TOPIC_PARTITIONS:3}
     replicas: ${KAFKA_TOPIC_REPLICAS:1}
