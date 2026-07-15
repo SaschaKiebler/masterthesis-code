@@ -15,7 +15,7 @@ export interface UserSummary {
 }
 
 export interface UserDetail extends UserSummary {
-  auth0Sub: string;
+  subject: string;
   tenants: {
     tenantId: string;
     tenantName: string;

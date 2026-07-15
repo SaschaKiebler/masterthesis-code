@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Auth0Provider } from "@auth0/nextjs-auth0/client";
 import { AuthContextProvider } from "@/lib/auth/AuthContext";
 import { AppShell } from "@/components/layout/AppShell";
 
@@ -35,11 +34,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Auth0Provider>
-          <AuthContextProvider>
-            <AppShell>{children}</AppShell>
-          </AuthContextProvider>
-        </Auth0Provider>
+        <AuthContextProvider>
+          <AppShell>{children}</AppShell>
+        </AuthContextProvider>
       </body>
     </html>
   );

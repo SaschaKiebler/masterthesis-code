@@ -58,7 +58,7 @@ class UserControllerTest {
 
         targetUser = new User();
         targetUser.setId(UUID.randomUUID());
-        targetUser.setAuth0Sub("auth0|target-user-123");
+        targetUser.setSubject("local|target-user-123");
         targetUser.setEmail("user@example.com");
         targetUser.setDisplayName("Test User");
         targetUser.setGlobalRole("viewer");
@@ -151,7 +151,7 @@ class UserControllerTest {
             @SuppressWarnings("unchecked")
             Map<String, Object> user = (Map<String, Object>) response.getBody().get("user");
             assertThat(user.get("email")).isEqualTo("user@example.com");
-            assertThat(user.get("auth0Sub")).isNotNull();
+            assertThat(user.get("subject")).isNotNull();
         }
 
         @Test

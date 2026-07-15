@@ -37,13 +37,13 @@ public class N8nServiceUserBootstrap implements ApplicationRunner {
             return;
         }
 
-        String auth0Sub = requireAuth0Sub();
+        String subject = requireSubject();
         GlobalRole globalRole = resolveRole(properties.getGlobalRole());
 
-        User user = userRepository.findByAuth0Sub(auth0Sub)
+        User user = userRepository.findBySubject(subject)
                 .orElseGet(() -> {
                     User created = new User();
-                    created.setAuth0Sub(auth0Sub);
+                    created.setSubject(subject);
                     created.setCreatedAt(Instant.now());
                     return created;
                 });
@@ -55,15 +55,15 @@ public class N8nServiceUserBootstrap implements ApplicationRunner {
 
         User saved = userRepository.save(user);
         log.info("n8n service user ready (id={}, sub={}, role={})",
-                saved.getId(), saved.getAuth0Sub(), saved.getGlobalRole());
+                saved.getId(), saved.getSubject(), saved.getGlobalRole());
     }
 
-    private String requireAuth0Sub() {
-        String auth0Sub = blankToNull(properties.getAuth0Sub());
-        if (auth0Sub == null) {
-            throw new IllegalStateException("service-auth.n8n.auth0-sub must be configured when n8n service auth is enabled");
+    private String requireSubject() {
+        String subject = blankToNull(properties.getSubject());
+        if (subject == null) {
+            throw new IllegalStateException("service-auth.n8n.subject must be configured when n8n service auth is enabled");
         }
-        return auth0Sub;
+        return subject;
     }
 
     private GlobalRole resolveRole(String configuredRole) {

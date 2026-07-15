@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE } from "@/lib/auth/session";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8080";
 
 /**
  * Catch-all API proxy — forwards /api/v1/* requests to core-platform at runtime.
  * Uses BACKEND_URL env var (server-side only, set via docker-compose).
+ * The session JWT from the httpOnly cookie is forwarded as a Bearer token.
  */
 async function proxyRequest(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
@@ -12,11 +14,15 @@ async function proxyRequest(req: NextRequest, { params }: { params: Promise<{ pa
   const url = new URL(req.url);
   const target = `${BACKEND_URL}/api/v1/${pathStr}${url.search}`;
 
-  // Only forward essential headers — strip cookies (Auth0 session cookie is huge
-  // and causes Tomcat's "Request header is too large" error)
+  // Only forward essential headers — cookies stay at the proxy boundary
   const headers = new Headers();
+  const sessionToken = req.cookies.get(SESSION_COOKIE)?.value;
   const authorization = req.headers.get("authorization");
-  if (authorization) headers.set("authorization", authorization);
+  if (authorization) {
+    headers.set("authorization", authorization);
+  } else if (sessionToken) {
+    headers.set("authorization", `Bearer ${sessionToken}`);
+  }
   const contentType = req.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
   headers.set("accept", req.headers.get("accept") || "application/json");

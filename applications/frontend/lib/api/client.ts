@@ -1,10 +1,9 @@
 /**
  * API Client Configuration
  * Centralized configuration for API calls
- * Includes Auth0 access token injection for authenticated requests
+ * Authentication rides on the httpOnly session cookie; the /api/v1 proxy
+ * route converts it into a Bearer token for the backend.
  */
-
-import { getAccessToken } from "@auth0/nextjs-auth0/client";
 
 const API_BASE_URL = "/api/v1";
 
@@ -24,20 +23,6 @@ export class ApiError extends Error {
 }
 
 /**
- * Get the Authorization header with a Bearer token.
- * Returns empty object if no session exists (unauthenticated).
- */
-async function getAuthHeaders(): Promise<Record<string, string>> {
-    try {
-        const token = await getAccessToken();
-        return { Authorization: `Bearer ${token}` };
-    } catch {
-        // No session or token unavailable — proceed without auth header
-        return {};
-    }
-}
-
-/**
  * Generic fetch wrapper with error handling
  */
 export async function apiFetch<T>(
@@ -47,21 +32,20 @@ export async function apiFetch<T>(
     const url = `${API_BASE_URL}${endpoint}`;
 
     try {
-        const authHeaders = await getAuthHeaders();
-
         const response = await fetch(url, {
             ...options,
             headers: {
                 "Content-Type": "application/json",
-                ...authHeaders,
                 ...options?.headers,
             },
         });
 
         if (!response.ok) {
-            // Redirect to login on 401
+            // Redirect to login on 401 (unless we're already there)
             if (response.status === 401) {
-                window.location.href = "/auth/login";
+                if (!window.location.pathname.startsWith("/auth/login")) {
+                    window.location.href = "/auth/login";
+                }
                 throw new ApiError("Unauthorized", 401, "Unauthorized");
             }
 

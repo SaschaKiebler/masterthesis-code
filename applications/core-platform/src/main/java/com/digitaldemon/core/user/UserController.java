@@ -95,7 +95,7 @@ public class UserController {
         List<UserTenantRole> tenantRoles = userTenantRoleRepository.findByUserId(userId);
 
         Map<String, Object> response = new HashMap<>(toUserSummary(user));
-        response.put("auth0Sub", user.getAuth0Sub());
+        response.put("subject", user.getSubject());
 
         List<Map<String, Object>> tenants = tenantRoles.stream()
                 .map(utr -> {

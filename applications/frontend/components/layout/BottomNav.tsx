@@ -21,7 +21,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/auth/AuthContext";
-import { useUser } from "@auth0/nextjs-auth0/client";
 import type { Permission } from "@/lib/auth/types";
 
 interface MobileNavItem {
@@ -168,8 +167,7 @@ function MoreSheet({
     pathname: string;
 }) {
     const sheetRef = useRef<HTMLDivElement>(null);
-    const { user: auth0User, isLoading: auth0Loading } = useUser();
-    const { globalRole } = useAuth();
+    const { user, isAuthenticated, isLoading } = useAuth();
 
     // Close on Escape
     const handleKeyDown = useCallback(
@@ -245,7 +243,7 @@ function MoreSheet({
 
                     {/* Divider + User section */}
                     <div className="border-t border-border px-4 py-3">
-                        {auth0Loading ? (
+                        {isLoading ? (
                             <div className="flex items-center gap-3">
                                 <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0" />
                                 <div className="flex-1 space-y-1.5">
@@ -253,7 +251,7 @@ function MoreSheet({
                                     <div className="h-2.5 w-32 bg-muted rounded animate-pulse" />
                                 </div>
                             </div>
-                        ) : auth0User ? (
+                        ) : isAuthenticated && user ? (
                             <div className="flex items-center gap-3">
                                 {/* Avatar + info */}
                                 <Link
@@ -261,9 +259,9 @@ function MoreSheet({
                                     className="flex items-center gap-3 flex-1 min-w-0 rounded-lg p-1 -m-1 hover:bg-muted transition-colors"
                                     aria-label="Account settings"
                                 >
-                                    {auth0User.picture ? (
+                                    {user.avatarUrl ? (
                                         <img
-                                            src={auth0User.picture}
+                                            src={user.avatarUrl}
                                             alt=""
                                             className="h-8 w-8 rounded-full shrink-0 ring-2 ring-border"
                                         />
@@ -274,10 +272,10 @@ function MoreSheet({
                                     )}
                                     <div className="flex-1 min-w-0">
                                         <p className="text-sm font-medium text-foreground truncate">
-                                            {auth0User.name}
+                                            {user.displayName || user.email}
                                         </p>
                                         <p className="text-xs text-muted-foreground truncate">
-                                            {auth0User.email}
+                                            {user.email}
                                         </p>
                                     </div>
                                 </Link>

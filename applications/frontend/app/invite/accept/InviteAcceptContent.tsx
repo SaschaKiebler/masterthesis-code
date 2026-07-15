@@ -15,11 +15,11 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useUser } from "@auth0/nextjs-auth0/client";
 import { useAuth } from "@/lib/auth/AuthContext";
 import { apiFetch } from "@/lib/api/client";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Badge } from "@/components/ui/Badge";
 import { Skeleton } from "@/components/ui/Skeleton";
 import {
@@ -52,13 +52,18 @@ export default function InviteAcceptContent() {
   const router = useRouter();
   const token = searchParams.get("token");
 
-  const { user: auth0User, isLoading: auth0Loading } = useUser();
-  const { refresh } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, refresh } = useAuth();
 
   const [invitation, setInvitation] = useState<InvitationDetails | null>(null);
   const [pageState, setPageState] = useState<PageState>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [canRetry, setCanRetry] = useState(false);
+
+  // Account creation fields for users without a session
+  const [displayName, setDisplayName] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [formError, setFormError] = useState<string | null>(null);
 
   const fetchInvitation = useCallback(async () => {
     if (!token) {
@@ -105,11 +110,38 @@ export default function InviteAcceptContent() {
 
   const handleAccept = async () => {
     if (!token) return;
+
+    // New users create their local account while accepting
+    let accountPayload: { password: string; displayName?: string } | undefined;
+    if (!isAuthenticated) {
+      setFormError(null);
+      if (password.length < 8) {
+        setFormError("Password must be at least 8 characters.");
+        return;
+      }
+      if (password !== passwordConfirm) {
+        setFormError("Passwords do not match.");
+        return;
+      }
+      accountPayload = { password, displayName: displayName || undefined };
+    }
+
     setPageState("accepting");
     try {
       await apiFetch(`/invitations/by-token/${token}/accept`, {
         method: "POST",
+        body: accountPayload ? JSON.stringify(accountPayload) : undefined,
       });
+
+      // Establish the session for newly created accounts
+      if (!isAuthenticated && invitation) {
+        await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: invitation.email, password }),
+        });
+      }
+
       setPageState("accepted");
       // Refresh auth context so sidebar/permissions update
       refresh();
@@ -122,8 +154,6 @@ export default function InviteAcceptContent() {
       setErrorMessage(apiErr?.message || "Failed to accept invitation.");
     }
   };
-
-  const loginUrl = `/auth/login?returnTo=${encodeURIComponent(`/invite/accept?token=${token}`)}`;
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -224,14 +254,14 @@ export default function InviteAcceptContent() {
               </div>
 
               {/* Action — touch target minimum 48px (guidelines: 44px min, 56px primary) */}
-              {auth0Loading ? (
+              {authLoading ? (
                 <div className="space-y-2">
                   <Skeleton variant="custom" className="h-12 w-full rounded-lg" />
                   <p className="text-sm text-center text-muted-foreground">
                     Checking authentication...
                   </p>
                 </div>
-              ) : auth0User ? (
+              ) : isAuthenticated ? (
                 <Button
                   variant="primary"
                   fullWidth
@@ -243,19 +273,59 @@ export default function InviteAcceptContent() {
                   Accept Invitation
                 </Button>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <p className="text-base text-center text-muted-foreground">
-                    Sign in to accept this invitation
+                    Choose a password to create your account
                   </p>
-                  {/* Native <a> — no nested interactive elements (a11y) */}
-                  <a
-                    href={loginUrl}
-                    className="inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary bg-primary text-primary-foreground hover:opacity-90 px-6 py-3 text-lg w-full"
-                    aria-label="Sign in to accept invitation"
+                  <Input
+                    label="Name (optional)"
+                    type="text"
+                    autoComplete="name"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                  />
+                  <Input
+                    label="Password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    helperText="At least 8 characters"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  <Input
+                    label="Confirm password"
+                    type="password"
+                    autoComplete="new-password"
+                    required
+                    value={passwordConfirm}
+                    onChange={(e) => setPasswordConfirm(e.target.value)}
+                  />
+                  {formError && (
+                    <p role="alert" className="text-sm text-danger">
+                      {formError}
+                    </p>
+                  )}
+                  <Button
+                    variant="primary"
+                    fullWidth
+                    size="lg"
+                    onClick={handleAccept}
+                    disabled={!password || !passwordConfirm}
+                    aria-label="Create account and accept invitation"
                   >
                     <LogIn className="h-5 w-5 mr-2" aria-hidden="true" />
-                    Sign In to Accept
-                  </a>
+                    Create Account &amp; Accept
+                  </Button>
+                  <p className="text-sm text-center text-muted-foreground">
+                    Already have an account?{" "}
+                    <a
+                      href={`/auth/login?returnTo=${encodeURIComponent(`/invite/accept?token=${token}`)}`}
+                      className="text-primary hover:underline"
+                    >
+                      Sign in first
+                    </a>
+                  </p>
                 </div>
               )}
             </CardContent>

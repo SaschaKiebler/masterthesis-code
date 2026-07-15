@@ -34,7 +34,7 @@ public class AuthService {
 
     // ── JWT Extraction ──────────────────────────────────────────────────
 
-    public Optional<String> getCurrentAuth0Sub() {
+    public Optional<String> getCurrentSubject() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !(authentication.getPrincipal() instanceof Jwt jwt)) {
             return Optional.empty();
@@ -54,18 +54,18 @@ public class AuthService {
     // ── User Resolution ─────────────────────────────────────────────────
 
     public Optional<User> getCurrentUser() {
-        return getCurrentAuth0Sub()
-            .flatMap(userRepository::findByAuth0Sub);
+        return getCurrentSubject()
+            .flatMap(userRepository::findBySubject);
     }
 
     @Transactional
     public User getOrProvisionCurrentUser() {
-        String auth0Sub = getCurrentAuth0Sub()
+        String subject = getCurrentSubject()
             .orElseThrow(() -> new SecurityException("No authenticated user"));
 
-        Optional<User> byAuth0Sub = userRepository.findByAuth0Sub(auth0Sub);
-        if (byAuth0Sub.isPresent()) {
-            User user = byAuth0Sub.get();
+        Optional<User> bySubject = userRepository.findBySubject(subject);
+        if (bySubject.isPresent()) {
+            User user = bySubject.get();
             getCurrentEmail().ifPresent(user::setEmail);
             getJwtClaim("name").ifPresent(user::setDisplayName);
             getJwtClaim("picture").ifPresent(user::setAvatarUrl);
@@ -78,9 +78,9 @@ public class AuthService {
             Optional<User> byEmail = userRepository.findByEmail(email.get());
             if (byEmail.isPresent()) {
                 User user = byEmail.get();
-                log.info("Linking existing user {} to new auth0_sub (was: {}, now: {})",
-                        user.getEmail(), user.getAuth0Sub(), auth0Sub);
-                user.setAuth0Sub(auth0Sub);
+                log.info("Linking existing user {} to new subject (was: {}, now: {})",
+                        user.getEmail(), user.getSubject(), subject);
+                user.setSubject(subject);
                 getJwtClaim("name").ifPresent(user::setDisplayName);
                 getJwtClaim("picture").ifPresent(user::setAvatarUrl);
                 user.setLastLoginAt(Instant.now());
@@ -88,9 +88,9 @@ public class AuthService {
             }
         }
 
-        log.info("Auto-provisioning new user for auth0_sub: {}", auth0Sub);
+        log.info("Auto-provisioning new user for subject: {}", subject);
         User user = new User();
-        user.setAuth0Sub(auth0Sub);
+        user.setSubject(subject);
         user.setEmail(email.orElse(null));
         user.setDisplayName(getJwtClaim("name").orElse(null));
         user.setAvatarUrl(getJwtClaim("picture").orElse(null));

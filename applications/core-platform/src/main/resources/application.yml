@@ -24,13 +24,6 @@ spring:
     locations: classpath:db/migration
     out-of-order: true
 
-  # Auth0 OAuth2 Resource Server (JWT validation)
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://${AUTH0_DOMAIN:YOUR_AUTH0_DOMAIN.auth0.com}/
-
   # Kafka broker connection (topic names live under the app-level kafka: block)
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
@@ -60,16 +53,19 @@ grpc:
       negotiation-type: PLAINTEXT
       max-inbound-message-size: 104857600 # 100 MB
 
-# Custom Auth0 config
-auth0:
-  domain: ${AUTH0_DOMAIN:YOUR_AUTH0_DOMAIN.auth0.com}
-  audience: ${AUTH0_AUDIENCE:https://api.digitaldemon.local}
+# Local authentication (self-issued HS256 JWTs, no external identity provider)
+local-auth:
+  jwt-secret: ${LOCAL_AUTH_JWT_SECRET:insecure-local-dev-secret-change-me}
+  token-ttl-hours: ${LOCAL_AUTH_TOKEN_TTL_HOURS:24}
+  admin-email: ${LOCAL_AUTH_ADMIN_EMAIL:admin@local}
+  admin-password: ${LOCAL_AUTH_ADMIN_PASSWORD:admin}
+  admin-display-name: ${LOCAL_AUTH_ADMIN_DISPLAY_NAME:Local Admin}
 
 service-auth:
   n8n:
     enabled: ${N8N_SERVICE_TOKEN_ENABLED:false}
     token: ${N8N_SERVICE_TOKEN:}
-    auth0-sub: ${N8N_SERVICE_AUTH0_SUB:service:n8n}
+    subject: ${N8N_SERVICE_SUBJECT:service:n8n}
     email: ${N8N_SERVICE_EMAIL:n8n@digitaldemon.local}
     display-name: ${N8N_SERVICE_DISPLAY_NAME:n8n Service User}
     global-role: ${N8N_SERVICE_GLOBAL_ROLE:system_admin}
@@ -79,23 +75,15 @@ kafka:
   enabled: ${KAFKA_ENABLED:true}
   topics:
     measurement-ingested: measurement.ingested
+    device-discovered: device.discovered
   topic-defaults:
     partitions: ${KAFKA_TOPIC_PARTITIONS:3}
     replicas: ${KAFKA_TOPIC_REPLICAS:1}
 
-# MQTT stays for device discovery only — measurements flow via Kafka
-mqtt:
-  broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}
-  client-id: core-platform
-  username: ${MQTT_USERNAME:}
-  password: ${MQTT_PASSWORD:}
-  enabled: ${MQTT_ENABLED:true}
-  discovery:
-    enabled: ${MQTT_DISCOVERY_ENABLED:true}
-    max-sessions-per-tenant: 3
-    session-timeout-seconds: 300
-    max-messages-per-session: 500
-    client-id-prefix: core-platform-discovery
+# Device-management service (owns the MQTT broker tap and device topics).
+# Core has no broker connection anymore; discovery-session REST is proxied.
+device-management:
+  url: ${DEVICE_MANAGEMENT_URL:http://localhost:8082}
 
 logging:
   level:

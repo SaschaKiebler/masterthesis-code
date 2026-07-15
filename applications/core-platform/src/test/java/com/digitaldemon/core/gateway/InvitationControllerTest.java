@@ -242,9 +242,9 @@ class InvitationControllerTest {
 
         @Test
         void shouldDelegateToService() {
-            invitationController.acceptInvitation("some-token");
+            invitationController.acceptInvitation("some-token", null);
 
-            verify(invitationService).acceptInvitation("some-token");
+            verify(invitationService).acceptInvitation("some-token", null, null);
         }
     }
 

@@ -14,6 +14,7 @@ import com.digitaldemon.core.user.UserRepository;
 import com.digitaldemon.core.user.UserTenantRoleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class InvitationService {
     private final TenantRepository tenantRepository;
     private final UserTenantRoleRepository userTenantRoleRepository;
     private final AuthService authService;
+    private final PasswordEncoder passwordEncoder;
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final int TOKEN_BYTES = 32; // 64 hex characters
@@ -72,9 +74,12 @@ public class InvitationService {
     /**
      * Accept an invitation by token.
      * Sets the user's global role and creates tenant membership.
+     *
+     * Works for authenticated users (password ignored) as well as for new users,
+     * who create their local account by supplying a password with the acceptance.
      */
     @Transactional
-    public void acceptInvitation(String token) {
+    public void acceptInvitation(String token, String password, String displayName) {
         Invitation invitation = invitationRepository.findByToken(token)
                 .orElseThrow(() -> new ResourceNotFoundException("Invitation not found"));
 
@@ -85,7 +90,8 @@ public class InvitationService {
             throw new ValidationException("Invitation has expired");
         }
 
-        User user = authService.getOrProvisionCurrentUser();
+        User user = authService.getCurrentUser()
+                .orElseGet(() -> resolveInvitedUser(invitation, password, displayName));
 
         // Upgrade global role if the invitation specifies a higher one
         GlobalRole invitedRole = GlobalRole.fromValue(invitation.getGlobalRole());
@@ -115,6 +121,43 @@ public class InvitationService {
         invitationRepository.save(invitation);
 
         log.info("Invitation {} accepted by user {}", invitation.getId(), user.getId());
+    }
+
+    /**
+     * Unauthenticated acceptance: create (or complete) the local account for the
+     * invited email address using the supplied password.
+     */
+    private User resolveInvitedUser(Invitation invitation, String password, String displayName) {
+        if (password == null || password.isBlank()) {
+            throw new ValidationException("A password is required to create your account");
+        }
+        if (password.length() < 8) {
+            throw new ValidationException("Password must be at least 8 characters");
+        }
+
+        String email = invitation.getEmail();
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            User created = new User();
+            created.setSubject("local|" + email);
+            created.setEmail(email);
+            created.setGlobalRole(GlobalRole.VIEWER.getValue());
+            created.setCreatedAt(Instant.now());
+            return created;
+        });
+
+        if (user.getPasswordHash() != null) {
+            throw new ValidationException("An account for this email already exists. Please sign in first.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(password));
+        if (displayName != null && !displayName.isBlank()) {
+            user.setDisplayName(displayName.trim());
+        }
+        user.setLastLoginAt(Instant.now());
+
+        User saved = userRepository.save(user);
+        log.info("Created local account for invited user {} ({})", saved.getId(), email);
+        return saved;
     }
 
     private String generateToken() {

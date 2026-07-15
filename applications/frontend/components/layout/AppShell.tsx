@@ -8,6 +8,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { cn } from "@/lib/utils/cn";
@@ -29,7 +30,10 @@ export function useSidebar() {
 const STORAGE_KEY = "sidebar-collapsed";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
     const [collapsed, setCollapsed] = useState(false);
+    // Auth pages (login) render without the app chrome
+    const bareLayout = pathname?.startsWith("/auth");
 
     // Restore persisted preference after mount (avoids SSR hydration mismatch)
     useEffect(() => {
@@ -45,6 +49,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             return next;
         });
     };
+
+    if (bareLayout) {
+        return <>{children}</>;
+    }
 
     return (
         <SidebarContext.Provider value={{ collapsed, toggle }}>

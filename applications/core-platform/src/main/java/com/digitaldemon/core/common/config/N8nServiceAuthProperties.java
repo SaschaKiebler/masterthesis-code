@@ -14,7 +14,7 @@ public class N8nServiceAuthProperties {
 
     private boolean enabled = false;
     private String token = "";
-    private String auth0Sub = "service:n8n";
+    private String subject = "service:n8n";
     private String email = "n8n@digitaldemon.local";
     private String displayName = "n8n Service User";
     private String globalRole = "system_admin";

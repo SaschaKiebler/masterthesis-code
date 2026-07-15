@@ -1,8 +1,31 @@
-import type { NextRequest } from "next/server";
-import { auth0 } from "./lib/auth0";
+import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE } from "./lib/auth/session";
 
+/** Page routes reachable without a session. */
+const PUBLIC_PATHS = ["/auth/login", "/invite/accept"];
+
+/**
+ * Redirects unauthenticated page requests to the login page.
+ * API routes are passed through — the backend answers 401 itself.
+ */
 export async function proxy(request: NextRequest) {
-  return await auth0.middleware(request);
+  const { pathname } = request.nextUrl;
+
+  if (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/auth") ||
+    PUBLIC_PATHS.some((path) => pathname.startsWith(path))
+  ) {
+    return NextResponse.next();
+  }
+
+  if (!request.cookies.has(SESSION_COOKIE)) {
+    const loginUrl = new URL("/auth/login", request.url);
+    loginUrl.searchParams.set("returnTo", pathname + request.nextUrl.search);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

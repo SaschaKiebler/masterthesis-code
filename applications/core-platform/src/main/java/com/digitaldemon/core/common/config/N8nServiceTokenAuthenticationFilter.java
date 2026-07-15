@@ -25,8 +25,8 @@ import java.util.*;
 /**
  * Authenticates static n8n bearer tokens and injects a synthetic JWT principal.
  *
- * This allows machine-to-machine callers to access the Core API without Auth0 user login,
- * while still flowing through existing AuthService user-resolution logic by auth0_sub.
+ * This allows machine-to-machine callers to access the Core API without a user login,
+ * while still flowing through existing AuthService user-resolution logic by subject.
  */
 @Slf4j
 @Component
@@ -66,7 +66,7 @@ public class N8nServiceTokenAuthenticationFilter extends OncePerRequestFilter {
                     List.of(new SimpleGrantedAuthority("service:n8n"))
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            log.debug("Authenticated request using n8n service bearer token for subject {}", properties.getAuth0Sub());
+            log.debug("Authenticated request using n8n service bearer token for subject {}", properties.getSubject());
         }
 
         // Prevent OAuth2 BearerTokenAuthenticationFilter from trying to parse this non-JWT token.
@@ -81,7 +81,7 @@ public class N8nServiceTokenAuthenticationFilter extends OncePerRequestFilter {
         headers.put("typ", "JWT");
 
         Map<String, Object> claims = new HashMap<>();
-        claims.put("sub", properties.getAuth0Sub());
+        claims.put("sub", properties.getSubject());
         if (properties.getEmail() != null && !properties.getEmail().isBlank()) {
             claims.put("email", properties.getEmail());
         }

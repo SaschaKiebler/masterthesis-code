@@ -1,7 +1,8 @@
 /**
  * AuthContext — Role-aware authentication context (ADR-009).
  *
- * Wraps the Auth0 user with our backend profile (global role, tenant memberships).
+ * Local authentication: the session lives in an httpOnly cookie set at login.
+ * On mount we fetch the backend profile (/me); a 401 simply means "not signed in".
  * Provides:
  *   - user profile with globalRole
  *   - tenant memberships with per-tenant roles
@@ -12,8 +13,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
-import { useUser } from "@auth0/nextjs-auth0/client";
-import { apiFetch } from "@/lib/api/client";
 import {
   GlobalRole,
   TenantRole,
@@ -24,9 +23,9 @@ import {
 } from "./types";
 
 interface AuthContextValue {
-  /** Auth0 authentication state */
+  /** True when a signed-in user profile was loaded */
   isAuthenticated: boolean;
-  /** True while loading Auth0 user or backend profile */
+  /** True while loading the backend profile */
   isLoading: boolean;
   /** User profile from our backend (global role, etc.) */
   user: UserProfile | null;
@@ -62,49 +61,29 @@ const AuthContext = createContext<AuthContextValue>({
 const ACTIVE_TENANT_KEY = "dd_active_tenant";
 
 export function AuthContextProvider({ children }: { children: React.ReactNode }) {
-  const { user: auth0User, isLoading: auth0Loading } = useUser();
   const [backendProfile, setBackendProfile] = useState<UserProfile | null>(null);
   const [tenants, setTenants] = useState<TenantMembership[]>([]);
-  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [activeTenantId, setActiveTenantIdState] = useState<string | null>(null);
 
-  // Fetch backend profile when Auth0 user is available
+  // Fetch the backend profile; 401 means there is no session
   const fetchProfile = useCallback(async () => {
-    if (!auth0User) {
-      setBackendProfile(null);
-      setTenants([]);
-      return;
-    }
-
     setProfileLoading(true);
     try {
-      const data = await apiFetch<{
-        user: UserProfile;
-        tenants: TenantMembership[];
-      }>("/me");
+      const response = await fetch("/api/v1/me", {
+        headers: { Accept: "application/json" },
+      });
 
-      // Sync Auth0 profile to backend if fields are missing
-      const needsSync =
-        (!data.user.email && auth0User.email) ||
-        (!data.user.displayName && auth0User.name) ||
-        (!data.user.avatarUrl && auth0User.picture);
-
-      if (needsSync) {
-        const syncData: Record<string, string> = {};
-        if (!data.user.email && auth0User.email) syncData.email = auth0User.email;
-        if (!data.user.displayName && auth0User.name) syncData.displayName = auth0User.name;
-        if (!data.user.avatarUrl && auth0User.picture) syncData.avatarUrl = auth0User.picture;
-
-        const updated = await apiFetch<{ user: UserProfile; tenants: TenantMembership[] }>("/me", {
-          method: "PATCH",
-          body: JSON.stringify(syncData),
-        });
-        setBackendProfile(updated.user);
-        setTenants(updated.tenants);
-      } else {
-        setBackendProfile(data.user);
-        setTenants(data.tenants);
+      if (!response.ok) {
+        setBackendProfile(null);
+        setTenants([]);
+        return;
       }
+
+      const data: { user: UserProfile; tenants: TenantMembership[] } =
+        await response.json();
+      setBackendProfile(data.user);
+      setTenants(data.tenants);
 
       // Restore active tenant from localStorage, or default to first tenant
       const stored = localStorage.getItem(ACTIVE_TENANT_KEY);
@@ -116,16 +95,16 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
       }
     } catch (err) {
       console.error("Failed to fetch user profile:", err);
+      setBackendProfile(null);
+      setTenants([]);
     } finally {
       setProfileLoading(false);
     }
-  }, [auth0User]);
+  }, []);
 
   useEffect(() => {
-    if (auth0User && !auth0Loading) {
-      fetchProfile();
-    }
-  }, [auth0User, auth0Loading, fetchProfile]);
+    fetchProfile();
+  }, [fetchProfile]);
 
   // Persist active tenant selection
   const setActiveTenantId = useCallback((id: string | null) => {
@@ -155,12 +134,11 @@ export function AuthContextProvider({ children }: { children: React.ReactNode })
     [permissions]
   );
 
-  const isAuthenticated = !!auth0User;
-  const isLoading = auth0Loading || profileLoading;
+  const isAuthenticated = backendProfile !== null;
+  const isLoading = profileLoading;
   const hasNoAccess =
     isAuthenticated &&
     !isLoading &&
-    backendProfile !== null &&
     tenants.length === 0 &&
     globalRole !== "system_admin" &&
     globalRole !== "consultant";

@@ -73,15 +73,15 @@ class AuthServiceTest {
     private User createUser(String role) {
         User user = new User();
         user.setId(UUID.randomUUID());
-        user.setAuth0Sub("auth0|" + UUID.randomUUID());
+        user.setSubject("local|" + UUID.randomUUID());
         user.setEmail(role + "@example.com");
         user.setGlobalRole(role);
         return user;
     }
 
-    private void mockJwtAuthentication(String auth0Sub) {
+    private void mockJwtAuthentication(String subject) {
         Jwt jwt = mock(Jwt.class);
-        given(jwt.getSubject()).willReturn(auth0Sub);
+        given(jwt.getSubject()).willReturn(subject);
 
         Authentication authentication = mock(Authentication.class);
         given(authentication.getPrincipal()).willReturn(jwt);
@@ -97,8 +97,8 @@ class AuthServiceTest {
 
         @Test
         void isSystemAdmin_WhenSystemAdmin_ReturnsTrue() {
-            mockJwtAuthentication(systemAdmin.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(systemAdmin.getAuth0Sub()))
+            mockJwtAuthentication(systemAdmin.getSubject());
+            given(userRepository.findBySubject(systemAdmin.getSubject()))
                     .willReturn(Optional.of(systemAdmin));
 
             assertThat(authService.isSystemAdmin()).isTrue();
@@ -106,8 +106,8 @@ class AuthServiceTest {
 
         @Test
         void isSystemAdmin_WhenConsultant_ReturnsFalse() {
-            mockJwtAuthentication(consultant.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(consultant.getAuth0Sub()))
+            mockJwtAuthentication(consultant.getSubject());
+            given(userRepository.findBySubject(consultant.getSubject()))
                     .willReturn(Optional.of(consultant));
 
             assertThat(authService.isSystemAdmin()).isFalse();
@@ -115,8 +115,8 @@ class AuthServiceTest {
 
         @Test
         void isConsultant_WhenConsultant_ReturnsTrue() {
-            mockJwtAuthentication(consultant.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(consultant.getAuth0Sub()))
+            mockJwtAuthentication(consultant.getSubject());
+            given(userRepository.findBySubject(consultant.getSubject()))
                     .willReturn(Optional.of(consultant));
 
             assertThat(authService.isConsultant()).isTrue();
@@ -124,8 +124,8 @@ class AuthServiceTest {
 
         @Test
         void isConsultant_WhenSystemAdmin_ReturnsTrue() {
-            mockJwtAuthentication(systemAdmin.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(systemAdmin.getAuth0Sub()))
+            mockJwtAuthentication(systemAdmin.getSubject());
+            given(userRepository.findBySubject(systemAdmin.getSubject()))
                     .willReturn(Optional.of(systemAdmin));
 
             assertThat(authService.isConsultant()).isTrue();
@@ -133,8 +133,8 @@ class AuthServiceTest {
 
         @Test
         void isConsultant_WhenLandlord_ReturnsFalse() {
-            mockJwtAuthentication(landlord.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(landlord.getAuth0Sub()))
+            mockJwtAuthentication(landlord.getSubject());
+            given(userRepository.findBySubject(landlord.getSubject()))
                     .willReturn(Optional.of(landlord));
 
             assertThat(authService.isConsultant()).isFalse();
@@ -142,8 +142,8 @@ class AuthServiceTest {
 
         @Test
         void isConsultantOrAdmin_WhenSystemAdmin_ReturnsTrue() {
-            mockJwtAuthentication(systemAdmin.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(systemAdmin.getAuth0Sub()))
+            mockJwtAuthentication(systemAdmin.getSubject());
+            given(userRepository.findBySubject(systemAdmin.getSubject()))
                     .willReturn(Optional.of(systemAdmin));
 
             assertThat(authService.isConsultantOrAdmin()).isTrue();
@@ -171,8 +171,8 @@ class AuthServiceTest {
 
         @Test
         void canAccessTenant_SystemAdmin_AlwaysTrue() {
-            mockJwtAuthentication(systemAdmin.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(systemAdmin.getAuth0Sub()))
+            mockJwtAuthentication(systemAdmin.getSubject());
+            given(userRepository.findBySubject(systemAdmin.getSubject()))
                     .willReturn(Optional.of(systemAdmin));
 
             assertThat(authService.canAccessTenant(tenantId)).isTrue();
@@ -180,8 +180,8 @@ class AuthServiceTest {
 
         @Test
         void canAccessTenant_WithTenantRole_ReturnsTrue() {
-            mockJwtAuthentication(landlord.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(landlord.getAuth0Sub()))
+            mockJwtAuthentication(landlord.getSubject());
+            given(userRepository.findBySubject(landlord.getSubject()))
                     .willReturn(Optional.of(landlord));
 
             UserTenantRole utr = new UserTenantRole();
@@ -194,8 +194,8 @@ class AuthServiceTest {
 
         @Test
         void canAccessTenant_NoTenantRole_ReturnsFalse() {
-            mockJwtAuthentication(landlord.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(landlord.getAuth0Sub()))
+            mockJwtAuthentication(landlord.getSubject());
+            given(userRepository.findBySubject(landlord.getSubject()))
                     .willReturn(Optional.of(landlord));
             given(userTenantRoleRepository.findByUserIdAndTenantId(landlord.getId(), tenantId))
                     .willReturn(Optional.empty());
@@ -205,8 +205,8 @@ class AuthServiceTest {
 
         @Test
         void isManagerInTenant_WithManagerRole_ReturnsTrue() {
-            mockJwtAuthentication(consultant.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(consultant.getAuth0Sub()))
+            mockJwtAuthentication(consultant.getSubject());
+            given(userRepository.findBySubject(consultant.getSubject()))
                     .willReturn(Optional.of(consultant));
 
             UserTenantRole utr = new UserTenantRole();
@@ -219,8 +219,8 @@ class AuthServiceTest {
 
         @Test
         void isManagerInTenant_WithOwnerRole_ReturnsTrue() {
-            mockJwtAuthentication(landlord.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(landlord.getAuth0Sub()))
+            mockJwtAuthentication(landlord.getSubject());
+            given(userRepository.findBySubject(landlord.getSubject()))
                     .willReturn(Optional.of(landlord));
 
             UserTenantRole utr = new UserTenantRole();
@@ -233,8 +233,8 @@ class AuthServiceTest {
 
         @Test
         void isManagerInTenant_WithViewerRole_ReturnsFalse() {
-            mockJwtAuthentication(landlord.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(landlord.getAuth0Sub()))
+            mockJwtAuthentication(landlord.getSubject());
+            given(userRepository.findBySubject(landlord.getSubject()))
                     .willReturn(Optional.of(landlord));
 
             UserTenantRole utr = new UserTenantRole();
@@ -247,8 +247,8 @@ class AuthServiceTest {
 
         @Test
         void getAccessibleTenantIds_SystemAdmin_ReturnsEmptyList() {
-            mockJwtAuthentication(systemAdmin.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(systemAdmin.getAuth0Sub()))
+            mockJwtAuthentication(systemAdmin.getSubject());
+            given(userRepository.findBySubject(systemAdmin.getSubject()))
                     .willReturn(Optional.of(systemAdmin));
 
             List<UUID> result = authService.getAccessibleTenantIds();
@@ -259,8 +259,8 @@ class AuthServiceTest {
 
         @Test
         void getAccessibleTenantIds_RegularUser_ReturnsTenantIds() {
-            mockJwtAuthentication(landlord.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(landlord.getAuth0Sub()))
+            mockJwtAuthentication(landlord.getSubject());
+            given(userRepository.findBySubject(landlord.getSubject()))
                     .willReturn(Optional.of(landlord));
 
             UUID t1 = UUID.randomUUID();
@@ -279,8 +279,8 @@ class AuthServiceTest {
 
         @Test
         void canAccessSite_SystemAdmin_AlwaysTrue() {
-            mockJwtAuthentication(systemAdmin.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(systemAdmin.getAuth0Sub()))
+            mockJwtAuthentication(systemAdmin.getSubject());
+            given(userRepository.findBySubject(systemAdmin.getSubject()))
                     .willReturn(Optional.of(systemAdmin));
 
             assertThat(authService.canAccessSite(UUID.randomUUID())).isTrue();
@@ -297,8 +297,8 @@ class AuthServiceTest {
             obj.setId(siteId);
             obj.setTenant(tenant);
 
-            mockJwtAuthentication(landlord.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(landlord.getAuth0Sub()))
+            mockJwtAuthentication(landlord.getSubject());
+            given(userRepository.findBySubject(landlord.getSubject()))
                     .willReturn(Optional.of(landlord));
             given(objectRepository.findById(siteId)).willReturn(Optional.of(obj));
 
@@ -321,8 +321,8 @@ class AuthServiceTest {
             obj.setId(siteId);
             obj.setTenant(tenant);
 
-            mockJwtAuthentication(technician.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(technician.getAuth0Sub()))
+            mockJwtAuthentication(technician.getSubject());
+            given(userRepository.findBySubject(technician.getSubject()))
                     .willReturn(Optional.of(technician));
             given(objectRepository.findById(siteId)).willReturn(Optional.of(obj));
             given(userTenantRoleRepository.findByUserIdAndTenantId(technician.getId(), tenantId))
@@ -344,8 +344,8 @@ class AuthServiceTest {
             obj.setId(siteId);
             obj.setTenant(tenant);
 
-            mockJwtAuthentication(viewer.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(viewer.getAuth0Sub()))
+            mockJwtAuthentication(viewer.getSubject());
+            given(userRepository.findBySubject(viewer.getSubject()))
                     .willReturn(Optional.of(viewer));
             given(objectRepository.findById(siteId)).willReturn(Optional.of(obj));
             given(userTenantRoleRepository.findByUserIdAndTenantId(viewer.getId(), tenantId))
@@ -360,8 +360,8 @@ class AuthServiceTest {
         void canAccessSite_SiteNotFound_ReturnsFalse() {
             UUID siteId = UUID.randomUUID();
 
-            mockJwtAuthentication(landlord.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(landlord.getAuth0Sub()))
+            mockJwtAuthentication(landlord.getSubject());
+            given(userRepository.findBySubject(landlord.getSubject()))
                     .willReturn(Optional.of(landlord));
             given(objectRepository.findById(siteId)).willReturn(Optional.empty());
 
@@ -370,8 +370,8 @@ class AuthServiceTest {
 
         @Test
         void getAccessibleSiteIds_SystemAdmin_ReturnsNull() {
-            mockJwtAuthentication(systemAdmin.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(systemAdmin.getAuth0Sub()))
+            mockJwtAuthentication(systemAdmin.getSubject());
+            given(userRepository.findBySubject(systemAdmin.getSubject()))
                     .willReturn(Optional.of(systemAdmin));
 
             // null means "no filter needed"
@@ -380,8 +380,8 @@ class AuthServiceTest {
 
         @Test
         void getAccessibleSiteIds_Technician_CombinesAssignmentsAndTenantSites() {
-            mockJwtAuthentication(technician.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(technician.getAuth0Sub()))
+            mockJwtAuthentication(technician.getSubject());
+            given(userRepository.findBySubject(technician.getSubject()))
                     .willReturn(Optional.of(technician));
 
             UUID assignedSite = UUID.randomUUID();
@@ -410,8 +410,8 @@ class AuthServiceTest {
             User existing = createUser("landlord");
             existing.setLastLoginAt(Instant.now().minus(1, java.time.temporal.ChronoUnit.DAYS));
 
-            mockJwtAuthentication(existing.getAuth0Sub());
-            given(userRepository.findByAuth0Sub(existing.getAuth0Sub()))
+            mockJwtAuthentication(existing.getSubject());
+            given(userRepository.findBySubject(existing.getSubject()))
                     .willReturn(Optional.of(existing));
             given(userRepository.save(any(User.class))).willAnswer(inv -> inv.getArgument(0));
 
@@ -423,15 +423,15 @@ class AuthServiceTest {
 
         @Test
         void getOrProvisionCurrentUser_NewUser_CreatesWithViewerRole() {
-            String auth0Sub = "auth0|new-user";
-            mockJwtAuthentication(auth0Sub);
+            String subject = "local|new-user";
+            mockJwtAuthentication(subject);
 
             Jwt jwt = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
             given(jwt.getClaimAsString("email")).willReturn("new@example.com");
             given(jwt.getClaimAsString("name")).willReturn("New User");
             given(jwt.getClaimAsString("picture")).willReturn("https://example.com/avatar.jpg");
 
-            given(userRepository.findByAuth0Sub(auth0Sub)).willReturn(Optional.empty());
+            given(userRepository.findBySubject(subject)).willReturn(Optional.empty());
             given(userRepository.findByEmail("new@example.com")).willReturn(Optional.empty());
             given(userRepository.save(any(User.class))).willAnswer(inv -> {
                 User u = inv.getArgument(0);
@@ -441,7 +441,7 @@ class AuthServiceTest {
 
             User result = authService.getOrProvisionCurrentUser();
 
-            assertThat(result.getAuth0Sub()).isEqualTo(auth0Sub);
+            assertThat(result.getSubject()).isEqualTo(subject);
             assertThat(result.getEmail()).isEqualTo("new@example.com");
             assertThat(result.getDisplayName()).isEqualTo("New User");
             assertThat(result.getAvatarUrl()).isEqualTo("https://example.com/avatar.jpg");
@@ -451,10 +451,10 @@ class AuthServiceTest {
         }
 
         @Test
-        void getOrProvisionCurrentUser_Auth0SubChanged_LinksViaEmail() {
-            // Existing user has old auth0_sub
+        void getOrProvisionCurrentUser_SubjectChanged_LinksViaEmail() {
+            // Existing user has old subject
             User existing = createUser("consultant");
-            String oldSub = existing.getAuth0Sub();
+            String oldSub = existing.getSubject();
             String newSub = "google-oauth2|" + UUID.randomUUID();
 
             mockJwtAuthentication(newSub);
@@ -463,8 +463,8 @@ class AuthServiceTest {
             given(jwt.getClaimAsString("name")).willReturn("Updated Name");
             given(jwt.getClaimAsString("picture")).willReturn("https://example.com/new-avatar.jpg");
 
-            // auth0_sub lookup fails (new sub)
-            given(userRepository.findByAuth0Sub(newSub)).willReturn(Optional.empty());
+            // subject lookup fails (new sub)
+            given(userRepository.findBySubject(newSub)).willReturn(Optional.empty());
             // email fallback finds the existing user
             given(userRepository.findByEmail(existing.getEmail())).willReturn(Optional.of(existing));
             given(userRepository.save(any(User.class))).willAnswer(inv -> inv.getArgument(0));
@@ -473,7 +473,7 @@ class AuthServiceTest {
 
             // Should reuse the existing user, not create a new one
             assertThat(result.getId()).isEqualTo(existing.getId());
-            assertThat(result.getAuth0Sub()).isEqualTo(newSub); // linked to new sub
+            assertThat(result.getSubject()).isEqualTo(newSub); // linked to new sub
             assertThat(result.getGlobalRole()).isEqualTo("consultant"); // preserved role
             assertThat(result.getDisplayName()).isEqualTo("Updated Name");
             assertThat(result.getLastLoginAt()).isAfter(Instant.now().minusSeconds(5));

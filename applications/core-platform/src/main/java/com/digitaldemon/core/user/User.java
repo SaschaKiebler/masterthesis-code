@@ -16,11 +16,15 @@ public class User {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "auth0_sub", unique = true, nullable = false)
-    private String auth0Sub;
+    @Column(name = "subject", unique = true, nullable = false)
+    private String subject;
 
     @Column
     private String email;
+
+    /** BCrypt hash for local login. Null for service users that authenticate via static tokens. */
+    @Column(name = "password_hash")
+    private String passwordHash;
 
     @Column(name = "display_name")
     private String displayName;

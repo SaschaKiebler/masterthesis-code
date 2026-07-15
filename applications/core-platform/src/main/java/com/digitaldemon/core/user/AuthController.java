@@ -52,7 +52,7 @@ public class AuthController {
      * PATCH /api/v1/me — Update the current user's profile.
      * Accepts: displayName, email, avatarUrl.
      * Users can always update their own displayName.
-     * Email and avatarUrl are synced from the identity provider (Auth0).
+     * Email and avatarUrl are synced on login.
      */
     @PatchMapping("/me")
     public ResponseEntity<Map<String, Object>> updateCurrentUser(@RequestBody Map<String, Object> body) {

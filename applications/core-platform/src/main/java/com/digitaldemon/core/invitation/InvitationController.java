@@ -147,13 +147,19 @@ public class InvitationController {
 
     /**
      * POST /api/v1/invitations/by-token/{token}/accept — Accept an invitation.
-     * Requires authenticated user.
+     * Authenticated users accept directly. New users supply a password
+     * (and optional displayName) to create their local account in the same step.
      */
     @PostMapping("/by-token/{token}/accept")
-    public ResponseEntity<Map<String, Object>> acceptInvitation(@PathVariable String token) {
+    public ResponseEntity<Map<String, Object>> acceptInvitation(
+            @PathVariable String token,
+            @RequestBody(required = false) Map<String, Object> body) {
         log.info("REST POST /api/v1/invitations/by-token/{}...", token.substring(0, Math.min(8, token.length())));
 
-        invitationService.acceptInvitation(token);
+        String password = body != null && body.get("password") instanceof String s ? s : null;
+        String displayName = body != null && body.get("displayName") instanceof String s ? s : null;
+
+        invitationService.acceptInvitation(token, password, displayName);
 
         return ResponseEntity.ok(Map.of("message", "Invitation accepted"));
     }

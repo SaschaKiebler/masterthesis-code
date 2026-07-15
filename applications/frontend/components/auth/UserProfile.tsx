@@ -1,12 +1,11 @@
 /**
  * UserProfile Component
  * Displays user avatar, name, role badge, and logout button in the sidebar
- * Uses AuthContext for role information (ADR-009)
+ * Uses AuthContext for user and role information (ADR-009)
  */
 
 "use client";
 
-import { useUser } from "@auth0/nextjs-auth0/client";
 import { LogOut, LogIn, User } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthContext";
 import type { GlobalRole } from "@/lib/auth/types";
@@ -30,10 +29,9 @@ const ROLE_COLORS: Record<GlobalRole, string> = {
 };
 
 export function UserProfile({ collapsed = false }: { collapsed?: boolean }) {
-  const { user: auth0User, isLoading: auth0Loading } = useUser();
-  const { globalRole, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, globalRole, isLoading } = useAuth();
 
-  if (auth0Loading || authLoading) {
+  if (isLoading) {
     return (
       <div className={collapsed ? "flex justify-center p-2" : "flex items-center gap-3 p-2"}>
         <div className="h-8 w-8 rounded-full bg-muted animate-pulse shrink-0" />
@@ -47,7 +45,7 @@ export function UserProfile({ collapsed = false }: { collapsed?: boolean }) {
     );
   }
 
-  if (!auth0User) {
+  if (!isAuthenticated || !user) {
     return (
       <a
         href="/auth/login"
@@ -64,20 +62,22 @@ export function UserProfile({ collapsed = false }: { collapsed?: boolean }) {
     );
   }
 
+  const displayName = user.displayName || user.email || "Account";
+
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-2">
-        {auth0User.picture ? (
+        {user.avatarUrl ? (
           <img
-            src={auth0User.picture}
-            alt={auth0User.name || "User avatar"}
+            src={user.avatarUrl}
+            alt={displayName}
             className="h-8 w-8 rounded-full ring-2 ring-border"
-            title={auth0User.name || undefined}
+            title={displayName}
           />
         ) : (
           <div
             className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center"
-            title={auth0User.name || undefined}
+            title={displayName}
           >
             <User className="h-4 w-4 text-primary" aria-hidden="true" />
           </div>
@@ -97,10 +97,10 @@ export function UserProfile({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-3 p-2">
-        {auth0User.picture ? (
+        {user.avatarUrl ? (
           <img
-            src={auth0User.picture}
-            alt={auth0User.name || "User avatar"}
+            src={user.avatarUrl}
+            alt={displayName}
             className="h-8 w-8 rounded-full shrink-0 ring-2 ring-border"
           />
         ) : (
@@ -111,14 +111,14 @@ export function UserProfile({ collapsed = false }: { collapsed?: boolean }) {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="text-sm font-medium text-foreground truncate">
-              {auth0User.name}
+              {displayName}
             </p>
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ${ROLE_COLORS[globalRole]}`}>
               {ROLE_LABELS[globalRole]}
             </span>
           </div>
           <p className="text-xs text-muted-foreground truncate">
-            {auth0User.email}
+            {user.email}
           </p>
         </div>
       </div>
@@ -137,7 +137,7 @@ export function UserProfile({ collapsed = false }: { collapsed?: boolean }) {
  * Compact user button for mobile bottom nav
  */
 export function UserButton() {
-  const { user, isLoading } = useUser();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -145,7 +145,7 @@ export function UserButton() {
     );
   }
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return (
       <a
         href="/auth/login"
@@ -164,10 +164,10 @@ export function UserButton() {
       className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-200 min-w-[64px] min-h-[48px]"
       aria-label="Account settings"
     >
-      {user.picture ? (
+      {user.avatarUrl ? (
         <img
-          src={user.picture}
-          alt={user.name || "User"}
+          src={user.avatarUrl}
+          alt={user.displayName || "User"}
           className="h-6 w-6 rounded-full ring-1 ring-border"
         />
       ) : (

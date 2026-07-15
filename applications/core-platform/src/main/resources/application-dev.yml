@@ -1,5 +1,5 @@
 # Dev profile — permits all requests without authentication,
-# but still parses Auth0 JWTs when AUTH0_DOMAIN is configured.
+# but still parses local JWTs so user resolution works when a token is sent.
 # Activate with: SPRING_PROFILES_ACTIVE=dev or --spring.profiles.active=dev
 
 spring:

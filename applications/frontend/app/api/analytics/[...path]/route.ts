@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE } from "@/lib/auth/session";
 
 const ANALYTICS_URL = process.env.ANALYTICS_URL || "http://localhost:8100";
 
 /**
  * Catch-all proxy — forwards /api/analytics/* requests to analytics-service.
+ * The session JWT is forwarded as a Bearer token; the analytics service does
+ * not validate it today, but can verify the shared HS256 secret if needed.
  */
 async function proxyRequest(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
@@ -12,8 +15,13 @@ async function proxyRequest(req: NextRequest, { params }: { params: Promise<{ pa
   const target = `${ANALYTICS_URL}/${pathStr}${url.search}`;
 
   const headers = new Headers();
+  const sessionToken = req.cookies.get(SESSION_COOKIE)?.value;
   const authorization = req.headers.get("authorization");
-  if (authorization) headers.set("authorization", authorization);
+  if (authorization) {
+    headers.set("authorization", authorization);
+  } else if (sessionToken) {
+    headers.set("authorization", `Bearer ${sessionToken}`);
+  }
   const contentType = req.headers.get("content-type");
   if (contentType) headers.set("content-type", contentType);
   headers.set("accept", req.headers.get("accept") || "application/json");

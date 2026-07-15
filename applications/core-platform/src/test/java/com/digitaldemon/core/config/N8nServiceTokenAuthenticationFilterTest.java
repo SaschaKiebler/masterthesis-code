@@ -30,7 +30,7 @@ class N8nServiceTokenAuthenticationFilterTest {
         properties = new N8nServiceAuthProperties();
         properties.setEnabled(true);
         properties.setToken("n8n-secret-token");
-        properties.setAuth0Sub("service:n8n");
+        properties.setSubject("service:n8n");
         properties.setEmail("n8n@digitaldemon.local");
         properties.setDisplayName("n8n Service User");
 

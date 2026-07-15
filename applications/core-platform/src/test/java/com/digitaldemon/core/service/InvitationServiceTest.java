@@ -184,12 +184,12 @@ class InvitationServiceTest {
         @Test
         void shouldAcceptValidInvitation() {
             given(invitationRepository.findByToken("valid-token-123")).willReturn(Optional.of(pendingInvitation));
-            given(authService.getOrProvisionCurrentUser()).willReturn(invitedUser);
+            given(authService.getCurrentUser()).willReturn(Optional.of(invitedUser));
             given(tenantRepository.findById(tenant.getId())).willReturn(Optional.of(tenant));
             given(userTenantRoleRepository.findByUserIdAndTenantId(invitedUser.getId(), tenant.getId()))
                     .willReturn(Optional.empty());
 
-            invitationService.acceptInvitation("valid-token-123");
+            invitationService.acceptInvitation("valid-token-123", null, null);
 
             // User's global role should be upgraded to landlord
             verify(userRepository).save(invitedUser);
@@ -208,12 +208,12 @@ class InvitationServiceTest {
             invitedUser.setGlobalRole("system_admin");
 
             given(invitationRepository.findByToken("valid-token-123")).willReturn(Optional.of(pendingInvitation));
-            given(authService.getOrProvisionCurrentUser()).willReturn(invitedUser);
+            given(authService.getCurrentUser()).willReturn(Optional.of(invitedUser));
             given(tenantRepository.findById(tenant.getId())).willReturn(Optional.of(tenant));
             given(userTenantRoleRepository.findByUserIdAndTenantId(invitedUser.getId(), tenant.getId()))
                     .willReturn(Optional.empty());
 
-            invitationService.acceptInvitation("valid-token-123");
+            invitationService.acceptInvitation("valid-token-123", null, null);
 
             // Global role should NOT change
             assertThat(invitedUser.getGlobalRole()).isEqualTo("system_admin");
@@ -225,12 +225,12 @@ class InvitationServiceTest {
             invitedUser.setGlobalRole("consultant");
 
             given(invitationRepository.findByToken("valid-token-123")).willReturn(Optional.of(pendingInvitation));
-            given(authService.getOrProvisionCurrentUser()).willReturn(invitedUser);
+            given(authService.getCurrentUser()).willReturn(Optional.of(invitedUser));
             given(tenantRepository.findById(tenant.getId())).willReturn(Optional.of(tenant));
             given(userTenantRoleRepository.findByUserIdAndTenantId(invitedUser.getId(), tenant.getId()))
                     .willReturn(Optional.empty());
 
-            invitationService.acceptInvitation("valid-token-123");
+            invitationService.acceptInvitation("valid-token-123", null, null);
 
             assertThat(invitedUser.getGlobalRole()).isEqualTo("consultant");
             verify(userRepository, never()).save(invitedUser);
@@ -241,12 +241,12 @@ class InvitationServiceTest {
             invitedUser.setGlobalRole("viewer");
 
             given(invitationRepository.findByToken("valid-token-123")).willReturn(Optional.of(pendingInvitation));
-            given(authService.getOrProvisionCurrentUser()).willReturn(invitedUser);
+            given(authService.getCurrentUser()).willReturn(Optional.of(invitedUser));
             given(tenantRepository.findById(tenant.getId())).willReturn(Optional.of(tenant));
             given(userTenantRoleRepository.findByUserIdAndTenantId(invitedUser.getId(), tenant.getId()))
                     .willReturn(Optional.empty());
 
-            invitationService.acceptInvitation("valid-token-123");
+            invitationService.acceptInvitation("valid-token-123", null, null);
 
             verify(userRepository).save(invitedUser);
             assertThat(invitedUser.getGlobalRole()).isEqualTo("landlord");
@@ -258,12 +258,12 @@ class InvitationServiceTest {
             existingRole.setId(UUID.randomUUID());
 
             given(invitationRepository.findByToken("valid-token-123")).willReturn(Optional.of(pendingInvitation));
-            given(authService.getOrProvisionCurrentUser()).willReturn(invitedUser);
+            given(authService.getCurrentUser()).willReturn(Optional.of(invitedUser));
             given(tenantRepository.findById(tenant.getId())).willReturn(Optional.of(tenant));
             given(userTenantRoleRepository.findByUserIdAndTenantId(invitedUser.getId(), tenant.getId()))
                     .willReturn(Optional.of(existingRole));
 
-            invitationService.acceptInvitation("valid-token-123");
+            invitationService.acceptInvitation("valid-token-123", null, null);
 
             // Should NOT try to add user to tenant again
             verify(authService, never()).addUserToTenant(any(), any(), any());
@@ -273,7 +273,7 @@ class InvitationServiceTest {
         void shouldThrowWhenTokenNotFound() {
             given(invitationRepository.findByToken("nonexistent")).willReturn(Optional.empty());
 
-            assertThatThrownBy(() -> invitationService.acceptInvitation("nonexistent"))
+            assertThatThrownBy(() -> invitationService.acceptInvitation("nonexistent", null, null))
                     .isInstanceOf(ResourceNotFoundException.class);
         }
 
@@ -282,7 +282,7 @@ class InvitationServiceTest {
             pendingInvitation.setAcceptedAt(Instant.now());
             given(invitationRepository.findByToken("valid-token-123")).willReturn(Optional.of(pendingInvitation));
 
-            assertThatThrownBy(() -> invitationService.acceptInvitation("valid-token-123"))
+            assertThatThrownBy(() -> invitationService.acceptInvitation("valid-token-123", null, null))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("already been accepted");
         }
@@ -292,7 +292,7 @@ class InvitationServiceTest {
             pendingInvitation.setExpiresAt(Instant.now().minus(1, ChronoUnit.HOURS));
             given(invitationRepository.findByToken("valid-token-123")).willReturn(Optional.of(pendingInvitation));
 
-            assertThatThrownBy(() -> invitationService.acceptInvitation("valid-token-123"))
+            assertThatThrownBy(() -> invitationService.acceptInvitation("valid-token-123", null, null))
                     .isInstanceOf(ValidationException.class)
                     .hasMessageContaining("expired");
         }
@@ -303,9 +303,9 @@ class InvitationServiceTest {
             pendingInvitation.setGlobalRole("consultant");
 
             given(invitationRepository.findByToken("valid-token-123")).willReturn(Optional.of(pendingInvitation));
-            given(authService.getOrProvisionCurrentUser()).willReturn(invitedUser);
+            given(authService.getCurrentUser()).willReturn(Optional.of(invitedUser));
 
-            invitationService.acceptInvitation("valid-token-123");
+            invitationService.acceptInvitation("valid-token-123", null, null);
 
             // Should upgrade role
             verify(userRepository).save(invitedUser);

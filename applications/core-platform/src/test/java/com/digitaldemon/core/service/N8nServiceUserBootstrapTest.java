@@ -38,7 +38,7 @@ class N8nServiceUserBootstrapTest {
         properties = new N8nServiceAuthProperties();
         properties.setEnabled(true);
         properties.setToken("n8n-secret-token");
-        properties.setAuth0Sub("service:n8n");
+        properties.setSubject("service:n8n");
         properties.setEmail("n8n@digitaldemon.local");
         properties.setDisplayName("n8n Service User");
         properties.setGlobalRole("system_admin");
@@ -48,7 +48,7 @@ class N8nServiceUserBootstrapTest {
 
     @Test
     void shouldCreateServiceUserWhenMissing() throws Exception {
-        given(userRepository.findByAuth0Sub("service:n8n")).willReturn(Optional.empty());
+        given(userRepository.findBySubject("service:n8n")).willReturn(Optional.empty());
         given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         bootstrap.run(applicationArguments);
@@ -57,7 +57,7 @@ class N8nServiceUserBootstrapTest {
         verify(userRepository).save(savedUser.capture());
 
         User user = savedUser.getValue();
-        assertThat(user.getAuth0Sub()).isEqualTo("service:n8n");
+        assertThat(user.getSubject()).isEqualTo("service:n8n");
         assertThat(user.getEmail()).isEqualTo("n8n@digitaldemon.local");
         assertThat(user.getDisplayName()).isEqualTo("n8n Service User");
         assertThat(user.getGlobalRole()).isEqualTo("system_admin");
@@ -68,12 +68,12 @@ class N8nServiceUserBootstrapTest {
     @Test
     void shouldUpdateExistingServiceUser() throws Exception {
         User existing = new User();
-        existing.setAuth0Sub("service:n8n");
+        existing.setSubject("service:n8n");
         existing.setGlobalRole("viewer");
         existing.setEmail("old@example.com");
         existing.setDisplayName("Old");
 
-        given(userRepository.findByAuth0Sub("service:n8n")).willReturn(Optional.of(existing));
+        given(userRepository.findBySubject("service:n8n")).willReturn(Optional.of(existing));
         given(userRepository.save(any(User.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         bootstrap.run(applicationArguments);
