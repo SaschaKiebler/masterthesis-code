@@ -1,0 +1,57 @@
+# Owns the MQTT broker tap: discovery, sniffing sessions, and the compacted
+# device.configured projection. Must be running for ingestion to become ready
+# (ingestion replays device.configured before accepting traffic).
+apiVersion: v1
+kind: Service
+metadata:
+  name: device-management
+spec:
+  selector:
+    app: device-management
+  ports:
+    - name: http
+      port: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: device-management
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: device-management
+  template:
+    metadata:
+      labels:
+        app: device-management
+    spec:
+      containers:
+        - name: device-management
+          image: device-management
+          ports:
+            - containerPort: 8082
+          env:
+            - name: DB_HOST
+              value: timescaledb
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: MQTT_BROKER_URL
+              value: tcp://mosquitto:1883
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi

@@ -1,0 +1,38 @@
+# Rust ingestion: MQTT in, TimescaleDB + measurement.ingested out.
+# No HTTP surface, hence no probes; it blocks at startup until it has
+# replayed device.configured (device-management must be up).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingestion-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ingestion-service
+  template:
+    metadata:
+      labels:
+        app: ingestion-service
+    spec:
+      containers:
+        - name: ingestion-service
+          image: ingestion-service
+          env:
+            - name: MQTT_HOST
+              value: mosquitto
+            - name: DB_HOST
+              value: timescaledb
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 512Mi

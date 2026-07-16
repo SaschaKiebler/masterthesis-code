@@ -1,0 +1,67 @@
+# Core: ontology/tenants/auth, REST + gRPC for the frontend, threshold
+# evaluation over measurement.ingested, publishes threshold.breached.
+# Owns the database schema (Flyway runs at startup).
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-platform
+spec:
+  selector:
+    app: core-platform
+  ports:
+    - name: http
+      port: 8080
+    - name: grpc
+      port: 9090
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core-platform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: core-platform
+  template:
+    metadata:
+      labels:
+        app: core-platform
+    spec:
+      containers:
+        - name: core-platform
+          image: core-platform
+          ports:
+            - containerPort: 8080
+            - containerPort: 9090
+          env:
+            - name: SPRING_DATASOURCE_URL
+              value: jdbc:postgresql://timescaledb:5432/digital_demon
+            - name: SPRING_DATASOURCE_USERNAME
+              value: postgres
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: DEVICE_MANAGEMENT_URL
+              value: http://device-management:8082
+            - name: LOCAL_AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: LOCAL_AUTH_JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              memory: 1536Mi

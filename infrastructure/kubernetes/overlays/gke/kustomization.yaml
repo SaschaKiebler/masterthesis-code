@@ -1,0 +1,21 @@
+# GKE overlay: points the deployments at the Artifact Registry images
+# (registry url = terraform output registry_url; currently heating-platform-eval).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: ingestion-service
+    newName: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/ingestion-service
+    newTag: latest
+  - name: core-platform
+    newName: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/core-platform
+    newTag: latest
+  - name: device-management
+    newName: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/device-management
+    newTag: latest
+  - name: notification-service
+    newName: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/notification-service
+    newTag: latest

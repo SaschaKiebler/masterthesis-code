@@ -1,0 +1,32 @@
+# One evaluation run of the mock fleet (fleet shape must match mock-seed).
+# Example: 10 sites x 3 rooms at 10 s interval for 10 min with one overheat
+# alert scenario. kubectl delete + apply to rerun with new parameters.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mock-run
+  namespace: heating-platform
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: mock-run
+          image: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/mock-service:latest
+          args:
+            - run
+            - --sites=10
+            - --rooms=3
+            - --interval=10
+            - --duration=600
+            - --broker=mosquitto:1883
+            - --connections=4
+            - --fault=overheat:count=2,at=120,for=180
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 512Mi

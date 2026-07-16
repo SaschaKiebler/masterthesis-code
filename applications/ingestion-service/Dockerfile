@@ -2,7 +2,7 @@
 # Usage: docker build -f applications/ingestion-service/Dockerfile .
 
 # ── Stage 1: Build ──────────────────────────────────────────────────
-FROM rust:1.84-bookworm AS builder
+FROM rust:1.90-bookworm AS builder
 
 # Mirror repo structure so build.rs relative paths (../../apis/proto/) resolve correctly:
 #   /workspace/applications/ingestion-service/../../apis/proto/ = /workspace/apis/proto/ ✓
