@@ -1,0 +1,53 @@
+# Analytics: the platform's only measurement reader. Serves statistical
+# charts and the live endpoints (/stats/latest, /stats/ingest-rate) for the
+# frontend Monitor.
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-service
+spec:
+  selector:
+    app: analytics-service
+  ports:
+    - name: http
+      port: 8100
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: analytics-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: analytics-service
+  template:
+    metadata:
+      labels:
+        app: analytics-service
+    spec:
+      containers:
+        - name: analytics-service
+          image: analytics-service
+          ports:
+            - containerPort: 8100
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
+            - name: DATABASE_URL
+              value: postgresql://postgres:$(DB_PASSWORD)@timescaledb:5432/digital_demon
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8100
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi

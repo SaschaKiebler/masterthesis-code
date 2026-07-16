@@ -6,6 +6,7 @@
  * metrics by displayName/quantityName pattern.
  */
 
+import { randomUUID } from "@/lib/utils/uuid";
 import type { DashboardLayout, DashboardWidget, WidgetConfig, GraphObject } from "@/lib/api/types";
 import type { MetricPoint } from "@/lib/api/metric-points";
 import type { AbstractWidgetConfig } from "./abstractLayout";
@@ -55,7 +56,7 @@ export function resolveTemplate(
 
         return {
             ...w,
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             config: cleanConfig,
         };
     });

@@ -94,3 +94,6 @@ charts/*.tgz
 *.tar.gz
 *.rar
 *.lck
+
+# Local dev stack runtime state (scripts/dev.sh)
+.dev/

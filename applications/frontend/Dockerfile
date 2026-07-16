@@ -1,12 +1,12 @@
-# Build context: repo root (heizungs-plattform/)
-# Usage: docker build -f applications/web-dashboard/Dockerfile .
+# Build context: repo root (masterthesis-code/)
+# Usage: docker build -f applications/frontend/Dockerfile .
 
 # ── Stage 1: Dependencies ───────────────────────────────────────────
 FROM node:22-alpine AS deps
 
 WORKDIR /app
 
-COPY applications/web-dashboard/package.json applications/web-dashboard/package-lock.json* ./
+COPY applications/frontend/package.json applications/frontend/package-lock.json* ./
 RUN npm ci
 
 # ── Stage 2: Build ──────────────────────────────────────────────────
@@ -15,7 +15,7 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY applications/web-dashboard/ .
+COPY applications/frontend/ .
 
 RUN npm run build
 

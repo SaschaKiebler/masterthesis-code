@@ -1,3 +1,4 @@
+import { randomUUID } from "@/lib/utils/uuid";
 import { useState, useCallback } from "react";
 import { converseDashboardAi } from "@/lib/api/dashboard-ai";
 import type { DashboardLayout } from "@/lib/api/types";
@@ -16,7 +17,7 @@ export function useDashboardAiChat(projectId: string) {
 
     const send = useCallback(async (text: string) => {
         const userMsg: ChatMessage = {
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             role: "user",
             content: text,
         };
@@ -34,7 +35,7 @@ export function useDashboardAiChat(projectId: string) {
             const response = await converseDashboardAi(projectId, apiMessages);
 
             const assistantMsg: ChatMessage = {
-                id: crypto.randomUUID(),
+                id: randomUUID(),
                 role: "assistant",
                 content: response.type === "question" ? response.message : response.summary,
                 generatedLayout: response.type === "dashboard" ? response.layout : undefined,

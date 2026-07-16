@@ -13,6 +13,8 @@ resources:
   - ingestion-service.yaml
   - core-platform.yaml
   - notification-service.yaml
+  - analytics-service.yaml
+  - frontend.yaml
 
 labels:
   - includeSelectors: false

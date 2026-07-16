@@ -19,3 +19,9 @@ images:
   - name: notification-service
     newName: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/notification-service
     newTag: latest
+  - name: analytics-service
+    newName: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/analytics-service
+    newTag: latest
+  - name: frontend
+    newName: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/frontend
+    newTag: latest

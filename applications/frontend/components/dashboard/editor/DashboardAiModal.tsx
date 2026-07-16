@@ -6,6 +6,7 @@
  * ultimately returns a ready-to-apply DashboardLayout.
  */
 
+import { randomUUID } from "@/lib/utils/uuid";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Sparkles, Send } from "lucide-react";
 import { Modal, ModalHeader, ModalContent, ModalFooter } from "@/components/ui/Modal";
@@ -236,7 +237,7 @@ export function DashboardAiModal({
             ...generatedLayout,
             widgets: generatedLayout.widgets.map(w => ({
                 ...w,
-                id: crypto.randomUUID(),
+                id: randomUUID(),
             })),
         };
 

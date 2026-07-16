@@ -7,6 +7,10 @@ metadata:
   name: ingestion-service
 spec:
   replicas: 1
+  # Recreate: two overlapping pods would fight over the same MQTT client id
+  # (the broker kicks the older connection on every new connect).
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: ingestion-service

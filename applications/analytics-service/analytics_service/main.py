@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .db.pool import init_pool, close_pool
-from .routers import descriptive, timeseries, regression, boxplot, compute, histogram, heatmap
+from .routers import descriptive, timeseries, regression, boxplot, compute, histogram, heatmap, live
 
 
 @asynccontextmanager
@@ -37,6 +37,7 @@ app.include_router(boxplot.router)
 app.include_router(compute.router)
 app.include_router(histogram.router)
 app.include_router(heatmap.router)
+app.include_router(live.router)
 
 
 @app.get("/health")

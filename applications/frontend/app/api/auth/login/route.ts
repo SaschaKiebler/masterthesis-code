@@ -33,7 +33,12 @@ export async function POST(req: NextRequest) {
     response.cookies.set(SESSION_COOKIE, data.token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      // Secure by default in production; COOKIE_SECURE=false permits the
+      // plain-HTTP evaluation deployment (LoadBalancer without TLS).
+      secure:
+        process.env.COOKIE_SECURE != null
+          ? process.env.COOKIE_SECURE === "true"
+          : process.env.NODE_ENV === "production",
       path: "/",
       maxAge: SESSION_MAX_AGE_SECONDS,
     });

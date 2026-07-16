@@ -1,0 +1,56 @@
+# Next.js frontend. Its server-side proxies attach the session token and
+# forward to core (structure, auth, events) and analytics (measurements).
+# The LoadBalancer service is the platform's only public entry point.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: frontend
+          ports:
+            - containerPort: 3000
+          env:
+            - name: BACKEND_URL
+              value: http://core-platform:8080
+            - name: ANALYTICS_URL
+              value: http://analytics-service:8100
+            # The evaluation LoadBalancer serves plain HTTP; a Secure cookie
+            # would be dropped by the browser. Remove when TLS-terminated.
+            - name: COOKIE_SECURE
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /auth/login
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 768Mi

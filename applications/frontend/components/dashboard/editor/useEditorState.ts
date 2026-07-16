@@ -5,6 +5,7 @@
  * Manages layout, widget selection, dirty tracking, and scope resolution.
  */
 
+import { randomUUID } from "@/lib/utils/uuid";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import type {
     DashboardLayout,
@@ -78,7 +79,7 @@ export function useEditorState({ dashboard, objects, links }: UseEditorStateOpti
     }, []);
 
     const addWidget = useCallback((asset: DraggedAsset, col: number) => {
-        const id = crypto.randomUUID();
+        const id = randomUUID();
         const nextRow = layout.widgets.length > 0
             ? Math.max(...layout.widgets.map((w) => w.position.row + w.position.rowSpan))
             : 0;
@@ -133,7 +134,7 @@ export function useEditorState({ dashboard, objects, links }: UseEditorStateOpti
     };
 
     const addWidgetByType = useCallback((type: WidgetType) => {
-        const id = crypto.randomUUID();
+        const id = randomUUID();
         const nextRow = layout.widgets.length > 0
             ? Math.max(...layout.widgets.map((w) => w.position.row + w.position.rowSpan))
             : 0;
@@ -196,7 +197,7 @@ export function useEditorState({ dashboard, objects, links }: UseEditorStateOpti
     const duplicateWidget = useCallback((widgetId: string) => {
         const source = layout.widgets.find((w) => w.id === widgetId);
         if (!source) return;
-        const id = crypto.randomUUID();
+        const id = randomUUID();
         const nextRow = Math.max(...layout.widgets.map((w) => w.position.row + w.position.rowSpan));
         const clone: DashboardWidget = {
             ...source,

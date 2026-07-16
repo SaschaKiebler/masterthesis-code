@@ -76,6 +76,13 @@ pub async fn run(
             }
             Ok(Event::Incoming(Packet::ConnAck(_))) => {
                 info!("Connected to MQTT broker");
+                // Re-establish subscriptions on every (re)connect: rumqttc
+                // does not restore them after a reconnect, which would leave
+                // the service connected but deaf to device traffic.
+                client.subscribe(&cfg.topic, QoS::AtLeastOnce).await?;
+                for extra_topic in &cfg.extra_topics {
+                    client.subscribe(extra_topic, QoS::AtLeastOnce).await?;
+                }
             }
             Ok(_) => {
                 // Other events (ping, etc.)

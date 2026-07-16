@@ -19,8 +19,8 @@ PLATFORM=${PLATFORM:-linux/amd64}
 REPO_ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 cd "$REPO_ROOT"
 
-# repo-root build context (Dockerfiles copy apis/proto/)
-ROOT_CONTEXT_SERVICES=(ingestion-service core-platform device-management notification-service)
+# repo-root build context (Dockerfiles copy from applications/<svc>/...)
+ROOT_CONTEXT_SERVICES=(ingestion-service core-platform device-management notification-service analytics-service frontend)
 
 for svc in "${ROOT_CONTEXT_SERVICES[@]}"; do
   echo "==> $svc"
@@ -35,4 +35,4 @@ docker build --platform "$PLATFORM" \
   -t "$REGISTRY/mock-service:$TAG" applications/mock-service
 docker push "$REGISTRY/mock-service:$TAG"
 
-echo "done: 5 images pushed to $REGISTRY (tag $TAG)"
+echo "done: 7 images pushed to $REGISTRY (tag $TAG)"

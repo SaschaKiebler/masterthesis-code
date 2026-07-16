@@ -67,7 +67,7 @@ export function Sidebar() {
             {/* Logo/Branding + collapse toggle */}
             <div
                 className={cn(
-                    "flex items-center border-b border-border h-[73px] shrink-0",
+                    "flex items-center border-b border-border h-18.25 shrink-0",
                     collapsed ? "justify-center px-2" : "justify-between px-6"
                 )}
             >

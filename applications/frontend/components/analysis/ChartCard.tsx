@@ -1,5 +1,6 @@
 "use client";
 
+import { randomUUID } from "@/lib/utils/uuid";
 import { useState, useCallback, useMemo } from "react";
 import { useRef } from "react";
 import { Plus, Trash2, Calculator, X } from "lucide-react";
@@ -90,7 +91,7 @@ export function ChartCard({ chart, measurements, metricPoints, timeRange, compar
 
     const handleAddSource = useCallback((mp: ProjectMetricPoint) => {
         const newSource: ChartSource = {
-            id: `src-${crypto.randomUUID().slice(0, 8)}`,
+            id: `src-${randomUUID().slice(0, 8)}`,
             label: mp.quantityDisplayName || mp.displayName || `Metric ${mp.metricId}`,
             color: getChartColor(chart.sources.length),
             metricPointId: mp.id,
@@ -123,7 +124,7 @@ export function ChartCard({ chart, measurements, metricPoints, timeRange, compar
         const targetCalc = chart.calculations.find((c) => c.id === inputs.source);
         const baseLabel = CALC_LABELS[type] || type;
         const calc: ChartCalculation = {
-            id: `calc-${crypto.randomUUID().slice(0, 8)}`,
+            id: `calc-${randomUUID().slice(0, 8)}`,
             type,
             label: type === "formula" ? defaultFormula : targetCalc ? `${baseLabel} (${targetCalc.label})` : baseLabel,
             color: getChartColor(chart.sources.length + chart.calculations.length),

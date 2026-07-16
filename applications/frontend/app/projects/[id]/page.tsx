@@ -16,12 +16,13 @@ import { useProject, useProjectGraph } from "@/lib/hooks/useProjects";
 import { useDashboards } from "@/lib/hooks/useDashboards";
 import { useProjectHealth } from "@/lib/hooks/useProjectHealth";
 import { useProjectKpis } from "@/lib/hooks/useProjectKpis";
+import { useIngestRate } from "@/lib/hooks/useIngestRate";
 import { getProjectEvents } from "@/lib/api/projects";
 import { SynopticView } from "@/components/graph/SynopticView";
 import { LogEventModal } from "@/components/events/LogEventModal";
 import {
     Wrench, Building2, Pencil, BarChart3,
-    Plus, LayoutDashboard, Gauge, Trash2,
+    Plus, LayoutDashboard, Gauge, Trash2, Activity, Radio, Wifi, AlertTriangle,
 } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { DashboardRenderer } from "@/components/dashboard/DashboardRenderer";
@@ -86,6 +87,7 @@ export default function MonitorPage({ params }: MonitorPageProps) {
 
     // Project health: device-level connectivity per building
     const { health: projectHealth } = useProjectHealth(projectId);
+    const { rate: ingestRate } = useIngestRate(projectId);
 
     // Project KPIs: formulas from all objects in the project
     const { kpis: projectKpis, isLoading: kpisLoading } = useProjectKpis(graphObjects);
@@ -308,6 +310,55 @@ export default function MonitorPage({ params }: MonitorPageProps) {
                         {/* System Overview heading */}
                         <h2 className="text-lg font-semibold text-foreground">System Overview</h2>
 
+                        {/* Live stats: fleet size from core (structure/health),
+                            throughput from analytics (measurement reader) */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
+                            <Card variant="elevated">
+                                <CardContent className="py-4">
+                                    <div className="flex items-center gap-3">
+                                        <Radio className="h-5 w-5 text-primary shrink-0" />
+                                        <div>
+                                            <p className="text-2xl font-semibold text-foreground">{totalOnline}<span className="text-sm text-muted-foreground font-normal"> / {totalDevices}</span></p>
+                                            <p className="text-xs text-muted-foreground">devices online</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <Card variant="elevated">
+                                <CardContent className="py-4">
+                                    <div className="flex items-center gap-3">
+                                        <Activity className="h-5 w-5 text-primary shrink-0" />
+                                        <div>
+                                            <p className="text-2xl font-semibold text-foreground">{ingestRate ? ingestRate.ratePerMinute.toLocaleString() : "–"}</p>
+                                            <p className="text-xs text-muted-foreground">measurements / min</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <Card variant="elevated">
+                                <CardContent className="py-4">
+                                    <div className="flex items-center gap-3">
+                                        <Wifi className="h-5 w-5 text-primary shrink-0" />
+                                        <div>
+                                            <p className="text-2xl font-semibold text-foreground">{ingestRate ? ingestRate.activeDevices : "–"}</p>
+                                            <p className="text-xs text-muted-foreground">actively sending (15 min)</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                            <Card variant="elevated">
+                                <CardContent className="py-4">
+                                    <div className="flex items-center gap-3">
+                                        <AlertTriangle className={`h-5 w-5 shrink-0 ${totalIssues > 0 ? "text-danger" : "text-muted-foreground/50"}`} />
+                                        <div>
+                                            <p className="text-2xl font-semibold text-foreground">{totalIssues}</p>
+                                            <p className="text-xs text-muted-foreground">stale / offline devices</p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
                         {/* Synoptic Canvas */}
                         {graphObjects.length === 0 ? (
                             <Card variant="elevated" className="shrink-0">
@@ -323,7 +374,7 @@ export default function MonitorPage({ params }: MonitorPageProps) {
                                 </CardContent>
                             </Card>
                         ) : (
-                            <div className="h-[500px] lg:h-[600px]">
+                            <div className="h-125 lg:h-150">
                                 <SynopticView
                                     projectId={projectId}
                                     objects={graphObjects}

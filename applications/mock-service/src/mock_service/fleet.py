@@ -53,9 +53,16 @@ class DeviceSpec:
     seeded: bool
     metrics: tuple[MetricSpec, ...] = ()
     rules: tuple[RuleSpec, ...] = ()
+    # Ontology asset (what the UI shows): object type + display name + location
+    asset_type: str = "GENERIC_SENSOR"
+    asset_name: str = ""
+    room_index: int | None = None  # None = installed in the technical room
 
     def object_id(self, prefix: str) -> uuid.UUID:
         return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:device:{self.device_id}")
+
+    def asset_object_id(self, prefix: str) -> uuid.UUID:
+        return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:asset:{self.device_id}")
 
     def metric_object_id(self, prefix: str, metric_id: int) -> uuid.UUID:
         return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:metric:{self.device_id}:{metric_id}")
@@ -65,6 +72,30 @@ class DeviceSpec:
             UUID_NAMESPACE,
             f"{prefix}:rule:{self.device_id}:{rule.metric_id}:{rule.operator}",
         )
+
+
+def project_id(prefix: str) -> uuid.UUID:
+    return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:project")
+
+
+def building_object_id(prefix: str, site_index: int) -> uuid.UUID:
+    return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:building:{site_index:03d}")
+
+
+def building_name(prefix: str, site_index: int) -> str:
+    return f"{prefix.capitalize()} Site {site_index:03d}"
+
+
+def floor_object_id(prefix: str, site_index: int) -> uuid.UUID:
+    return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:floor:{site_index:03d}")
+
+
+def technical_room_object_id(prefix: str, site_index: int) -> uuid.UUID:
+    return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:techroom:{site_index:03d}")
+
+
+def room_object_id(prefix: str, site_index: int, room_index: int) -> uuid.UUID:
+    return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:room:{site_index:03d}:{room_index:02d}")
 
 
 SHELLY_HT_METRICS = (
@@ -106,6 +137,8 @@ def build_fleet(scenario: Scenario) -> list[DeviceSpec]:
                 seeded=True,
                 metrics=BOILER_METRICS,
                 rules=BOILER_RULES,
+                asset_type="BOILER",
+                asset_name=f"Boiler {site:03d}",
             )
         )
         for room in range(1, scenario.rooms_per_site + 1):
@@ -117,6 +150,9 @@ def build_fleet(scenario: Scenario) -> list[DeviceSpec]:
                     seeded=True,
                     metrics=SHELLY_HT_METRICS,
                     rules=SHELLY_HT_RULES,
+                    asset_type="GENERIC_SENSOR",
+                    asset_name=f"Room Sensor {site:03d}-{room:02d}",
+                    room_index=room,
                 )
             )
     # Rogue devices: publish like normal H&T sensors but are never seeded, so

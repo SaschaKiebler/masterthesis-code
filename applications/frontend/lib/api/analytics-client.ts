@@ -111,3 +111,47 @@ export async function fetchDifference(
         resample: resample || "auto",
     });
 }
+
+// ─── Live operations (Monitor view) ─────────────────────────────────────────
+// Latest values + ingest rate come from analytics, not core: analytics is the
+// platform's only measurement reader; core serves structure.
+
+import type { LatestValue } from "./projects";
+
+export interface LatestValuesResponse {
+    values: LatestValue[];
+    computationTimeMs: number;
+}
+
+export async function fetchLatestValues(
+    metricPointIds: string[],
+): Promise<LatestValuesResponse> {
+    return analyticsFetch<LatestValuesResponse>("/stats/latest", {
+        metric_point_ids: metricPointIds,
+    });
+}
+
+export interface IngestRatePoint {
+    minute: number; // epoch seconds
+    count: number;
+    devices: number;
+}
+
+export interface IngestRateResponse {
+    windowMinutes: number;
+    perMinute: IngestRatePoint[];
+    total: number;
+    ratePerMinute: number;
+    activeDevices: number;
+    computationTimeMs: number;
+}
+
+export async function fetchIngestRate(
+    metricPointIds: string[] | null,
+    windowMinutes = 15,
+): Promise<IngestRateResponse> {
+    return analyticsFetch<IngestRateResponse>("/stats/ingest-rate", {
+        metric_point_ids: metricPointIds,
+        window_minutes: windowMinutes,
+    });
+}

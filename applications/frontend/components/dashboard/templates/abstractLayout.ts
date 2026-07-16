@@ -6,6 +6,7 @@
  * types of devices, even though the specific object IDs are different.
  */
 
+import { randomUUID } from "@/lib/utils/uuid";
 import type { DashboardLayout, DashboardWidget, WidgetConfig, GraphObject } from "@/lib/api/types";
 import type { MetricPoint } from "@/lib/api/metric-points";
 
@@ -47,7 +48,7 @@ function abstractWidget(widget: DashboardWidget, ctx: AbstractionContext): Dashb
     const config = abstractConfig(widget.config, ctx);
     return {
         ...widget,
-        id: crypto.randomUUID(), // new ID for template
+        id: randomUUID(), // new ID for template
         config,
     };
 }

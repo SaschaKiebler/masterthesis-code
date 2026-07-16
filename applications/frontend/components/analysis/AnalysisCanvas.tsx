@@ -1,5 +1,6 @@
 "use client";
 
+import { randomUUID } from "@/lib/utils/uuid";
 import { useCallback } from "react";
 import { Plus } from "lucide-react";
 import { TimeRangeBar } from "./TimeRangeBar";
@@ -45,7 +46,7 @@ export function AnalysisCanvas({
     onBucketChange,
 }: AnalysisCanvasProps) {
     const handleAddChart = useCallback(() => {
-        const id = crypto.randomUUID().slice(0, 8);
+        const id = randomUUID().slice(0, 8);
         onCanvasChange({
             ...canvas,
             charts: [...canvas.charts, createEmptyChart(id, canvas.charts.length)],
