@@ -1,0 +1,20 @@
+# Remote image build (no local Docker needed), native amd64.
+# Usage, from the repo root:
+#   gcloud builds submit . --config infrastructure/cloudbuild.yaml \
+#     --project heating-platform-eval --substitutions _SERVICE=frontend
+# Source upload is trimmed by .gcloudignore. Regional builds gave
+# PERMISSION_DENIED on this project; use the default (global) pool.
+substitutions:
+  _SERVICE: frontend
+  _REGISTRY: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform
+steps:
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - build
+      - '-f'
+      - applications/${_SERVICE}/Dockerfile
+      - '-t'
+      - ${_REGISTRY}/${_SERVICE}:latest
+      - '.'
+images:
+  - ${_REGISTRY}/${_SERVICE}:latest
