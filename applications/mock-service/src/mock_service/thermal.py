@@ -22,6 +22,7 @@ DESIGN_SPREAD_K = 15.0
 OVERHEAT_TARGET_C = 32.0      # room fault target (> 28 rule)
 COLLAPSE_FLOW_TARGET_C = 68.0 # boiler fault: short circuit, return ≈ flow (> 62 rule)
 FAULT_TAU_S = 60.0            # fast lag during faults, alert fires within ~1-2 min
+SHORT_CYCLE_PERIOD_S = 120.0  # burner fault: one on/off cycle every 2 min (30 starts/h)
 
 
 def _clamp(value: float, low: float, high: float) -> float:
@@ -82,6 +83,15 @@ class BoilerModel:
             self.flow_c = _lag(self.flow_c, COLLAPSE_FLOW_TARGET_C, dt, FAULT_TAU_S)
             self.return_c = self.flow_c - 1.0
             spread = 1.0
+        elif fault == "short_cycle":
+            # Burner short cycling: the pump signal flips every half period,
+            # far more starts per hour than any outdoor temperature justifies
+            # (deterministic trigger for the weather-context detector, AT-09).
+            heating_on = (self._elapsed % SHORT_CYCLE_PERIOD_S) < SHORT_CYCLE_PERIOD_S / 2
+            target = _clamp(CURVE_BASE_C + CURVE_SLOPE * (20.0 - t_out), FLOW_MIN_C, FLOW_MAX_C)
+            self.flow_c = _lag(self.flow_c, target, dt, 120.0) + self._rng.gauss(0.0, 0.15)
+            spread = DESIGN_SPREAD_K if heating_on else 2.0
+            self.return_c = self.flow_c - spread
         else:
             target = (
                 _clamp(CURVE_BASE_C + CURVE_SLOPE * (20.0 - t_out), FLOW_MIN_C, FLOW_MAX_C)

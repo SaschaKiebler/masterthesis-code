@@ -3,6 +3,8 @@ package com.digitaldemon.devicemanagement.projection;
 import com.digitaldemon.device.proto.v1.DeviceConfig;
 import com.digitaldemon.device.proto.v1.SignalMapEntry;
 import com.digitaldemon.devicemanagement.config.DeviceManagementProperties;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.Timestamp;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +44,8 @@ public class DeviceConfigProjection {
     private final KafkaTemplate<Object, Object> kafka;
     private final DeviceManagementProperties props;
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     /** Fingerprints of the last published config per device id. */
     private final ConcurrentHashMap<String, Integer> published = new ConcurrentHashMap<>();
 
@@ -61,6 +65,7 @@ public class DeviceConfigProjection {
     public void sweep() {
         try {
             Map<String, DeviceConfig.Builder> configs = loadConfigsFromDatabase();
+            applySiteCoordinates(configs);
 
             int publishedCount = 0;
             for (Map.Entry<String, DeviceConfig.Builder> entry : configs.entrySet()) {
@@ -169,5 +174,94 @@ public class DeviceConfigProjection {
                 }
                 return configs;
             });
+    }
+
+    /**
+     * Resolve each device's site coordinates by walking the ontology graph
+     * upwards from the device's asset (inbound REALIZED_BY), via
+     * INSTALLED_AT/INSTALLED_IN and up the CONTAINS chain. The nearest object
+     * whose {@code properties -> attributes} JSON carries latitude/longitude
+     * wins. Coordinates flow into the config fingerprint, so location changes
+     * republish automatically.
+     */
+    private void applySiteCoordinates(Map<String, DeviceConfig.Builder> configs) {
+        Map<String, double[]> coordinates = jdbc.sql("""
+                WITH RECURSIVE lt AS (
+                    SELECT id, name FROM link_types
+                    WHERE name IN ('REALIZED_BY', 'CONTAINS', 'INSTALLED_AT', 'INSTALLED_IN')
+                ),
+                device_assets AS (
+                    SELECT pd.device_id, l.source_object_id AS object_id
+                    FROM physical_devices pd
+                    JOIN links l ON l.target_object_id = pd.id
+                    JOIN lt ON lt.id = l.link_type_id AND lt.name = 'REALIZED_BY'
+                ),
+                up AS (
+                    SELECT device_id, object_id, 0 AS depth FROM device_assets
+                    UNION ALL
+                    SELECT up.device_id, parents.next_object, up.depth + 1
+                    FROM up
+                    JOIN LATERAL (
+                        SELECT l.target_object_id AS next_object
+                        FROM links l JOIN lt ON lt.id = l.link_type_id
+                        WHERE l.source_object_id = up.object_id
+                          AND lt.name IN ('INSTALLED_AT', 'INSTALLED_IN')
+                        UNION
+                        SELECT l.source_object_id
+                        FROM links l JOIN lt ON lt.id = l.link_type_id
+                        WHERE l.target_object_id = up.object_id AND lt.name = 'CONTAINS'
+                    ) parents ON TRUE
+                    WHERE up.depth < 6
+                )
+                SELECT u.device_id, u.depth, o.properties::text AS properties
+                FROM up u
+                JOIN objects o ON o.id = u.object_id
+                WHERE o.properties IS NOT NULL AND o.properties::text LIKE '%latitude%'
+                ORDER BY u.device_id, u.depth
+                """)
+            .query((ResultSet rs) -> {
+                Map<String, double[]> result = new LinkedHashMap<>();
+                while (rs.next()) {
+                    String deviceId = rs.getString("device_id");
+                    if (result.containsKey(deviceId)) {
+                        continue; // nearest match (lowest depth) already found
+                    }
+                    double[] coords = parseCoordinates(rs.getString("properties"));
+                    if (coords != null) {
+                        result.put(deviceId, coords);
+                    }
+                }
+                return result;
+            });
+
+        for (Map.Entry<String, double[]> entry : coordinates.entrySet()) {
+            DeviceConfig.Builder builder = configs.get(entry.getKey());
+            if (builder != null) {
+                builder.setSiteLatitude(entry.getValue()[0]);
+                builder.setSiteLongitude(entry.getValue()[1]);
+            }
+        }
+    }
+
+    /** The attributes field is nested JSON inside the properties JSONB. */
+    private static double[] parseCoordinates(String propertiesJson) {
+        try {
+            JsonNode properties = objectMapper.readTree(propertiesJson);
+            JsonNode attributes = properties.path("attributes");
+            if (attributes.isTextual()) {
+                attributes = objectMapper.readTree(attributes.asText());
+            }
+            JsonNode lat = attributes.path("latitude");
+            JsonNode lon = attributes.path("longitude");
+            if (lat.isNumber() && lon.isNumber()) {
+                return new double[] {lat.asDouble(), lon.asDouble()};
+            }
+            if (lat.isTextual() && lon.isTextual()) {
+                return new double[] {Double.parseDouble(lat.asText()), Double.parseDouble(lon.asText())};
+            }
+            return null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

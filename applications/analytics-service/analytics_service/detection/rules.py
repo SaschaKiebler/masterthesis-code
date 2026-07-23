@@ -6,14 +6,12 @@ the topic from the beginning — event-carried state transfer, no registry
 read. Mirrors the ingestion service's DeviceStateStore for device.configured.
 """
 
-import asyncio
 import logging
 from dataclasses import dataclass
 
-from aiokafka import AIOKafkaConsumer, TopicPartition
-
 from ..config import settings
 from ..proto_gen.detection.v1 import rule_config_pb2
+from .compacted import CompactedStore
 
 log = logging.getLogger(__name__)
 
@@ -31,22 +29,26 @@ class Rule:
     tenant_id: str
 
 
-class RuleStore:
-    """Rule state keyed by channel identity and by rule id.
+class RuleStore(CompactedStore):
+    """Rule state keyed by channel identity and by rule id."""
 
-    start() blocks until the topic has been replayed up to the high
-    watermarks (same startup semantics as the ingestion config cache), then
-    follows live updates in a background task.
-    """
+    topic = settings.topic_rule_configured
 
     def __init__(self) -> None:
+        super().__init__()
         self._by_channel: dict[tuple[str, int], dict[str, Rule]] = {}
         self._by_id: dict[str, Rule] = {}
-        self._consumer: AIOKafkaConsumer | None = None
-        self._follow_task: asyncio.Task | None = None
 
     def rules_for(self, device_id: str, metric_id: int) -> list[Rule]:
         return list(self._by_channel.get((device_id, metric_id), {}).values())
+
+    def any_rule_for_device(self, device_id: str) -> Rule | None:
+        """Any rule on any channel of the device — used by the weather
+        detector to borrow tenant/asset context for its findings."""
+        for (rule_device, _), rules in self._by_channel.items():
+            if rule_device == device_id and rules:
+                return next(iter(rules.values()))
+        return None
 
     def get(self, rule_id: str) -> Rule | None:
         return self._by_id.get(rule_id)
@@ -55,60 +57,8 @@ class RuleStore:
         return len(self._by_id)
 
     async def start(self) -> None:
-        topic = settings.topic_rule_configured
-        consumer = AIOKafkaConsumer(
-            bootstrap_servers=settings.kafka_bootstrap_servers,
-            enable_auto_commit=False,
-            auto_offset_reset="earliest",
-        )
-        await consumer.start()
-        self._consumer = consumer
-
-        partitions = await self._wait_for_topic(consumer, topic)
-        tps = [TopicPartition(topic, p) for p in partitions]
-        consumer.assign(tps)
-        for tp in tps:
-            await consumer.seek_to_beginning(tp)
-        end_offsets = await consumer.end_offsets(tps)
-
-        remaining = {tp: end for tp, end in end_offsets.items() if end > 0}
-        while remaining:
-            batches = await consumer.getmany(timeout_ms=1000)
-            for tp, messages in batches.items():
-                for msg in messages:
-                    self._apply(msg.key, msg.value)
-                if tp in remaining and messages and messages[-1].offset + 1 >= remaining[tp]:
-                    del remaining[tp]
-
+        await super().start()
         log.info("Rule store replayed: %d rules", len(self._by_id))
-        self._follow_task = asyncio.create_task(self._follow(), name="rule-store-follow")
-
-    async def stop(self) -> None:
-        if self._follow_task:
-            self._follow_task.cancel()
-            try:
-                await self._follow_task
-            except asyncio.CancelledError:
-                pass
-        if self._consumer:
-            await self._consumer.stop()
-
-    async def _wait_for_topic(self, consumer: AIOKafkaConsumer, topic: str) -> set[int]:
-        while True:
-            partitions = consumer.partitions_for_topic(topic)
-            if partitions:
-                return partitions
-            log.info("Waiting for topic %s to appear (owned by core)...", topic)
-            await asyncio.sleep(2)
-            await consumer.topics()  # refresh metadata
-
-    async def _follow(self) -> None:
-        assert self._consumer is not None
-        while True:
-            batches = await self._consumer.getmany(timeout_ms=1000)
-            for messages in batches.values():
-                for msg in messages:
-                    self._apply(msg.key, msg.value)
 
     def _apply(self, key: bytes | None, value: bytes | None) -> None:
         if key is None:
@@ -118,11 +68,7 @@ class RuleStore:
             # Tombstone: rule deleted or disabled.
             rule = self._by_id.pop(rule_id, None)
             if rule is not None:
-                channel = self._by_channel.get((rule.device_id, rule.metric_id))
-                if channel is not None:
-                    channel.pop(rule_id, None)
-                    if not channel:
-                        del self._by_channel[(rule.device_id, rule.metric_id)]
+                self._drop_from_channel(rule_id, rule.device_id, rule.metric_id)
             return
 
         try:
@@ -147,10 +93,13 @@ class RuleStore:
             rule.device_id,
             rule.metric_id,
         ):
-            old_channel = self._by_channel.get((previous.device_id, previous.metric_id))
-            if old_channel is not None:
-                old_channel.pop(rule_id, None)
-                if not old_channel:
-                    del self._by_channel[(previous.device_id, previous.metric_id)]
+            self._drop_from_channel(rule_id, previous.device_id, previous.metric_id)
         self._by_id[rule_id] = rule
         self._by_channel.setdefault((rule.device_id, rule.metric_id), {})[rule_id] = rule
+
+    def _drop_from_channel(self, rule_id: str, device_id: str, metric_id: int) -> None:
+        channel = self._by_channel.get((device_id, metric_id))
+        if channel is not None:
+            channel.pop(rule_id, None)
+            if not channel:
+                del self._by_channel[(device_id, metric_id)]

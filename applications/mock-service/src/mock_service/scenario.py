@@ -12,7 +12,7 @@ from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any, Optional
 
-VALID_FAULT_TYPES = ("overheat", "spread_collapse", "stuck", "dropout")
+VALID_FAULT_TYPES = ("overheat", "spread_collapse", "stuck", "dropout", "short_cycle")
 VALID_FAULT_TARGETS = ("rooms", "boilers", "any")
 
 # Default fault target per fault type (overridable via target=...)
@@ -21,6 +21,7 @@ DEFAULT_FAULT_TARGET = {
     "spread_collapse": "boilers",
     "stuck": "any",
     "dropout": "any",
+    "short_cycle": "boilers",
 }
 
 

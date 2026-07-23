@@ -31,6 +31,11 @@ message DeviceConfig {
   repeated SignalMapEntry signals = 4;
 
   google.protobuf.Timestamp updated_at = 5;
+
+  // Coordinates of the site the device is installed at (resolved from the
+  // site's ontology attributes). Unset when the site has no location.
+  optional double site_latitude = 6;
+  optional double site_longitude = 7;
 }
 
 message SignalMapEntry {
