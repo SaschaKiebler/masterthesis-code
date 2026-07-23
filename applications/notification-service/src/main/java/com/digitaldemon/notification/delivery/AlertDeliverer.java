@@ -33,6 +33,14 @@ public class AlertDeliverer {
     }
 
     public void deliver(DetectionEvent event) {
+        deliver(event, null, null);
+    }
+
+    /**
+     * Rule-scoped delivery: a rule's own webhook overrides the global
+     * properties webhook; without either, delivery is log-only.
+     */
+    public void deliver(DetectionEvent event, String ruleWebhookUrl, String ruleWebhookToken) {
         Instant detectedAt = event.hasDetectedAt()
                 ? Instant.ofEpochSecond(event.getDetectedAt().getSeconds(), event.getDetectedAt().getNanos())
                 : Instant.now();
@@ -42,7 +50,12 @@ public class AlertDeliverer {
                 event.getChannel().getDeviceId(), event.getChannel().getMetricId(),
                 event.getAssetRef(), detectedAt, event.getDetail());
 
-        String url = props.getWebhook().getUrl();
+        String url = ruleWebhookUrl != null && !ruleWebhookUrl.isBlank()
+                ? ruleWebhookUrl
+                : props.getWebhook().getUrl();
+        String token = ruleWebhookUrl != null && !ruleWebhookUrl.isBlank()
+                ? ruleWebhookToken
+                : props.getWebhook().getToken();
         if (url == null || url.isBlank()) {
             return;
         }
@@ -60,7 +73,6 @@ public class AlertDeliverer {
             var request = webhookClient.post()
                     .uri(url)
                     .contentType(MediaType.APPLICATION_JSON);
-            String token = props.getWebhook().getToken();
             if (token != null && !token.isBlank()) {
                 request = request.header("Authorization", "Bearer " + token);
             }

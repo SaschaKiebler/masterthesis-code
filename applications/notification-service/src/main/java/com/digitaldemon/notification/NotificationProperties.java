@@ -16,6 +16,7 @@ public class NotificationProperties {
 
     private Policy policy = new Policy();
     private Webhook webhook = new Webhook();
+    private Auth auth = new Auth();
     private TopicDefaults topicDefaults = new TopicDefaults();
 
     @Data
@@ -32,6 +33,12 @@ public class NotificationProperties {
         private String url = "";
         /** Optional bearer token sent as Authorization header. */
         private String token = "";
+    }
+
+    @Data
+    public static class Auth {
+        /** Shared HS256 secret of the platform's self-issued tokens. */
+        private String jwtSecret = "insecure-local-dev-secret-change-me";
     }
 
     @Data

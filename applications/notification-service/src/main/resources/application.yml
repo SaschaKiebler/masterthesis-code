@@ -2,6 +2,21 @@ spring:
   application:
     name: notification-service
 
+  # Own table area in the shared master-data store (ch. 4.4.6): core,
+  # device-management and notification share the instance, each owns its
+  # tables exclusively. Flyway gets a service-own history table so the
+  # migrations never collide with core's.
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:digital_demon}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: org.postgresql.Driver
+
+  flyway:
+    enabled: true
+    table: flyway_schema_history_notification
+    baseline-on-migrate: true
+
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     client-id: notification-service
@@ -37,6 +52,10 @@ notification:
     # POST target for alerts (e.g. an n8n webhook). Empty = log-only delivery.
     url: ${NOTIFICATION_WEBHOOK_URL:}
     token: ${NOTIFICATION_WEBHOOK_TOKEN:}
+  auth:
+    # Shared HS256 secret of the platform's self-issued tokens (same value
+    # core signs with). Copied contract, not a shared library.
+    jwt-secret: ${LOCAL_AUTH_JWT_SECRET:insecure-local-dev-secret-change-me}
   topic-defaults:
     partitions: ${KAFKA_TOPIC_PARTITIONS:3}
     replicas: ${KAFKA_TOPIC_REPLICAS:1}

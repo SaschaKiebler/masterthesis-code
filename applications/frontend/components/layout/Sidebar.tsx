@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+    Bell,
     Home,
     Settings,
     Users,
@@ -38,6 +39,7 @@ interface NavItem {
 const allNavItems: NavItem[] = [
     { name: "Dashboard", href: "/", icon: Home },
     { name: "Projects", href: "/projects", icon: FolderOpen, permission: "fleet:view" },
+    { name: "Meldungen", href: "/notifications", icon: Bell },
     { name: "Device Catalog", href: "/templates", icon: BookOpen, permission: "template:create" },
     { name: "Device Scanner", href: "/discovery", icon: ScanLine, permission: "template:create" },
     { name: "Tenants", href: "/tenants", icon: Building2, permission: "user:manage" },

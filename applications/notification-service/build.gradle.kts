@@ -26,9 +26,23 @@ repositories {
 }
 
 dependencies {
-	// Web for actuator health and the RestClient webhook deliverer
+	// Web for actuator health, the RestClient webhook deliverer and the
+	// notifications/rules REST API consumed by the web app
 	implementation("org.springframework.boot:spring-boot-starter-web")
 	implementation("org.springframework.boot:spring-boot-starter-actuator")
+	implementation("org.springframework.boot:spring-boot-starter-validation")
+
+	// Resource server: validates the platform's HS256 tokens (same shared
+	// secret as core, coherence comes from the token contract, ch. 4.4.6)
+	implementation("org.springframework.boot:spring-boot-starter-security")
+	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
+
+	// Own table area in the shared master-data store (notification_rules,
+	// notifications) — plain JDBC plus Flyway with a service-own history table
+	implementation("org.springframework.boot:spring-boot-starter-jdbc")
+	implementation("org.flywaydb:flyway-core")
+	runtimeOnly("org.flywaydb:flyway-database-postgresql")
+	runtimeOnly("org.postgresql:postgresql")
 
 	// Kafka — consumes the detection-event topics (threshold.breached, ...)
 	implementation("org.springframework.boot:spring-boot-starter-kafka")

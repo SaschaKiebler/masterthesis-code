@@ -132,7 +132,10 @@ cmd_up() {
   start_bg core "$APPS/core-platform" ./gradlew bootRun
   wait_port core-platform 8080 300
 
-  # everything else only needs infra + the migrated schema
+  # everything else only needs infra + the migrated schema. Notification now
+  # has its own table area in the shared DB (own Flyway history table) and
+  # therefore starts after core like the rest; analytics runs the threshold
+  # evaluation and the weather-context detector on the measurement path.
   start_bg device    "$APPS/device-management"     ./gradlew bootRun
   start_bg notify    "$APPS/notification-service"  ./gradlew bootRun
   start_bg ingest    "$APPS/ingestion-service"     cargo run
@@ -150,7 +153,7 @@ cmd_up() {
   Frontend        http://localhost:3000   (login admin@local / admin)
   Core platform   http://localhost:8080
   Device mgmt     http://localhost:8082
-  Notification    http://localhost:8083
+  Notification    http://localhost:8083   (Meldungen + Regeln, DB-backed)
   Analytics       http://localhost:8100
   Kafka UI        http://localhost:8081
 

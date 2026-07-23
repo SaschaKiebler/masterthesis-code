@@ -17,7 +17,7 @@ import { usePathname } from "next/navigation";
 import {
     Home, Settings, MoreHorizontal,
     Users, BookOpen, Building2,
-    LogOut, LogIn, User, X,
+    Bell, LogOut, LogIn, User, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/auth/AuthContext";
@@ -34,6 +34,7 @@ interface MobileNavItem {
 // All nav items — same order as sidebar, with mobile labels
 const allNavItems: MobileNavItem[] = [
     { name: "Dashboard", href: "/", icon: Home, label: "Home" },
+    { name: "Meldungen", href: "/notifications", icon: Bell, label: "Meldungen" },
     { name: "Device Catalog", href: "/templates", icon: BookOpen, label: "Devices", permission: "template:create" },
     { name: "Tenants", href: "/tenants", icon: Building2, label: "Tenants", permission: "user:manage" },
     { name: "Team", href: "/team", icon: Users, label: "Team", permission: "team:manage" },
