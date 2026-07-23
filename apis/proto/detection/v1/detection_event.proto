@@ -2,8 +2,8 @@
 // detection fans in from many detectors, notification fans out to channels.
 //
 // Topics carrying this envelope (all keyed by device_id):
-//   threshold.breached   — core-platform monitoring (rule-based, live)
-//   anomaly.detected     — analytics family (later)
+//   threshold.breached   — analytics evaluator (rule-based, live)
+//   anomaly.detected     — analytics weather-context detector (live)
 //   maintenance.predicted — analytics family (later)
 //
 // The notification service treats every detection event uniformly; adding a
@@ -37,6 +37,13 @@ message DetectionEvent {
   // Detector-specific payload as raw JSON
   // (e.g. {"value":..,"threshold":..,"operator":..}).
   string detail = 6;
+
+  // Tenant owning the affected asset (UUID string). Lets consumers apply
+  // tenant-scoped policy without a registry lookup.
+  string tenant_id = 7;
+
+  // Human-readable one-line finding, produced by the detector.
+  string summary = 8;
 }
 
 // The measurement channel the detection fired on.

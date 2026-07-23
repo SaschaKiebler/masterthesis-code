@@ -8,8 +8,11 @@ import com.digitaldemon.core.common.exception.ResourceNotFoundException;
 import com.digitaldemon.core.thresholdrule.ThresholdRuleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 import java.util.UUID;
@@ -22,6 +25,8 @@ public class ThresholdRuleService {
 
     private final ThresholdRuleRepository ruleRepository;
     private final OntologyService ontologyService;
+    /** Provider because the projection bean only exists when kafka.enabled=true. */
+    private final ObjectProvider<ThresholdRuleConfigProjection> ruleConfigProjection;
 
     public List<ThresholdRule> getRulesForMetricPoint(UUID metricPointId) {
         return ruleRepository.findByMetricPointId(metricPointId);
@@ -50,6 +55,7 @@ public class ThresholdRuleService {
         log.info("Created threshold rule {} for metric_point={} ({}{} severity={})",
                 saved.getId(), metricPointId, operator,
                 threshold != null ? " " + threshold : "", severity);
+        sweepAfterCommit();
         return saved;
     }
 
@@ -65,7 +71,9 @@ public class ThresholdRuleService {
         if (cooldownSeconds != null)  rule.setCooldownSeconds(cooldownSeconds);
         if (enabled != null)          rule.setEnabled(enabled);
 
-        return ruleRepository.save(rule);
+        ThresholdRule saved = ruleRepository.save(rule);
+        sweepAfterCommit();
+        return saved;
     }
 
     @Transactional
@@ -75,5 +83,26 @@ public class ThresholdRuleService {
         }
         ruleRepository.deleteById(ruleId);
         log.info("Deleted threshold rule {}", ruleId);
+        sweepAfterCommit();
+    }
+
+    /**
+     * Push the rule-config projection right after the mutating transaction
+     * commits, so rule changes reach the analytics evaluator without waiting
+     * for the periodic reconciliation sweep.
+     */
+    private void sweepAfterCommit() {
+        ruleConfigProjection.ifAvailable(projection -> {
+            if (TransactionSynchronizationManager.isSynchronizationActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        projection.sweep();
+                    }
+                });
+            } else {
+                projection.sweep();
+            }
+        });
     }
 }

@@ -15,16 +15,19 @@ import org.springframework.stereotype.Component;
  * device id) and dispatches evaluation.
  *
  * Evaluation runs synchronously on the listener container thread, so the
- * offset is only committed after both evaluators finished: at-least-once
+ * offset is only committed after the evaluator finished: at-least-once
  * processing, ordered per device via the message key.
  *
- * Evaluation pipeline:
- * 1. {@link MeasurementEventEvaluator} — threshold rule breach detection and event recording.
- * 2. {@link KpiFormulaEvaluator} — KPI formula evaluation and derived property persistence.
+ * Threshold detection no longer happens here — the analytics service owns the
+ * measurement-path evaluation and publishes detection events (thesis ch. 4).
+ * Core keeps the rule config ({@link com.digitaldemon.core.thresholdrule.ThresholdRuleConfigProjection})
+ * and projects incoming detection events into its events table
+ * ({@link DetectionEventsListener}). What remains on this listener is the
+ * {@link KpiFormulaEvaluator} for KPI formula evaluation.
  *
- * A failure inside an evaluator is caught and logged, not retried — identical
- * to the previous MQTT behaviour. Only undecodable payloads are thrown, which
- * routes them to {@code measurement.ingested.dlq} via the error handler in
+ * A failure inside the evaluator is caught and logged, not retried. Only
+ * undecodable payloads are thrown, which routes them to
+ * {@code measurement.ingested.dlq} via the error handler in
  * {@link com.digitaldemon.core.common.config.KafkaConfig}.
  */
 @Slf4j
@@ -33,7 +36,6 @@ import org.springframework.stereotype.Component;
 @ConditionalOnProperty(name = "kafka.enabled", havingValue = "true", matchIfMissing = true)
 public class MeasurementBatchListener {
 
-    private final MeasurementEventEvaluator evaluator;
     private final KpiFormulaEvaluator kpiFormulaEvaluator;
 
     @KafkaListener(topics = "${kafka.topics.measurement-ingested}")
@@ -45,18 +47,10 @@ public class MeasurementBatchListener {
             // Poison message — non-retryable, goes straight to the DLQ.
             throw new IllegalArgumentException("Payload is not a valid MeasurementBatch protobuf", e);
         }
-
-        try {
-            evaluator.evaluate(batch);
-        } catch (Exception ex) {
-            log.error("Uncaught error in MeasurementEventEvaluator for device={}",
-                    batch.getDeviceId(), ex);
-        }
         try {
             kpiFormulaEvaluator.evaluate(batch);
         } catch (Exception ex) {
-            log.error("Uncaught error in KpiFormulaEvaluator for device={}",
-                    batch.getDeviceId(), ex);
+            log.error("Uncaught error in KpiFormulaEvaluator for device={}", batch.getDeviceId(), ex);
         }
     }
 }

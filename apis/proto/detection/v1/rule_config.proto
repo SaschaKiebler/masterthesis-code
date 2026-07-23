@@ -1,0 +1,31 @@
+// Compacted rule-config projection topic (rule.configured, key = rule_id),
+// published and owned by core-platform (the rule owner). The analytics
+// evaluator replays it to rebuild its rule state — event-carried state
+// transfer, mirror of device.configured for the ingestion service.
+//
+// Only enabled rules are published; deleting or disabling a rule produces a
+// tombstone. The channel identity (device_id, metric_id) is denormalised at
+// publish time so the evaluator never needs a registry read.
+
+syntax = "proto3";
+
+package detection.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.digitaldemon.detection.proto.v1";
+option java_multiple_files = true;
+option java_outer_classname = "RuleConfigProto";
+
+message RuleConfig {
+  string rule_id = 1;              // UUID, auch Kafka-Key
+  string metric_point_id = 2;      // wird als DetectionEvent.asset_ref zurückgegeben
+  string device_id = 3;            // Channel-Identität (denormalisiert)
+  int32 metric_id = 4;
+  string operator = 5;             // GT | LT | GTE | LTE | CHANGED_TO_TRUE | CHANGED_TO_FALSE
+  optional double threshold = 6;   // unset bei State-Change-Operatoren
+  string severity = 7;             // INFO | WARNING | ERROR | CRITICAL
+  int32 cooldown_seconds = 8;
+  string tenant_id = 9;            // UUID; wandert in DetectionEvent.tenant_id
+  google.protobuf.Timestamp updated_at = 10;
+}

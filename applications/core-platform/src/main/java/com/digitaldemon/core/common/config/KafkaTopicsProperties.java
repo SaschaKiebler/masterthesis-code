@@ -26,8 +26,12 @@ public class KafkaTopicsProperties {
         private String measurementIngested = "measurement.ingested";
         /** Unknown-device events from device-management (topic owned there). */
         private String deviceDiscovered = "device.discovered";
-        /** Detection events from core's threshold evaluation (owned here). */
+        /** Threshold detections from the analytics evaluator (topic owned there). */
         private String thresholdBreached = "threshold.breached";
+        /** Weather-contextual anomaly detections from analytics (topic owned there). */
+        private String anomalyDetected = "anomaly.detected";
+        /** Compacted detection-rule projection, published and owned by core. */
+        private String ruleConfigured = "rule.configured";
     }
 
     @Data

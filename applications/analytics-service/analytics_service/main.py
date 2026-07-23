@@ -13,7 +13,15 @@ from .routers import descriptive, timeseries, regression, boxplot, compute, hist
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool()
+    runner = None
+    if settings.kafka_enabled:
+        from .detection.runner import DetectionRunner
+
+        runner = DetectionRunner()
+        await runner.start()
     yield
+    if runner is not None:
+        await runner.stop()
     await close_pool()
 
 

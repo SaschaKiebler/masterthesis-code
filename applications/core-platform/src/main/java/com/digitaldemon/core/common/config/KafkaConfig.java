@@ -53,10 +53,37 @@ public class KafkaConfig {
                 .build();
     }
 
-    /** Detection events produced by core's threshold evaluation. */
+    /**
+     * Compacted rule-config projection topic, owned by core (the rule owner).
+     * The analytics evaluator replays it to rebuild its rule state
+     * (event-carried state transfer, mirror of device.configured).
+     */
     @Bean
-    public NewTopic thresholdBreachedTopic() {
-        return TopicBuilder.name(props.getTopics().getThresholdBreached())
+    public NewTopic ruleConfiguredTopic() {
+        return TopicBuilder.name(props.getTopics().getRuleConfigured())
+                .partitions(props.getTopicDefaults().getPartitions())
+                .replicas(props.getTopicDefaults().getReplicas())
+                .compact()
+                .build();
+    }
+
+    /**
+     * DLQs for core's detection-event subscriptions. Per the event catalog a
+     * consumer owns the DLQs of its own subscriptions; the source topics
+     * (threshold.breached, anomaly.detected) are provisioned by their
+     * producer, the analytics service.
+     */
+    @Bean
+    public NewTopic thresholdBreachedDlqTopic() {
+        return TopicBuilder.name(props.getTopics().getThresholdBreached() + DLQ_SUFFIX)
+                .partitions(props.getTopicDefaults().getPartitions())
+                .replicas(props.getTopicDefaults().getReplicas())
+                .build();
+    }
+
+    @Bean
+    public NewTopic anomalyDetectedDlqTopic() {
+        return TopicBuilder.name(props.getTopics().getAnomalyDetected() + DLQ_SUFFIX)
                 .partitions(props.getTopicDefaults().getPartitions())
                 .replicas(props.getTopicDefaults().getReplicas())
                 .build();
