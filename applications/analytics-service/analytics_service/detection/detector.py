@@ -49,6 +49,8 @@ class WeatherContextDetector:
         self._classes: dict[tuple[str, int], str] = {}
         # (device_id, finding kind) -> last fired (monotonic seconds)
         self._last_fired: dict[tuple[str, str], float] = {}
+        # (device_id, metric_id) -> (metric_point_id, tenant_id) from the registry
+        self._registry_context: dict[tuple[str, int], tuple[str, str]] = {}
         self._task: asyncio.Task | None = None
 
     # -- observation (called by the measurement consumer for every value) ----
@@ -181,6 +183,37 @@ class WeatherContextDetector:
                 },
             )
 
+    async def _registry_lookup(self, device_id: str, metric_id: int) -> tuple[str, str]:
+        """(metric_point_id, tenant_id) of the channel from the master-data
+        store; empty strings when unknown. Successful lookups are cached,
+        failures are not (retried on the next finding)."""
+        channel = (device_id, metric_id)
+        cached = self._registry_context.get(channel)
+        if cached is not None:
+            return cached
+        try:
+            from ..db.pool import get_registry_pool
+
+            pool = await get_registry_pool()
+            row = await pool.fetchrow(
+                """
+                SELECT mp.id::text AS metric_point_id, o.tenant_id::text AS tenant_id
+                FROM metric_points mp
+                JOIN objects o ON o.id = mp.id
+                WHERE mp.device_id = $1 AND mp.metric_id = $2
+                """,
+                device_id,
+                metric_id,
+            )
+        except Exception:
+            log.warning("Registry lookup failed for %s/%d", device_id, metric_id)
+            return "", ""
+        context = (
+            (row["metric_point_id"] or "", row["tenant_id"] or "") if row else ("", "")
+        )
+        self._registry_context[channel] = context
+        return context
+
     def _device_channel(self, device_id: str, signal_class: str) -> tuple[str, int] | None:
         for channel, cls in self._classes.items():
             if channel[0] == device_id and cls == signal_class:
@@ -202,15 +235,20 @@ class WeatherContextDetector:
         if last is not None and now - last < settings.weather_cooldown_seconds:
             return
 
-        # Borrow asset/tenant context from a threshold rule on the channel (or
-        # any channel of the device). Without it asset_ref stays empty: core
-        # then skips the events projection, the Meldung still reaches
-        # notification via tenant_id (if known) or its fallback policy.
+        # Asset/tenant context: prefer a threshold rule on the exact channel,
+        # otherwise resolve the channel's metric point from the registry store
+        # (weather findings fire on the switch channel, which usually carries
+        # no rule). Without asset_ref core skips the events projection; the
+        # Meldung still reaches notification via tenant_id.
         rules = self._rules.rules_for(device_id, metric_id) or (
             [rule] if (rule := self._rules.any_rule_for_device(device_id)) else []
         )
         asset_ref = rules[0].metric_point_id if rules and rules[0].metric_id == metric_id else ""
         tenant_id = rules[0].tenant_id if rules else ""
+        if not asset_ref or not tenant_id:
+            registry_ref, registry_tenant = await self._registry_lookup(device_id, metric_id)
+            asset_ref = asset_ref or registry_ref
+            tenant_id = tenant_id or registry_tenant
         detail = {**detail, "metric_point_id": asset_ref or None}
 
         event = self._publisher.build_event(

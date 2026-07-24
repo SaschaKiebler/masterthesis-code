@@ -12,7 +12,7 @@ import java.util.List;
 public class NotificationProperties {
 
     /** Detection-event topics to consume. */
-    private List<String> topics = List.of("threshold.breached");
+    private List<String> topics = List.of("threshold.breached", "anomaly.detected");
 
     private Policy policy = new Policy();
     private Webhook webhook = new Webhook();

@@ -43,7 +43,7 @@ server:
 notification:
   # Detection-event topics to consume; every detector added later just
   # extends this list (or the env var), nothing else changes.
-  topics: ${NOTIFICATION_TOPICS:threshold.breached}
+  topics: ${NOTIFICATION_TOPICS:threshold.breached,anomaly.detected}
   policy:
     # Deliver events at or above this severity: INFO | WARNING | ERROR | CRITICAL
     min-severity: ${NOTIFICATION_MIN_SEVERITY:INFO}

@@ -39,6 +39,8 @@ def _select_targets(fault: FaultSpec, devices: list[SimDevice]) -> list[SimDevic
         pool = [d for d in devices if d.spec.kind == KIND_BOILER]
     else:
         pool = [d for d in devices if d.spec.seeded]
+    if fault.site is not None:
+        pool = [d for d in pool if d.spec.site_index == fault.site]
     if fault.count is not None:
         n = fault.count
     elif fault.fraction is not None:

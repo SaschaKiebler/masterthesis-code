@@ -180,9 +180,9 @@ public class DeviceConfigProjection {
      * Resolve each device's site coordinates by walking the ontology graph
      * upwards from the device's asset (inbound REALIZED_BY), via
      * INSTALLED_AT/INSTALLED_IN and up the CONTAINS chain. The nearest object
-     * whose {@code properties -> attributes} JSON carries latitude/longitude
-     * wins. Coordinates flow into the config fingerprint, so location changes
-     * republish automatically.
+     * whose properties JSON carries latitude/longitude (in {@code custom} or
+     * {@code attributes}) wins. Coordinates flow into the config fingerprint,
+     * so location changes republish automatically.
      */
     private void applySiteCoordinates(Map<String, DeviceConfig.Builder> configs) {
         Map<String, double[]> coordinates = jdbc.sql("""
@@ -243,11 +243,18 @@ public class DeviceConfigProjection {
         }
     }
 
-    /** The attributes field is nested JSON inside the properties JSONB. */
+    /**
+     * Coordinates live in a nested container of the properties JSONB:
+     * {@code custom} for spec fields entered through the UI's property
+     * schema, {@code attributes} for imported/legacy data.
+     */
     private static double[] parseCoordinates(String propertiesJson) {
         try {
             JsonNode properties = objectMapper.readTree(propertiesJson);
-            JsonNode attributes = properties.path("attributes");
+            JsonNode attributes = properties.path("custom");
+            if (attributes.path("latitude").isMissingNode()) {
+                attributes = properties.path("attributes");
+            }
             if (attributes.isTextual()) {
                 attributes = objectMapper.readTree(attributes.asText());
             }

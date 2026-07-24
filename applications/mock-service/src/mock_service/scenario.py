@@ -33,6 +33,7 @@ class FaultSpec:
     target: str = ""          # rooms | boilers | any ("" = default for type)
     count: Optional[int] = None
     fraction: Optional[float] = None
+    site: Optional[int] = None  # restrict to one site's devices (1-based index)
     at_s: float = 60.0
     duration_s: float = 0.0   # 0 = until the end of the run
 
@@ -58,6 +59,8 @@ class FaultSpec:
                     kwargs["count"] = int(value)
                 elif key == "fraction":
                     kwargs["fraction"] = float(value)
+                elif key == "site":
+                    kwargs["site"] = int(value)
                 elif key == "at":
                     kwargs["at_s"] = float(value)
                 elif key in ("for", "duration"):
