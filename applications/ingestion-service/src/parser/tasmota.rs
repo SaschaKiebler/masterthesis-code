@@ -14,8 +14,8 @@ use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use tracing::debug;
 
-/// Known Tasmota topic prefixes.
-const TASMOTA_PREFIXES: &[&str] = &["tele/"];
+/// Known Tasmota topic prefixes: telemetry and command results.
+const TASMOTA_PREFIXES: &[&str] = &["tele/", "stat/"];
 
 /// Result of parsing a Tasmota MQTT topic
 #[derive(Debug, Clone)]

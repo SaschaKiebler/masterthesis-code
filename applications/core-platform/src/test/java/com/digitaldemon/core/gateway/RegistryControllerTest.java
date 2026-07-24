@@ -167,6 +167,7 @@ class RegistryControllerTest {
 
         @Test
         void shouldCreateSystemWideTemplateWhenAdmin() {
+            given(authService.isConsultantOrAdmin()).willReturn(true);
             given(authService.isSystemAdmin()).willReturn(true);
             given(deviceTemplateRepository.save(any(DeviceTemplate.class))).willAnswer(inv -> {
                 DeviceTemplate dt = inv.getArgument(0);
@@ -201,7 +202,7 @@ class RegistryControllerTest {
 
         @Test
         void shouldReturn403ForSystemWideWhenNotAdmin() {
-            given(authService.isSystemAdmin()).willReturn(false);
+            given(authService.isConsultantOrAdmin()).willReturn(false);
 
             ResponseEntity<Map<String, Object>> response = registryController.createDeviceTemplate(
                     Map.of("name", "System Template"));

@@ -99,6 +99,7 @@ class InvitationControllerTest {
         @Test
         void shouldReturnAllInvitationsForAdmin() {
             given(authService.isConsultantOrAdmin()).willReturn(true);
+            given(authService.isSystemAdmin()).willReturn(true);
             given(invitationRepository.findAll())
                     .willReturn(List.of(pendingInvitation, acceptedInvitation, expiredInvitation));
 
@@ -114,6 +115,7 @@ class InvitationControllerTest {
         @Test
         void shouldFilterByTenantId() {
             given(authService.isConsultantOrAdmin()).willReturn(true);
+            given(authService.canAccessTenant(tenant.getId())).willReturn(true);
             given(invitationRepository.findByTenantId(tenant.getId()))
                     .willReturn(List.of(pendingInvitation));
 
@@ -128,6 +130,7 @@ class InvitationControllerTest {
         @Test
         void shouldFilterByStatus() {
             given(authService.isConsultantOrAdmin()).willReturn(true);
+            given(authService.isSystemAdmin()).willReturn(true);
             given(invitationRepository.findAll())
                     .willReturn(List.of(pendingInvitation, acceptedInvitation, expiredInvitation));
 
@@ -159,6 +162,7 @@ class InvitationControllerTest {
         @Test
         void shouldCreateInvitationWithTenant() {
             given(authService.isConsultantOrAdmin()).willReturn(true);
+            given(authService.isManagerInTenant(tenant.getId())).willReturn(true);
             given(tenantRepository.findById(tenant.getId())).willReturn(Optional.of(tenant));
             given(invitationService.createInvitation("new@example.com", tenant.getId(), "owner", "landlord"))
                     .willReturn(pendingInvitation);
@@ -254,6 +258,7 @@ class InvitationControllerTest {
         @Test
         void shouldRevokePendingInvitation() {
             given(authService.isConsultantOrAdmin()).willReturn(true);
+            given(authService.isManagerInTenant(tenant.getId())).willReturn(true);
             given(invitationRepository.findById(pendingInvitation.getId()))
                     .willReturn(Optional.of(pendingInvitation));
 
