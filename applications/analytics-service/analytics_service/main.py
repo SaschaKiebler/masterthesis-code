@@ -2,12 +2,13 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .auth import require_token
 from .config import settings
 from .db.pool import init_pools, close_pools
-from .routers import descriptive, timeseries, regression, boxplot, compute, histogram, heatmap, live
+from .routers import descriptive, timeseries, regression, boxplot, compute, histogram, heatmap, live, series
 
 
 @asynccontextmanager
@@ -38,14 +39,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(descriptive.router)
-app.include_router(timeseries.router)
-app.include_router(regression.router)
-app.include_router(boxplot.router)
-app.include_router(compute.router)
-app.include_router(histogram.router)
-app.include_router(heatmap.router)
-app.include_router(live.router)
+# All /stats routes require the platform's HS256 bearer token; /health stays open.
+_auth = [Depends(require_token)]
+app.include_router(descriptive.router, dependencies=_auth)
+app.include_router(timeseries.router, dependencies=_auth)
+app.include_router(regression.router, dependencies=_auth)
+app.include_router(boxplot.router, dependencies=_auth)
+app.include_router(compute.router, dependencies=_auth)
+app.include_router(histogram.router, dependencies=_auth)
+app.include_router(heatmap.router, dependencies=_auth)
+app.include_router(live.router, dependencies=_auth)
+app.include_router(series.router, dependencies=_auth)
 
 
 @app.get("/health")

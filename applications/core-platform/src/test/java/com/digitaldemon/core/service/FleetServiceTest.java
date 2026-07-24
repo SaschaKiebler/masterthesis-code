@@ -8,7 +8,10 @@ import com.digitaldemon.core.fleet.FleetStatusDTO;
 import com.digitaldemon.core.ontology.ObjectEntity;
 import com.digitaldemon.core.ontology.ObjectType;
 import com.digitaldemon.core.tenant.Tenant;
-import com.digitaldemon.core.measurement.MeasurementRepository;
+import com.digitaldemon.core.measurement.ChannelResolver;
+import com.digitaldemon.core.measurement.LatestValueProjection;
+
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,7 +30,10 @@ import static org.mockito.BDDMockito.given;
 class FleetServiceTest {
 
     @Mock
-    private MeasurementRepository measurementRepository;
+    private ChannelResolver channelResolver;
+
+    @Mock
+    private LatestValueProjection latestValueProjection;
 
     @Mock
     private OntologyService ontologyService;
@@ -143,12 +149,15 @@ class FleetServiceTest {
 
         Instant recentTime = Instant.now().minus(Duration.ofMinutes(30));
 
-        given(measurementRepository.getLastSeenBySiteIds(List.of(siteId1, siteId2)))
+        given(channelResolver.devicesBySites(List.of(siteId1, siteId2)))
             .willReturn(List.of(
-                new MeasurementRepository.DeviceLastSeen(siteId1, "DEV-001", recentTime),
-                new MeasurementRepository.DeviceLastSeen(siteId1, "DEV-002", recentTime),
-                new MeasurementRepository.DeviceLastSeen(siteId2, "DEV-003", recentTime)
+                new ChannelResolver.DeviceSite(siteId1, "DEV-001"),
+                new ChannelResolver.DeviceSite(siteId1, "DEV-002"),
+                new ChannelResolver.DeviceSite(siteId2, "DEV-003")
             ));
+        given(latestValueProjection.lastSeen("DEV-001")).willReturn(Optional.of(recentTime));
+        given(latestValueProjection.lastSeen("DEV-002")).willReturn(Optional.of(recentTime));
+        given(latestValueProjection.lastSeen("DEV-003")).willReturn(Optional.of(recentTime));
         given(ontologyService.countByTargetAndType(siteId1, OntologyService.INSTALLED_AT)).willReturn(2);
         given(ontologyService.countByTargetAndType(siteId2, OntologyService.INSTALLED_AT)).willReturn(1);
 
@@ -180,12 +189,15 @@ class FleetServiceTest {
         Instant stale = now.minus(Duration.ofHours(5));
         Instant offline = now.minus(Duration.ofHours(30));
 
-        given(measurementRepository.getLastSeenBySiteIds(List.of(healthySiteId, warningSiteId, criticalSiteId)))
+        given(channelResolver.devicesBySites(List.of(healthySiteId, warningSiteId, criticalSiteId)))
             .willReturn(List.of(
-                new MeasurementRepository.DeviceLastSeen(healthySiteId, "DEV-H1", recent),
-                new MeasurementRepository.DeviceLastSeen(warningSiteId, "DEV-W1", stale),
-                new MeasurementRepository.DeviceLastSeen(criticalSiteId, "DEV-C1", offline)
+                new ChannelResolver.DeviceSite(healthySiteId, "DEV-H1"),
+                new ChannelResolver.DeviceSite(warningSiteId, "DEV-W1"),
+                new ChannelResolver.DeviceSite(criticalSiteId, "DEV-C1")
             ));
+        given(latestValueProjection.lastSeen("DEV-H1")).willReturn(Optional.of(recent));
+        given(latestValueProjection.lastSeen("DEV-W1")).willReturn(Optional.of(stale));
+        given(latestValueProjection.lastSeen("DEV-C1")).willReturn(Optional.of(offline));
         given(ontologyService.countByTargetAndType(healthySiteId, OntologyService.INSTALLED_AT)).willReturn(1);
         given(ontologyService.countByTargetAndType(warningSiteId, OntologyService.INSTALLED_AT)).willReturn(1);
         given(ontologyService.countByTargetAndType(criticalSiteId, OntologyService.INSTALLED_AT)).willReturn(1);
@@ -211,11 +223,13 @@ class FleetServiceTest {
         ObjectEntity site = buildSite(siteId, "New Site", tenant);
 
         // 3 assets but no measurement data at all
-        given(measurementRepository.getLastSeenBySiteIds(List.of(siteId)))
+        given(channelResolver.devicesBySites(List.of(siteId)))
             .willReturn(List.of(
-                new MeasurementRepository.DeviceLastSeen(siteId, "DEV-1", null),
-                new MeasurementRepository.DeviceLastSeen(siteId, "DEV-2", null)
+                new ChannelResolver.DeviceSite(siteId, "DEV-1"),
+                new ChannelResolver.DeviceSite(siteId, "DEV-2")
             ));
+        given(latestValueProjection.lastSeen("DEV-1")).willReturn(Optional.empty());
+        given(latestValueProjection.lastSeen("DEV-2")).willReturn(Optional.empty());
         given(ontologyService.countByTargetAndType(siteId, OntologyService.INSTALLED_AT)).willReturn(3);
 
         FleetStatusDTO result = fleetService.getFleetStatus(List.of(site));
@@ -241,7 +255,7 @@ class FleetServiceTest {
         ObjectEntity site2 = buildSite(siteId2, "S2", tenant1);
         ObjectEntity site3 = buildSite(siteId3, "S3", tenant2);
 
-        given(measurementRepository.getLastSeenBySiteIds(List.of(siteId1, siteId2, siteId3)))
+        given(channelResolver.devicesBySites(List.of(siteId1, siteId2, siteId3)))
             .willReturn(List.of());
         given(ontologyService.countByTargetAndType(siteId1, OntologyService.INSTALLED_AT)).willReturn(0);
         given(ontologyService.countByTargetAndType(siteId2, OntologyService.INSTALLED_AT)).willReturn(0);
@@ -261,7 +275,7 @@ class FleetServiceTest {
         UUID siteId = UUID.randomUUID();
         ObjectEntity site = buildSite(siteId, "Empty Site", tenant);
 
-        given(measurementRepository.getLastSeenBySiteIds(List.of(siteId)))
+        given(channelResolver.devicesBySites(List.of(siteId)))
             .willReturn(List.of());
         given(ontologyService.countByTargetAndType(siteId, OntologyService.INSTALLED_AT)).willReturn(0);
 

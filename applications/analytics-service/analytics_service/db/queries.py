@@ -90,6 +90,37 @@ async def fetch_descriptive_stats(
     return [dict(r) for r in rows]
 
 
+async def fetch_raw_timeseries(
+    pool: asyncpg.Pool,
+    device_metric_pairs: list[tuple[str, int]],
+    start: int,
+    end: int,
+) -> list[dict]:
+    """Every individual data point (no bucketing) — state-change widgets need
+    the exact transitions that aggregation would smear."""
+    device_ids = [d for d, _ in device_metric_pairs]
+    metric_ids = [m for _, m in device_metric_pairs]
+
+    rows = await pool.fetch(
+        """
+        WITH pairs AS (
+            SELECT unnest($1::text[]) AS device_id, unnest($2::int[]) AS metric_id
+        )
+        SELECT
+            EXTRACT(EPOCH FROM m.time)::bigint AS bucket,
+            m.device_id,
+            m.metric_id,
+            m.value
+        FROM measurements m
+        JOIN pairs p ON m.device_id = p.device_id AND m.metric_id = p.metric_id
+        WHERE m.time >= to_timestamp($3) AND m.time < to_timestamp($4)
+        ORDER BY bucket
+        """,
+        device_ids, metric_ids, start, end,
+    )
+    return [dict(r) for r in rows]
+
+
 async def fetch_timeseries(
     pool: asyncpg.Pool,
     device_metric_pairs: list[tuple[str, int]],

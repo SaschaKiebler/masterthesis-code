@@ -9,7 +9,7 @@ import com.digitaldemon.core.ontology.ObjectEntity;
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
 import com.digitaldemon.core.common.exception.ValidationException;
 import com.digitaldemon.core.kpiformula.KpiFormulaRepository;
-import com.digitaldemon.core.measurement.MeasurementRepository;
+import com.digitaldemon.core.measurement.LatestValueProjection;
 import com.digitaldemon.core.metricpoint.MetricPointRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -49,7 +49,8 @@ public class KpiFormulaService {
 
     private final KpiFormulaRepository kpiFormulaRepository;
     private final MetricPointRepository metricPointRepository;
-    private final MeasurementRepository measurementRepository;
+    /** Latest values come from the in-memory projection — no measurement-store read. */
+    private final LatestValueProjection latestValueProjection;
     private final OntologyService ontologyService;
     private final DerivedPropertyService derivedPropertyService;
 
@@ -253,7 +254,7 @@ public class KpiFormulaService {
             UUID mpId   = UUID.fromString(binding.metricPointId);
             MetricPoint mp = metricPointRepository.findById(mpId).orElse(null);
             if (mp == null) return Optional.empty();
-            return measurementRepository.findLatestValue(mp.getDeviceId(), mp.getMetricId());
+            return latestValueProjection.findLatestValue(mp.getDeviceId(), mp.getMetricId());
         } catch (IllegalArgumentException e) {
             log.warn("DIRECT binding has invalid metricPointId: {}", binding.metricPointId);
             return Optional.empty();
@@ -351,7 +352,7 @@ public class KpiFormulaService {
             }
 
             for (MetricPoint mp : matchingMps) {
-                measurementRepository.findLatestValue(mp.getDeviceId(), mp.getMetricId())
+                latestValueProjection.findLatestValue(mp.getDeviceId(), mp.getMetricId())
                         .ifPresent(values::add);
             }
         }

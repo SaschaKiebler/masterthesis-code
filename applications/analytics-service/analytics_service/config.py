@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     port: int = 8100
     workers: int = 1
 
+    # Auth: validate the platform's self-issued HS256 tokens on all /stats
+    # routes (same shared secret core signs with, env LOCAL_AUTH_JWT_SECRET).
+    auth_enabled: bool = True
+    local_auth_jwt_secret: str = "insecure-local-dev-secret-change-me"
+
     # Kafka / detection
     kafka_enabled: bool = True
     kafka_bootstrap_servers: str = "localhost:9092"

@@ -3,7 +3,6 @@ package com.digitaldemon.core.asset;
 import com.digitaldemon.core.proto.v1.*;
 import com.digitaldemon.core.asset.AssetService;
 import com.digitaldemon.core.asset.AssetDTO;
-import com.digitaldemon.core.measurement.MeasurementDTO;
 import com.google.protobuf.Timestamp;
 import io.grpc.stub.StreamObserver;
 import lombok.RequiredArgsConstructor;
@@ -71,63 +70,10 @@ public class AssetServiceImpl extends AssetServiceGrpc.AssetServiceImplBase {
         }
     }
     
-    @Override
-    public void getMeasurements(GetMeasurementsRequest request, StreamObserver<GetMeasurementsResponse> responseObserver) {
-        try {
-            log.info("gRPC GetMeasurements called for asset: {}", request.getAssetId().getValue());
-            java.util.UUID assetId = java.util.UUID.fromString(request.getAssetId().getValue());
-            
-            // Parse time range
-            Instant from = request.hasTimeRange() && request.getTimeRange().hasFrom()
-                ? Instant.ofEpochSecond(request.getTimeRange().getFrom().getSeconds())
-                : null;
-            Instant to = request.hasTimeRange() && request.getTimeRange().hasTo()
-                ? Instant.ofEpochSecond(request.getTimeRange().getTo().getSeconds())
-                : null;
-            // bucketMinutes <= 0 → raw mode (no bucketing/averaging), used for event-log widgets.
-            // The REST gateway always sets this explicitly, so unset proto default (0) = raw.
-            int bucketMinutes = request.getBucketMinutes(); // 0 = raw, >0 = bucketed
-            
-            List<String> metricNames = request.getMetricNamesList().isEmpty()
-                ? null : request.getMetricNamesList();
+    // Measurement reads moved to the analytics service (resolve-then-fetch):
+    // the former getMeasurements/getLatestMeasurements RPCs are no longer
+    // implemented — the BFF composes channels (REST) with analytics series.
 
-            Optional<List<MeasurementDTO>> measurementsOpt = assetService.getMeasurements(assetId, from, to, bucketMinutes, metricNames);
-            
-            if (measurementsOpt.isEmpty()) {
-                responseObserver.onError(io.grpc.Status.NOT_FOUND
-                    .withDescription("Asset not found or no measurements available")
-                    .asRuntimeException());
-                return;
-            }
-            
-            GetMeasurementsResponse.Builder responseBuilder = GetMeasurementsResponse.newBuilder();
-            
-            for (MeasurementDTO dto : measurementsOpt.get()) {
-                Measurement measurement = Measurement.newBuilder()
-                    .setTime(Timestamp.newBuilder()
-                        .setSeconds(dto.time().getEpochSecond())
-                        .setNanos(dto.time().getNano())
-                        .build())
-                    .setDeviceId(dto.deviceId())
-                    .setMetricId(dto.metricId())
-                    .setMetricName(dto.metricName())
-                    .setValue(dto.value())
-                    .build();
-                responseBuilder.addMeasurements(measurement);
-            }
-            
-            responseObserver.onNext(responseBuilder.build());
-            responseObserver.onCompleted();
-        } catch (io.grpc.StatusRuntimeException e) {
-            responseObserver.onError(e);
-        } catch (Exception e) {
-            log.error("Error in getMeasurements", e);
-            responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        }
-    }
-    
     @Override
     public void relocateAsset(RelocateAssetRequest request, StreamObserver<RelocateAssetResponse> responseObserver) {
         try {
@@ -187,49 +133,4 @@ public class AssetServiceImpl extends AssetServiceGrpc.AssetServiceImplBase {
         }
     }
     
-    @Override
-    public void getLatestMeasurements(GetLatestMeasurementsRequest request, StreamObserver<GetLatestMeasurementsResponse> responseObserver) {
-        try {
-            log.info("gRPC GetLatestMeasurements called for asset: {}", request.getAssetId().getValue());
-            java.util.UUID assetId = java.util.UUID.fromString(request.getAssetId().getValue());
-            
-            List<String> metricNames = request.getMetricNamesList().isEmpty()
-                ? null : request.getMetricNamesList();
-
-            Optional<List<MeasurementDTO>> measurementsOpt = assetService.getLatestMeasurements(assetId, metricNames);
-            
-            if (measurementsOpt.isEmpty()) {
-                responseObserver.onError(io.grpc.Status.NOT_FOUND
-                    .withDescription("Asset not found or no measurements available")
-                    .asRuntimeException());
-                return;
-            }
-            
-            GetLatestMeasurementsResponse.Builder responseBuilder = GetLatestMeasurementsResponse.newBuilder();
-            
-            for (MeasurementDTO dto : measurementsOpt.get()) {
-                Measurement measurement = Measurement.newBuilder()
-                    .setTime(Timestamp.newBuilder()
-                        .setSeconds(dto.time().getEpochSecond())
-                        .setNanos(dto.time().getNano())
-                        .build())
-                    .setDeviceId(dto.deviceId())
-                    .setMetricId(dto.metricId())
-                    .setMetricName(dto.metricName())
-                    .setValue(dto.value())
-                    .build();
-                responseBuilder.addMeasurements(measurement);
-            }
-            
-            responseObserver.onNext(responseBuilder.build());
-            responseObserver.onCompleted();
-        } catch (io.grpc.StatusRuntimeException e) {
-            responseObserver.onError(e);
-        } catch (Exception e) {
-            log.error("Error in getLatestMeasurements", e);
-            responseObserver.onError(io.grpc.Status.INTERNAL
-                .withDescription(e.getMessage())
-                .asRuntimeException());
-        }
-    }
 }

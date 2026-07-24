@@ -1,6 +1,5 @@
 package com.digitaldemon.core.project;
 
-import com.digitaldemon.core.measurement.MeasurementDTO;
 import com.digitaldemon.core.project.ProjectHealthDTO;
 import com.digitaldemon.core.derivedproperty.DerivedProperty;
 import com.digitaldemon.core.event.Event;
@@ -11,7 +10,8 @@ import com.digitaldemon.core.common.exception.ResourceNotFoundException;
 import com.digitaldemon.core.common.exception.ValidationException;
 import com.digitaldemon.core.derivedproperty.DerivedPropertyRepository;
 import com.digitaldemon.core.event.EventRepository;
-import com.digitaldemon.core.measurement.MeasurementRepository;
+import com.digitaldemon.core.measurement.ChannelResolver;
+import com.digitaldemon.core.measurement.LatestValueProjection;
 import com.digitaldemon.core.metricpoint.MetricPointRepository;
 import com.digitaldemon.core.ontology.ObjectRepository;
 import com.digitaldemon.core.user.AuthService;
@@ -62,7 +62,8 @@ public class ProjectController {
     private final ProjectService projectService;
     private final AuthService authService;
     private final MetricPointRepository metricPointRepository;
-    private final MeasurementRepository measurementRepository;
+    private final ChannelResolver channelResolver;
+    private final LatestValueProjection latestValueProjection;
     private final EventRepository eventRepository;
     private final DerivedPropertyRepository derivedPropertyRepository;
     private final ObjectRepository objectRepository;
@@ -307,31 +308,26 @@ public class ProjectController {
         }
     }
 
-    // ─── Measurements by metricPointIds ───────────────────────────────────────
+    // ─── Channels (resolve-then-fetch: series come from analytics via the BFF) ──
 
-    @GetMapping("/{id}/measurements")
-    public ResponseEntity<?> getProjectMeasurements(
+    @GetMapping("/{id}/channels")
+    public ResponseEntity<?> getProjectChannels(
             @PathVariable String id,
-            @RequestParam(required = false) String metricPointIds,
-            @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to,
-            @RequestParam(required = false) Integer bucket) {
-        log.info("GET /api/v1/projects/{}/measurements", id);
+            @RequestParam(required = false) String metricPointIds) {
+        log.info("GET /api/v1/projects/{}/channels", id);
         UUID projectId = parseUUID(id, "project ID");
 
         try {
             Set<UUID> objectIds = projectService.collectProjectObjectIds(projectId);
 
-            // Resolve metric point IDs: either from param or all in project scope
             List<UUID> mpIds;
             if (metricPointIds != null && !metricPointIds.isBlank()) {
                 mpIds = Arrays.stream(metricPointIds.split(","))
                     .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .map(s -> parseUUID(s, "metricPointId"))
+                    .filter(str -> !str.isEmpty())
+                    .map(str -> parseUUID(str, "metricPointId"))
                     .toList();
             } else {
-                // Fetch all metric point IDs in project scope
                 List<Object[]> rows = metricPointRepository.findEnrichedByObjectIds(objectIds);
                 mpIds = rows.stream()
                     .map(r -> (UUID) r[0])
@@ -339,55 +335,23 @@ public class ProjectController {
                     .toList();
             }
 
-            if (mpIds.isEmpty()) {
-                return ResponseEntity.ok(Map.of("measurements", List.of(), "count", 0, "bucketMinutes", 0));
-            }
-
-            Instant toInstant = to != null ? parseInstant(to) : Instant.now();
-            Instant fromInstant = from != null ? parseInstant(from) : toInstant.minus(Duration.ofDays(1));
-
-            // bucket=0 means raw (all data points), null means auto-calculate
-            int bucketMinutes;
-            List<MeasurementDTO> measurements;
-            if (bucket != null && bucket == 0) {
-                bucketMinutes = 0;
-                measurements = measurementRepository
-                    .getRawMeasurementsByMetricPointIds(mpIds, fromInstant, toInstant);
-            } else if (bucket != null && bucket > 0) {
-                bucketMinutes = bucket;
-                measurements = measurementRepository
-                    .getMeasurementsByMetricPointIds(mpIds, fromInstant, toInstant, bucketMinutes);
-            } else {
-                long spanMinutes = Duration.between(fromInstant, toInstant).toMinutes();
-                if (spanMinutes <= 360) bucketMinutes = 1;
-                else if (spanMinutes <= 2 * 1440) bucketMinutes = 5;
-                else if (spanMinutes <= 7 * 1440) bucketMinutes = 15;
-                else if (spanMinutes <= 30 * 1440) bucketMinutes = 60;
-                else if (spanMinutes <= 90 * 1440) bucketMinutes = 360;
-                else bucketMinutes = 1440;
-                measurements = measurementRepository
-                    .getMeasurementsByMetricPointIds(mpIds, fromInstant, toInstant, bucketMinutes);
-            }
-
-            List<Map<String, Object>> dtos = measurements.stream().map(m -> {
-                Map<String, Object> dto = new LinkedHashMap<>();
-                dto.put("time", m.time().getEpochSecond());
-                dto.put("deviceId", m.deviceId());
-                dto.put("metricId", m.metricId());
-                dto.put("metricName", m.metricName());
-                dto.put("value", m.value());
-                return dto;
-            }).toList();
-
-            Map<String, Object> response = new LinkedHashMap<>();
-            response.put("measurements", dtos);
-            response.put("count", dtos.size());
-            response.put("bucketMinutes", bucketMinutes);
-
-            return ResponseEntity.ok(response);
+            List<Map<String, Object>> channels = channelResolver.resolveMetricPoints(mpIds)
+                .stream().map(ProjectController::channelDto).toList();
+            return ResponseEntity.ok(Map.of("channels", channels, "count", channels.size()));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         }
+    }
+
+    private static Map<String, Object> channelDto(ChannelResolver.Channel c) {
+        Map<String, Object> dto = new LinkedHashMap<>();
+        dto.put("metricPointId", c.metricPointId().toString());
+        dto.put("deviceId", c.deviceId());
+        dto.put("metricId", c.metricId());
+        dto.put("metricName", c.displayName());
+        dto.put("unit", c.unit());
+        dto.put("source", c.source());
+        return dto;
     }
 
     // ─── Metric pairs for ΔT computation ──────────────────────────────────────
@@ -559,58 +523,33 @@ public class ProjectController {
         }
     }
 
-    // ─── Cross-building comparison ────────────────────────────────────────────
+    // ─── Cross-building comparison (channels only; series come from analytics) ──
 
-    @GetMapping("/{id}/compare")
-    public ResponseEntity<?> getProjectComparison(
+    @GetMapping("/{id}/quantity-channels")
+    public ResponseEntity<?> getProjectQuantityChannels(
             @PathVariable String id,
-            @RequestParam String quantityName,
-            @RequestParam String from,
-            @RequestParam String to,
-            @RequestParam(defaultValue = "60") int bucket) {
-        log.info("GET /api/v1/projects/{}/compare?quantityName={}", id, quantityName);
+            @RequestParam String quantityName) {
+        log.info("GET /api/v1/projects/{}/quantity-channels?quantityName={}", id, quantityName);
         UUID projectId = parseUUID(id, "project ID");
 
         try {
             List<UUID> siteIds = projectService.getProjectSiteIds(projectId);
             if (siteIds.isEmpty()) {
-                return ResponseEntity.ok(Map.of("series", List.of()));
+                return ResponseEntity.ok(Map.of("channels", List.of()));
             }
 
-            Instant fromInstant = parseInstant(from);
-            Instant toInstant = parseInstant(to);
+            List<Map<String, Object>> channels = channelResolver
+                .resolveByQuantity(siteIds, quantityName).stream()
+                .map(c -> {
+                    Map<String, Object> dto = new LinkedHashMap<String, Object>();
+                    dto.put("siteId", c.siteId().toString());
+                    dto.put("siteName", c.siteName());
+                    dto.put("deviceId", c.deviceId());
+                    dto.put("metricId", c.metricId());
+                    return dto;
+                }).toList();
 
-            List<Object[]> rows = measurementRepository
-                .getMeasurementsByQuantityAndSites(siteIds, quantityName, fromInstant, toInstant, bucket);
-
-            // Group by site
-            Map<String, List<Map<String, Object>>> bySite = new LinkedHashMap<>();
-            Map<String, String> siteNames = new LinkedHashMap<>();
-
-            for (Object[] r : rows) {
-                String siteId = toUuidString(r[1]);
-                String siteName = (String) r[2];
-                siteNames.putIfAbsent(siteId, siteName);
-
-                Map<String, Object> point = new LinkedHashMap<>();
-                point.put("time", r[0] instanceof java.sql.Timestamp ts
-                    ? ts.toInstant().getEpochSecond()
-                    : Instant.parse(r[0].toString()).getEpochSecond());
-                point.put("value", r[3] != null ? ((Number) r[3]).doubleValue() : null);
-
-                bySite.computeIfAbsent(siteId, k -> new ArrayList<>()).add(point);
-            }
-
-            List<Map<String, Object>> series = new ArrayList<>();
-            for (var entry : bySite.entrySet()) {
-                Map<String, Object> s = new LinkedHashMap<>();
-                s.put("siteId", entry.getKey());
-                s.put("siteName", siteNames.get(entry.getKey()));
-                s.put("measurements", entry.getValue());
-                series.add(s);
-            }
-
-            return ResponseEntity.ok(Map.of("series", series));
+            return ResponseEntity.ok(Map.of("channels", channels));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         }
@@ -691,23 +630,23 @@ public class ProjectController {
                 return ResponseEntity.ok(Map.of("values", List.of()));
             }
 
-            List<Object[]> rows = measurementRepository.getLatestByMetricPointIds(mpIds);
-
-            List<Map<String, Object>> values = rows.stream().map(r -> {
-                Map<String, Object> v = new LinkedHashMap<>();
-                v.put("metricPointId", toUuidString(r[0]));
-                v.put("deviceId", r[1]);
-                v.put("metricId", r[2] != null ? ((Number) r[2]).intValue() : null);
-                v.put("displayName", r[3]);
-                v.put("unit", r[4]);
-                v.put("quantityName", r[5]);
-                v.put("assetObjectId", toUuidString(r[6]));
-                v.put("value", r[7] != null ? ((Number) r[7]).doubleValue() : null);
-                v.put("time", r[8] != null ? (r[8] instanceof java.sql.Timestamp ts
-                    ? ts.toInstant().getEpochSecond()
-                    : Instant.parse(r[8].toString()).getEpochSecond()) : null);
-                return v;
-            }).toList();
+            // Registry context from the resolver, values from the in-memory
+            // projection — no measurement-store read.
+            List<Map<String, Object>> values = channelResolver.latestValueContext(mpIds)
+                .stream().map(c -> {
+                    var latest = latestValueProjection.latest(c.deviceId(), c.metricId()).orElse(null);
+                    Map<String, Object> v = new LinkedHashMap<String, Object>();
+                    v.put("metricPointId", c.metricPointId().toString());
+                    v.put("deviceId", c.deviceId());
+                    v.put("metricId", c.metricId());
+                    v.put("displayName", c.displayName());
+                    v.put("unit", c.unit());
+                    v.put("quantityName", c.quantityName());
+                    v.put("assetObjectId", c.assetObjectId() != null ? c.assetObjectId().toString() : null);
+                    v.put("value", latest != null ? latest.value() : null);
+                    v.put("time", latest != null ? latest.time().getEpochSecond() : null);
+                    return v;
+                }).toList();
 
             return ResponseEntity.ok(Map.of("values", values));
         } catch (ResourceNotFoundException e) {

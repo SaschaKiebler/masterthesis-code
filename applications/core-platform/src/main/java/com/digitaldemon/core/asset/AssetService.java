@@ -3,8 +3,6 @@ package com.digitaldemon.core.asset;
 import com.digitaldemon.core.ontology.OntologyService;
 
 import com.digitaldemon.core.asset.AssetDTO;
-import com.digitaldemon.core.measurement.MeasurementDTO;
-import com.digitaldemon.core.measurement.MeasurementStatisticsDTO;
 import com.digitaldemon.core.metricpoint.MetricPoint;
 import com.digitaldemon.core.ontology.ObjectEntity;
 import com.digitaldemon.core.device.PhysicalDevice;
@@ -12,7 +10,7 @@ import com.digitaldemon.core.common.exception.DuplicateResourceException;
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
 import com.digitaldemon.core.common.exception.ServiceException;
 import com.digitaldemon.core.common.exception.ValidationException;
-import com.digitaldemon.core.measurement.MeasurementRepository;
+import com.digitaldemon.core.measurement.ChannelResolver;
 import com.digitaldemon.core.metricpoint.MetricPointRepository;
 import com.digitaldemon.core.ontology.ObjectRepository;
 import com.digitaldemon.core.device.PhysicalDeviceRepository;
@@ -32,7 +30,7 @@ import java.util.*;
 @Transactional(readOnly = true)
 public class AssetService {
 
-    private final MeasurementRepository measurementRepository;
+    private final ChannelResolver channelResolver;
     private final OntologyService ontologyService;
     private final PhysicalDeviceRepository physicalDeviceRepository;
     private final MetricPointRepository metricPointRepository;
@@ -59,37 +57,25 @@ public class AssetService {
     }
 
     /**
-     * Get aggregated measurements for an asset.
+     * Channels of an asset (resolve-then-fetch): the asset's device channels,
+     * optionally filtered like the former metrics parameter (metric-point
+     * UUID, display name, or source). Series and latest values are fetched
+     * from the analytics service by the BFF.
      */
-    public Optional<List<MeasurementDTO>> getMeasurements(
-            UUID assetId, Instant from, Instant to, int bucketMinutes,
-            List<String> metricNames) {
-
+    public Optional<List<ChannelResolver.Channel>> getChannels(UUID assetId, List<String> metricNames) {
         return objectRepository.findById(assetId)
             .map(obj -> {
-                Instant end = to != null ? to : Instant.now();
-                Instant start = from != null ? from : end.minus(24, ChronoUnit.HOURS);
-
                 String deviceId = resolveDeviceId(assetId);
-                List<Integer> metricIds = resolveMetricIdsFromMetricPoints(assetId, metricNames);
-
-                if (bucketMinutes <= 0) {
-                    return measurementRepository.getRawMeasurements(deviceId, start, end, metricIds);
+                List<ChannelResolver.Channel> channels = channelResolver.resolveDevice(deviceId);
+                if (metricNames == null || metricNames.isEmpty()) {
+                    return channels;
                 }
-                return measurementRepository.getAggregatedMeasurements(
-                    deviceId, start, end, bucketMinutes, metricIds);
-            });
-    }
-
-    /**
-     * Get latest measurement per metric for an asset.
-     */
-    public Optional<List<MeasurementDTO>> getLatestMeasurements(UUID assetId, List<String> metricNames) {
-        return objectRepository.findById(assetId)
-            .map(obj -> {
-                String deviceId = resolveDeviceId(assetId);
-                List<Integer> metricIds = resolveMetricIdsFromMetricPoints(assetId, metricNames);
-                return measurementRepository.getLatestMeasurements(deviceId, metricIds);
+                return channels.stream()
+                    .filter(c -> metricNames.stream().anyMatch(name ->
+                        name.equals(c.metricPointId().toString())
+                            || name.equals(c.displayName())
+                            || name.equals(c.source())))
+                    .toList();
             });
     }
 
@@ -104,104 +90,11 @@ public class AssetService {
             .orElse(null);
     }
 
-    private List<Integer> resolveMetricIdsFromMetricPoints(UUID assetId, List<String> metricNames) {
-        if (metricNames == null || metricNames.isEmpty()) {
-            return null;
-        }
-        List<MetricPoint> metricPoints = metricPointRepository.findByAssetIdViaHasMetric(assetId, null);
-        if (metricPoints.isEmpty()) {
-            return List.of();
-        }
-
-        Map<UUID, String> displayNames = new HashMap<>();
-        List<UUID> mpIds = metricPoints.stream().map(MetricPoint::getId).toList();
-        objectRepository.findAllById(mpIds).forEach(obj ->
-            displayNames.put(obj.getId(), obj.getDisplayName())
-        );
-
-        List<Integer> ids = new ArrayList<>();
-        for (String metricName : metricNames) {
-            UUID metricPointUuid = tryParseUuid(metricName);
-            if (metricPointUuid != null) {
-                metricPoints.stream()
-                    .filter(mp -> mp.getId().equals(metricPointUuid))
-                    .findFirst()
-                    .ifPresent(mp -> ids.add(mp.getMetricId().intValue()));
-                continue;
-            }
-
-            boolean matched = false;
-            for (MetricPoint mp : metricPoints) {
-                String displayName = displayNames.get(mp.getId());
-                if (displayName != null && displayName.equals(metricName)) {
-                    ids.add(mp.getMetricId().intValue());
-                    matched = true;
-                    break;
-                }
-            }
-            if (matched) continue;
-
-            for (MetricPoint mp : metricPoints) {
-                if (mp.getSource() != null && mp.getSource().equals(metricName)) {
-                    ids.add(mp.getMetricId().intValue());
-                    break;
-                }
-            }
-        }
-        return ids;
-    }
-
-    private UUID tryParseUuid(String value) {
-        try {
-            return UUID.fromString(value);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-
-    public SiteMeasurementsResult getSiteMeasurements(
-            UUID siteId, Instant from, Instant to, Integer bucketMinutesOverride) {
-
-        log.debug("Fetching site measurements: siteId={}, from={}, to={}, bucket={}", siteId, from, to, bucketMinutesOverride);
-
+    /** Channels of a site subtree; the BFF fetches series/statistics from analytics. */
+    public List<ChannelResolver.Channel> resolveSiteChannels(UUID siteId) {
         objectRepository.findById(siteId)
             .orElseThrow(() -> new ResourceNotFoundException("Site", siteId));
-
-        Instant end = to != null ? to : Instant.now();
-        Instant start = from != null ? from : end.minus(24, ChronoUnit.HOURS);
-
-        int bucketMinutes;
-        if (bucketMinutesOverride != null && bucketMinutesOverride > 0) {
-            bucketMinutes = bucketMinutesOverride;
-        } else {
-            bucketMinutes = calculateBucketMinutes(start, end);
-        }
-
-        try {
-            List<MeasurementDTO> measurements = measurementRepository.getSiteMeasurements(
-                siteId, start, end, bucketMinutes);
-            return new SiteMeasurementsResult(measurements, bucketMinutes);
-        } catch (DataAccessException e) {
-            log.error("Database error fetching site measurements for {}: {}", siteId, e.getMessage(), e);
-            throw new ServiceException("Failed to fetch site measurements", e);
-        }
-    }
-
-    public List<MeasurementStatisticsDTO> getSiteStatistics(UUID siteId, Instant from, Instant to) {
-        log.debug("Fetching site statistics: siteId={}, from={}, to={}", siteId, from, to);
-
-        objectRepository.findById(siteId)
-            .orElseThrow(() -> new ResourceNotFoundException("Site", siteId));
-
-        Instant end = to != null ? to : Instant.now();
-        Instant start = from != null ? from : end.minus(24, ChronoUnit.HOURS);
-
-        try {
-            return measurementRepository.getSiteStatistics(siteId, start, end);
-        } catch (DataAccessException e) {
-            log.error("Database error fetching site statistics for {}: {}", siteId, e.getMessage(), e);
-            throw new ServiceException("Failed to fetch site statistics", e);
-        }
+        return channelResolver.resolveSite(siteId);
     }
 
     public int calculateBucketMinutes(Instant from, Instant to) {
@@ -214,11 +107,6 @@ public class AssetService {
         if (spanMinutes <= 90 * 1440) return 360;
         return 1440;
     }
-
-    public record SiteMeasurementsResult(
-        List<MeasurementDTO> measurements,
-        int bucketMinutes
-    ) {}
 
     @Transactional
     public List<AssetDTO> registerAssets(UUID siteId, List<DeviceRegistrationRequest> devices) {

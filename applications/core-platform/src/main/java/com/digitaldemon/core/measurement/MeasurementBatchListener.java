@@ -37,6 +37,7 @@ import org.springframework.stereotype.Component;
 public class MeasurementBatchListener {
 
     private final KpiFormulaEvaluator kpiFormulaEvaluator;
+    private final LatestValueProjection latestValueProjection;
 
     @KafkaListener(topics = "${kafka.topics.measurement-ingested}")
     public void onMessage(byte[] payload) {
@@ -47,6 +48,8 @@ public class MeasurementBatchListener {
             // Poison message — non-retryable, goes straight to the DLQ.
             throw new IllegalArgumentException("Payload is not a valid MeasurementBatch protobuf", e);
         }
+        // Projection first: KPI evaluation reads the latest values it feeds.
+        latestValueProjection.apply(batch);
         try {
             kpiFormulaEvaluator.evaluate(batch);
         } catch (Exception ex) {

@@ -5,7 +5,8 @@ import com.digitaldemon.core.ontology.OntologyService;
 import com.digitaldemon.core.fleet.FleetSiteHealthDTO;
 import com.digitaldemon.core.fleet.FleetStatusDTO;
 import com.digitaldemon.core.ontology.ObjectEntity;
-import com.digitaldemon.core.measurement.MeasurementRepository;
+import com.digitaldemon.core.measurement.ChannelResolver;
+import com.digitaldemon.core.measurement.LatestValueProjection;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,8 +27,13 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class FleetService {
 
-    private final MeasurementRepository measurementRepository;
+    private final ChannelResolver channelResolver;
+    private final LatestValueProjection latestValueProjection;
     private final OntologyService ontologyService;
+
+    /** Site membership from the graph, last-seen from the in-memory projection. */
+    record DeviceLastSeen(UUID siteId, String deviceId, Instant lastTime) {
+    }
 
     public static final Duration ONLINE_THRESHOLD = Duration.ofHours(2);
     public static final Duration STALE_THRESHOLD = Duration.ofHours(2);
@@ -44,9 +50,11 @@ public class FleetService {
         Instant now = Instant.now();
 
         List<UUID> siteIds = sites.stream().map(ObjectEntity::getId).toList();
-        Map<UUID, List<MeasurementRepository.DeviceLastSeen>> lastSeenBySite =
-            measurementRepository.getLastSeenBySiteIds(siteIds).stream()
-                .collect(Collectors.groupingBy(MeasurementRepository.DeviceLastSeen::siteId));
+        Map<UUID, List<DeviceLastSeen>> lastSeenBySite =
+            channelResolver.devicesBySites(siteIds).stream()
+                .map(d -> new DeviceLastSeen(d.siteId(), d.deviceId(),
+                        latestValueProjection.lastSeen(d.deviceId()).orElse(null)))
+                .collect(Collectors.groupingBy(DeviceLastSeen::siteId));
 
         List<FleetSiteHealthDTO> healthDTOs = new ArrayList<>();
         int totalAssets = 0;
@@ -61,7 +69,7 @@ public class FleetService {
             String tenantName = site.getTenant().getName();
             tenantIds.add(tenantId);
 
-            List<MeasurementRepository.DeviceLastSeen> deviceData =
+            List<DeviceLastSeen> deviceData =
                 lastSeenBySite.getOrDefault(site.getId(), List.of());
 
             int assetCount = ontologyService.countByTargetAndType(site.getId(), OntologyService.INSTALLED_AT);
@@ -72,7 +80,7 @@ public class FleetService {
             int offline = 0;
             Instant latestData = null;
 
-            for (MeasurementRepository.DeviceLastSeen d : deviceData) {
+            for (DeviceLastSeen d : deviceData) {
                 if (d.lastTime() != null) {
                     if (latestData == null || d.lastTime().isAfter(latestData)) {
                         latestData = d.lastTime();

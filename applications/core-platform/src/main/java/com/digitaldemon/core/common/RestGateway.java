@@ -1,7 +1,6 @@
 package com.digitaldemon.core.common;
 
 import com.digitaldemon.core.site.SiteDTO;
-import com.digitaldemon.core.measurement.MeasurementStatisticsDTO;
 import com.digitaldemon.core.ontology.ObjectEntity;
 import com.digitaldemon.core.proto.v1.*;
 import com.digitaldemon.core.proto.v1.UUID;
@@ -129,91 +128,34 @@ public class RestGateway {
         ));
     }
 
-    // Site-Level Measurement Endpoints
+    // Site-Level Channel Endpoint (resolve-then-fetch: the BFF composes
+    // series/statistics from these channels and the analytics service)
 
-    @GetMapping("/sites/{siteId}/measurements")
-    public ResponseEntity<Map<String, Object>> getSiteMeasurements(
-            @PathVariable String siteId,
-            @RequestParam(required = false) Long from,
-            @RequestParam(required = false) Long to,
-            @RequestParam(required = false) Integer bucketMinutes) {
-
-        log.info("REST GET /api/v1/sites/{}/measurements (from={}, to={}, bucket={})", siteId, from, to, bucketMinutes);
-
+    @GetMapping("/sites/{siteId}/channels")
+    public ResponseEntity<Map<String, Object>> getSiteChannels(@PathVariable String siteId) {
+        log.info("REST GET /api/v1/sites/{}/channels", siteId);
         try {
             java.util.UUID siteUuid = java.util.UUID.fromString(siteId);
-
-            java.time.Instant fromInstant = from != null ? java.time.Instant.ofEpochSecond(from) : null;
-            java.time.Instant toInstant = to != null ? java.time.Instant.ofEpochSecond(to) : null;
-
-            AssetService.SiteMeasurementsResult result = assetServiceBean.getSiteMeasurements(
-                siteUuid, fromInstant, toInstant, bucketMinutes);
-
-            List<Map<String, Object>> measurements = result.measurements().stream()
-                .map(m -> {
-                    Map<String, Object> mm = new HashMap<>();
-                    mm.put("time", m.time().getEpochSecond());
-                    mm.put("deviceId", m.deviceId());
-                    mm.put("metricId", m.metricId());
-                    mm.put("metricName", m.metricName());
-                    mm.put("value", m.value());
-                    return mm;
-                })
-                .collect(Collectors.toList());
-
-            Map<String, Object> response = new HashMap<>();
-            response.put("measurements", measurements);
-            response.put("bucketMinutes", result.bucketMinutes());
-            response.put("count", measurements.size());
-
-            return ResponseEntity.ok(response);
+            List<Map<String, Object>> channels = assetServiceBean.resolveSiteChannels(siteUuid)
+                .stream().map(RestGateway::channelDto).collect(Collectors.toList());
+            return ResponseEntity.ok(Map.of("channels", channels, "count", channels.size()));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         } catch (Exception e) {
-            log.error("Error fetching site measurements for {}: {}", siteId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of("message", "Failed to fetch site measurements"));
+            log.error("Error resolving site channels for {}: {}", siteId, e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "Failed to resolve site channels"));
         }
     }
 
-    @GetMapping("/sites/{siteId}/measurements/statistics")
-    public ResponseEntity<Map<String, Object>> getSiteStatistics(
-            @PathVariable String siteId,
-            @RequestParam(required = false) Long from,
-            @RequestParam(required = false) Long to) {
-
-        log.info("REST GET /api/v1/sites/{}/measurements/statistics (from={}, to={})", siteId, from, to);
-
-        try {
-            java.util.UUID siteUuid = java.util.UUID.fromString(siteId);
-
-            java.time.Instant fromInstant = from != null ? java.time.Instant.ofEpochSecond(from) : null;
-            java.time.Instant toInstant = to != null ? java.time.Instant.ofEpochSecond(to) : null;
-
-            List<MeasurementStatisticsDTO> stats = assetServiceBean.getSiteStatistics(
-                siteUuid, fromInstant, toInstant);
-
-            List<Map<String, Object>> statistics = stats.stream()
-                .map(s -> {
-                    Map<String, Object> sm = new HashMap<>();
-                    sm.put("deviceId", s.deviceId());
-                    sm.put("metricId", s.metricId());
-                    sm.put("metricName", s.metricName());
-                    sm.put("min", s.min());
-                    sm.put("max", s.max());
-                    sm.put("avg", s.avg());
-                    sm.put("stddev", s.stddev());
-                    sm.put("sampleCount", s.sampleCount());
-                    return sm;
-                })
-                .collect(Collectors.toList());
-
-            return ResponseEntity.ok(Map.of("statistics", statistics));
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
-        } catch (Exception e) {
-            log.error("Error fetching site statistics for {}: {}", siteId, e.getMessage(), e);
-            return ResponseEntity.internalServerError().body(Map.of("message", "Failed to fetch site statistics"));
-        }
+    private static Map<String, Object> channelDto(com.digitaldemon.core.measurement.ChannelResolver.Channel c) {
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("metricPointId", c.metricPointId().toString());
+        dto.put("deviceId", c.deviceId());
+        dto.put("metricId", c.metricId());
+        dto.put("metricName", c.displayName());
+        dto.put("unit", c.unit());
+        dto.put("source", c.source());
+        return dto;
     }
 
     // Asset Endpoints
@@ -243,105 +185,28 @@ public class RestGateway {
         return ResponseEntity.ok(Map.of("asset", assetMap));
     }
 
-    @GetMapping("/assets/{id}/measurements")
-    public ResponseEntity<Map<String, Object>> getMeasurements(
-            @PathVariable String id,
-            @RequestParam(required = false) Long from,
-            @RequestParam(required = false) Long to,
-            @RequestParam(defaultValue = "60") int bucketMinutes,
-            @RequestParam(required = false) String metrics) {
-
-        log.info("REST GET /api/v1/assets/{}/measurements", id);
-
-        try {
-            GetMeasurementsRequest.Builder requestBuilder = GetMeasurementsRequest.newBuilder()
-                .setAssetId(UUID.newBuilder().setValue(id).build())
-                .setBucketMinutes(bucketMinutes);
-
-            if (from != null || to != null) {
-                TimeRange.Builder timeRangeBuilder = TimeRange.newBuilder();
-                if (from != null) {
-                    timeRangeBuilder.setFrom(com.google.protobuf.Timestamp.newBuilder()
-                        .setSeconds(from)
-                        .build());
-                }
-                if (to != null) {
-                    timeRangeBuilder.setTo(com.google.protobuf.Timestamp.newBuilder()
-                        .setSeconds(to)
-                        .build());
-                }
-                requestBuilder.setTimeRange(timeRangeBuilder.build());
-            }
-
-            if (metrics != null && !metrics.isBlank()) {
-                for (String name : metrics.split(",")) {
-                    String trimmed = name.trim();
-                    if (!trimmed.isEmpty()) {
-                        requestBuilder.addMetricNames(trimmed);
-                    }
-                }
-            }
-
-            GetMeasurementsResponse response = assetServiceStub.getMeasurements(requestBuilder.build());
-
-            List<Map<String, Object>> measurements = response.getMeasurementsList().stream()
-                .map(m -> {
-                    Map<String, Object> measurementMap = new HashMap<>();
-                    measurementMap.put("time", m.getTime().getSeconds());
-                    measurementMap.put("deviceId", m.getDeviceId());
-                    measurementMap.put("metricId", m.getMetricId());
-                    measurementMap.put("metricName", m.getMetricName());
-                    measurementMap.put("value", m.getValue());
-                    return measurementMap;
-                })
-                .collect(Collectors.toList());
-
-            return ResponseEntity.ok(Map.of("measurements", measurements));
-        } catch (io.grpc.StatusRuntimeException e) {
-            log.error("gRPC error fetching measurements for asset {}: {} - {}", id, e.getStatus(), e.getMessage());
-            return ResponseEntity.status(mapGrpcStatus(e.getStatus().getCode())).body(Map.of("measurements", List.of()));
-        }
-    }
-
-    @GetMapping("/assets/{id}/measurements/latest")
-    public ResponseEntity<Map<String, Object>> getLatestMeasurements(
+    @GetMapping("/assets/{id}/channels")
+    public ResponseEntity<Map<String, Object>> getAssetChannels(
             @PathVariable String id,
             @RequestParam(required = false) String metrics) {
-        log.info("REST GET /api/v1/assets/{}/measurements/latest", id);
-
+        log.info("REST GET /api/v1/assets/{}/channels", id);
         try {
-            GetLatestMeasurementsRequest.Builder requestBuilder = GetLatestMeasurementsRequest.newBuilder()
-                .setAssetId(UUID.newBuilder().setValue(id).build());
-
+            java.util.UUID assetId = java.util.UUID.fromString(id);
+            List<String> metricNames = null;
             if (metrics != null && !metrics.isBlank()) {
-                for (String name : metrics.split(",")) {
-                    String trimmed = name.trim();
-                    if (!trimmed.isEmpty()) {
-                        requestBuilder.addMetricNames(trimmed);
-                    }
-                }
+                metricNames = java.util.Arrays.stream(metrics.split(","))
+                    .map(String::trim).filter(m -> !m.isEmpty()).toList();
             }
-
-            GetLatestMeasurementsRequest request = requestBuilder.build();
-
-            GetLatestMeasurementsResponse response = assetServiceStub.getLatestMeasurements(request);
-
-            List<Map<String, Object>> measurements = response.getMeasurementsList().stream()
-                .map(m -> {
-                    Map<String, Object> measurementMap = new HashMap<>();
-                    measurementMap.put("time", m.getTime().getSeconds());
-                    measurementMap.put("deviceId", m.getDeviceId());
-                    measurementMap.put("metricId", m.getMetricId());
-                    measurementMap.put("metricName", m.getMetricName());
-                    measurementMap.put("value", m.getValue());
-                    return measurementMap;
+            return assetServiceBean.getChannels(assetId, metricNames)
+                .map(channels -> {
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("channels", channels.stream().map(RestGateway::channelDto).collect(Collectors.toList()));
+                    return ResponseEntity.ok(body);
                 })
-                .collect(Collectors.toList());
-
-            return ResponseEntity.ok(Map.of("measurements", measurements));
-        } catch (io.grpc.StatusRuntimeException e) {
-            log.error("gRPC error fetching latest measurements for asset {}: {} - {}", id, e.getStatus(), e.getMessage());
-            return ResponseEntity.status(mapGrpcStatus(e.getStatus().getCode())).body(Map.of("measurements", List.of()));
+                .orElseGet(() -> ResponseEntity.status(404).body(Map.of("message", "Asset not found")));
+        } catch (Exception e) {
+            log.error("Error resolving asset channels for {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("message", "Failed to resolve asset channels"));
         }
     }
 

@@ -1,10 +1,8 @@
 package com.digitaldemon.core.metricpoint;
 
-import com.digitaldemon.core.measurement.MeasurementDTO;
 import com.digitaldemon.core.metricpoint.MetricPoint;
 import com.digitaldemon.core.physicalquantity.PhysicalQuantity;
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
-import com.digitaldemon.core.measurement.MeasurementRepository;
 import com.digitaldemon.core.user.AuthService;
 import com.digitaldemon.core.metricpoint.MetricPointService;
 import com.digitaldemon.core.ontology.OntologyService;
@@ -42,7 +40,6 @@ public class MetricPointController {
     private final PhysicalQuantityService physicalQuantityService;
     private final OntologyService ontologyService;
     private final AuthService authService;
-    private final MeasurementRepository measurementRepository;
 
     @GetMapping("/api/v1/objects/{objectId}/metrics")
     public ResponseEntity<?> listMetricPoints(@PathVariable String objectId) {
@@ -138,39 +135,9 @@ public class MetricPointController {
         }
     }
 
-    @GetMapping("/api/v1/metric-points/{id}/measurements")
-    public ResponseEntity<?> getMetricPointMeasurements(
-            @PathVariable String id,
-            @RequestParam(required = false) String from,
-            @RequestParam(required = false) String to,
-            @RequestParam(defaultValue = "60") int bucket) {
-        log.info("GET /api/v1/metric-points/{}/measurements", id);
-        UUID metricPointId = parseUUID(id, "metric point ID");
-
-        Optional<MetricPoint> opt = metricPointService.findById(metricPointId);
-        if (opt.isEmpty()) {
-            return ResponseEntity.status(404).body(Map.of("message", "MetricPoint not found"));
-        }
-
-        MetricPoint mp = opt.get();
-        Instant fromInstant = from != null ? parseInstant(from) : Instant.now().minus(Duration.ofDays(7));
-        Instant toInstant = to != null ? parseInstant(to) : Instant.now();
-
-        List<MeasurementDTO> measurements = measurementRepository.getAggregatedMeasurements(
-            mp.getDeviceId(), fromInstant, toInstant, bucket, List.of((int) mp.getMetricId()));
-
-        List<Map<String, Object>> dtos = measurements.stream().map(m -> {
-            Map<String, Object> dto = new LinkedHashMap<>();
-            dto.put("time", m.time().getEpochSecond());
-            dto.put("deviceId", m.deviceId());
-            dto.put("metricId", m.metricId());
-            dto.put("metricName", m.metricName());
-            dto.put("value", m.value());
-            return dto;
-        }).toList();
-
-        return ResponseEntity.ok(Map.of("measurements", dtos, "count", dtos.size()));
-    }
+    // Measurement series for a metric point are served by the analytics
+    // service; the BFF composes them from GET /metric-points/{id} (channel)
+    // plus POST /stats/series (resolve-then-fetch, design doc §6).
 
     private Map<String, Object> toDto(MetricPoint mp) {
         Map<String, Object> dto = new LinkedHashMap<>();

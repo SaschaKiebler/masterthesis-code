@@ -9,7 +9,8 @@ import com.digitaldemon.core.tenant.TenantRepository;
 import com.digitaldemon.core.ontology.ObjectRepository;
 import com.digitaldemon.core.ontology.LinkRepository;
 import com.digitaldemon.core.dashboard.DashboardRepository;
-import com.digitaldemon.core.measurement.MeasurementRepository;
+import com.digitaldemon.core.measurement.ChannelResolver;
+import com.digitaldemon.core.measurement.LatestValueProjection;
 import com.digitaldemon.core.fleet.FleetService;
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
 import com.digitaldemon.core.common.exception.ValidationException;
@@ -36,7 +37,14 @@ public class ProjectService {
     private final LinkRepository linkRepository;
     private final DashboardRepository dashboardRepository;
     private final OntologyService ontologyService;
-    private final MeasurementRepository measurementRepository;
+    private final ChannelResolver channelResolver;
+    private final LatestValueProjection latestValueProjection;
+
+    /** Graph detail from the resolver, last-seen from the in-memory projection. */
+    record DeviceHealthDetail(UUID siteId, UUID objectId, String objectName,
+                              String objectTypeName, String objectTypeCategory,
+                              String deviceId, java.time.Instant lastTime) {
+    }
 
     // ─── DTOs ─────────────────────────────────────────────────────────────────
 
@@ -306,12 +314,16 @@ public class ProjectService {
         }
 
         // Fetch per-device last-seen data
-        List<MeasurementRepository.DeviceHealthDetail> deviceData =
-            measurementRepository.getDeviceHealthBySiteIds(siteIds);
+        List<DeviceHealthDetail> deviceData =
+            channelResolver.deviceDetailsBySites(siteIds).stream()
+                .map(d -> new DeviceHealthDetail(d.siteId(), d.objectId(), d.objectName(),
+                        d.objectTypeName(), d.objectTypeCategory(), d.deviceId(),
+                        latestValueProjection.lastSeen(d.deviceId()).orElse(null)))
+                .toList();
 
         // Group by site
-        Map<UUID, List<MeasurementRepository.DeviceHealthDetail>> bySite =
-            deviceData.stream().collect(Collectors.groupingBy(MeasurementRepository.DeviceHealthDetail::siteId));
+        Map<UUID, List<DeviceHealthDetail>> bySite =
+            deviceData.stream().collect(Collectors.groupingBy(DeviceHealthDetail::siteId));
 
         Instant now = Instant.now();
         List<ProjectHealthDTO.BuildingHealth> buildingHealths = new ArrayList<>();
@@ -319,12 +331,12 @@ public class ProjectService {
 
         for (UUID siteId : siteIds) {
             String name = buildingNames.getOrDefault(siteId, "Unknown");
-            List<MeasurementRepository.DeviceHealthDetail> devices = bySite.getOrDefault(siteId, List.of());
+            List<DeviceHealthDetail> devices = bySite.getOrDefault(siteId, List.of());
 
             int online = 0, stale = 0, offline = 0, noData = 0;
             List<ProjectHealthDTO.DeviceHealth> deviceHealths = new ArrayList<>();
 
-            for (MeasurementRepository.DeviceHealthDetail d : devices) {
+            for (DeviceHealthDetail d : devices) {
                 String status;
                 Long lastSeenEpoch = null;
 

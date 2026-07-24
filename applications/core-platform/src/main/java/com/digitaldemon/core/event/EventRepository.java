@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * EventRepository — native query access to the events TimescaleDB hypertable.
- * Uses EntityManager directly (same pattern as MeasurementRepository) because
+ * Uses EntityManager directly because
  * the composite PK (id, time) and hypertable partitioning require native SQL.
  */
 @Repository

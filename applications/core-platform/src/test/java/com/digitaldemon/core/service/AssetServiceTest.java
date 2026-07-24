@@ -4,14 +4,12 @@ import com.digitaldemon.core.ontology.OntologyService;
 import com.digitaldemon.core.asset.AssetService;
 
 import com.digitaldemon.core.asset.AssetDTO;
-import com.digitaldemon.core.measurement.MeasurementDTO;
-import com.digitaldemon.core.measurement.MeasurementStatisticsDTO;
 import com.digitaldemon.core.ontology.ObjectEntity;
 import com.digitaldemon.core.ontology.ObjectType;
 import com.digitaldemon.core.common.exception.DuplicateResourceException;
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
 import com.digitaldemon.core.common.exception.ValidationException;
-import com.digitaldemon.core.measurement.MeasurementRepository;
+import com.digitaldemon.core.measurement.ChannelResolver;
 import com.digitaldemon.core.metricpoint.MetricPointRepository;
 import com.digitaldemon.core.ontology.ObjectRepository;
 import com.digitaldemon.core.device.PhysicalDeviceRepository;
@@ -42,7 +40,7 @@ class AssetServiceTest {
     private ObjectRepository objectRepository;
 
     @Mock
-    private MeasurementRepository measurementRepository;
+    private ChannelResolver channelResolver;
 
     @Mock
     private OntologyService ontologyService;
@@ -233,119 +231,6 @@ class AssetServiceTest {
     }
 
     // --- Site-Level Measurement Tests ---
-
-    @Test
-    void getSiteMeasurements_AutoBucket_24h() {
-        UUID siteId = UUID.randomUUID();
-        ObjectEntity site = new ObjectEntity();
-        site.setId(siteId);
-        given(objectRepository.findById(siteId)).willReturn(Optional.of(site));
-
-        Instant now = Instant.now();
-        Instant yesterday = now.minus(24, ChronoUnit.HOURS);
-
-        List<MeasurementDTO> mockData = List.of(
-            new MeasurementDTO(now.minus(1, ChronoUnit.HOURS), "dev1", 1, "flow_temp", 45.2),
-            new MeasurementDTO(now.minus(1, ChronoUnit.HOURS), "dev1", 2, "return_temp", 32.1)
-        );
-
-        // 24h span -> auto bucket = 5 min
-        given(measurementRepository.getSiteMeasurements(eq(siteId), any(), any(), eq(5)))
-            .willReturn(mockData);
-
-        AssetService.SiteMeasurementsResult result = assetService.getSiteMeasurements(
-            siteId, yesterday, now, null);
-
-        assertThat(result.bucketMinutes()).isEqualTo(5);
-        assertThat(result.measurements()).hasSize(2);
-        verify(measurementRepository).getSiteMeasurements(eq(siteId), any(), any(), eq(5));
-    }
-
-    @Test
-    void getSiteMeasurements_ExplicitBucketOverride() {
-        UUID siteId = UUID.randomUUID();
-        ObjectEntity site = new ObjectEntity();
-        site.setId(siteId);
-        given(objectRepository.findById(siteId)).willReturn(Optional.of(site));
-
-        Instant now = Instant.now();
-        Instant yesterday = now.minus(24, ChronoUnit.HOURS);
-
-        given(measurementRepository.getSiteMeasurements(eq(siteId), any(), any(), eq(15)))
-            .willReturn(List.of());
-
-        AssetService.SiteMeasurementsResult result = assetService.getSiteMeasurements(
-            siteId, yesterday, now, 15);
-
-        assertThat(result.bucketMinutes()).isEqualTo(15);
-        verify(measurementRepository).getSiteMeasurements(eq(siteId), any(), any(), eq(15));
-    }
-
-    @Test
-    void getSiteMeasurements_DefaultsTo24hWhenNoTimeRange() {
-        UUID siteId = UUID.randomUUID();
-        ObjectEntity site = new ObjectEntity();
-        site.setId(siteId);
-        given(objectRepository.findById(siteId)).willReturn(Optional.of(site));
-
-        given(measurementRepository.getSiteMeasurements(eq(siteId), any(), any(), eq(5)))
-            .willReturn(List.of());
-
-        AssetService.SiteMeasurementsResult result = assetService.getSiteMeasurements(
-            siteId, null, null, null);
-
-        // Auto bucket for 24h range = 5 min
-        assertThat(result.bucketMinutes()).isEqualTo(5);
-    }
-
-    @Test
-    void getSiteMeasurements_SiteNotFound_Throws() {
-        UUID siteId = UUID.randomUUID();
-        given(objectRepository.findById(siteId)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> assetService.getSiteMeasurements(siteId, null, null, null))
-            .isInstanceOf(ResourceNotFoundException.class)
-            .hasMessageContaining("Site not found");
-    }
-
-    @Test
-    void getSiteStatistics_Success() {
-        UUID siteId = UUID.randomUUID();
-        ObjectEntity site = new ObjectEntity();
-        site.setId(siteId);
-        given(objectRepository.findById(siteId)).willReturn(Optional.of(site));
-
-        Instant now = Instant.now();
-        Instant yesterday = now.minus(24, ChronoUnit.HOURS);
-
-        List<MeasurementStatisticsDTO> mockStats = List.of(
-            new MeasurementStatisticsDTO("dev1", 1, "flow_temp", 35.0, 72.0, 48.7, 8.2, 1440),
-            new MeasurementStatisticsDTO("dev1", 2, "return_temp", 28.0, 58.0, 35.2, 6.1, 1440)
-        );
-
-        given(measurementRepository.getSiteStatistics(eq(siteId), any(), any()))
-            .willReturn(mockStats);
-
-        List<MeasurementStatisticsDTO> result = assetService.getSiteStatistics(siteId, yesterday, now);
-
-        assertThat(result).hasSize(2);
-        assertThat(result.get(0).metricName()).isEqualTo("flow_temp");
-        assertThat(result.get(0).min()).isEqualTo(35.0);
-        assertThat(result.get(0).max()).isEqualTo(72.0);
-        assertThat(result.get(1).metricName()).isEqualTo("return_temp");
-    }
-
-    @Test
-    void getSiteStatistics_SiteNotFound_Throws() {
-        UUID siteId = UUID.randomUUID();
-        given(objectRepository.findById(siteId)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> assetService.getSiteStatistics(siteId, null, null))
-            .isInstanceOf(ResourceNotFoundException.class)
-            .hasMessageContaining("Site not found");
-    }
-
-    // --- Update Asset Tests ---
 
     @Test
     void updateAsset_NameOnly_Success() {
