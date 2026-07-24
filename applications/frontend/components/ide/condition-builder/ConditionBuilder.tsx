@@ -46,6 +46,8 @@ const SUPPRESS_ROLE = "suppress_while";
 interface ConditionBuilderProps {
     open: boolean;
     channels: ChannelOption[];
+    /** Asset the builder was opened from — preselects its channels. */
+    currentAssetId: string | null;
     /** Rule being edited; null when creating a new one. */
     initialRule: AnomalyRule | null;
     onSave: (input: AnomalyRuleInput) => Promise<void>;
@@ -61,7 +63,19 @@ export function ConditionBuilder(props: ConditionBuilderProps) {
     );
 }
 
-function initialGraph(rule: AnomalyRule | null): { nodes: BuilderNode[]; edges: Edge[] } {
+/** Preferred default channel: a bool signal of the current asset, else the
+ * asset's first channel — so new conditions start on the asset the builder
+ * was opened from and the rule stays listed there. */
+function defaultChannel(channels: ChannelOption[], currentAssetId: string | null): string {
+    if (!currentAssetId) return "";
+    const own = channels.filter((c) => c.assetId === currentAssetId);
+    return (own.find((c) => c.unit === "bool") ?? own[0])?.metricPointId ?? "";
+}
+
+function initialGraph(
+    rule: AnomalyRule | null,
+    defaultChannelId: string,
+): { nodes: BuilderNode[]; edges: Edge[] } {
     const condition = rule?.params?.condition as ConditionTree | undefined;
     if (rule && condition) {
         return conditionToGraph(
@@ -76,7 +90,7 @@ function initialGraph(rule: AnomalyRule | null): { nodes: BuilderNode[]; edges: 
             id: conditionId,
             type: "condition",
             position: { x: 0, y: 0 },
-            data: { agg: "duty", metricPointId: "", windowMin: "30", op: "GT", value: "0.9" },
+            data: { agg: "duty", metricPointId: defaultChannelId, windowMin: "30", op: "GT", value: "0.9" },
         },
         { id: groupId, type: "group", position: { x: 0, y: 0 }, data: { mode: "all" } },
     ];
@@ -84,8 +98,15 @@ function initialGraph(rule: AnomalyRule | null): { nodes: BuilderNode[]; edges: 
     return { nodes: layoutGraph(nodes, edges), edges };
 }
 
-function BuilderInner({ channels, initialRule, onSave, onClose }: ConditionBuilderProps) {
-    const initial = useMemo(() => initialGraph(initialRule), [initialRule]);
+function BuilderInner({ channels, currentAssetId, initialRule, onSave, onClose }: ConditionBuilderProps) {
+    const defaultChannelId = useMemo(
+        () => defaultChannel(channels, currentAssetId),
+        [channels, currentAssetId]
+    );
+    const initial = useMemo(
+        () => initialGraph(initialRule, defaultChannelId),
+        [initialRule, defaultChannelId]
+    );
     const [nodes, setNodes, onNodesChange] = useNodesState<BuilderNode>(initial.nodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>(initial.edges);
 
@@ -113,8 +134,8 @@ function BuilderInner({ channels, initialRule, onSave, onClose }: ConditionBuild
     }, [setNodes]);
 
     const context = useMemo<BuilderContextValue>(
-        () => ({ channels, updateNode }),
-        [channels, updateNode]
+        () => ({ channels, currentAssetId, updateNode }),
+        [channels, currentAssetId, updateNode]
     );
 
     // A block feeds exactly one group: a new connection replaces the source's
@@ -140,12 +161,12 @@ function BuilderInner({ channels, initialRule, onSave, onClose }: ConditionBuild
             id,
             type: "condition",
             position: { x: 40, y },
-            data: { agg: "duty", metricPointId: "", windowMin: "30", op: "GT", value: "0.5" },
+            data: { agg: "duty", metricPointId: defaultChannelId, windowMin: "30", op: "GT", value: "0.5" },
         }]);
         if (rootGroupId) {
             setEdges((prev) => [...prev, makeEdge(id, rootGroupId)]);
         }
-    }, [nodes, rootGroupId, setNodes, setEdges]);
+    }, [nodes, rootGroupId, defaultChannelId, setNodes, setEdges]);
 
     const addGroup = useCallback((mode: "all" | "any") => {
         const id = nextId("group");

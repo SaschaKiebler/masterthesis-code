@@ -9,11 +9,14 @@ import type { ConditionNodeData, GroupNodeData } from "./graph-model";
  */
 export interface BuilderContextValue {
     channels: ChannelOption[];
+    /** Asset the builder was opened from — its channels are listed first. */
+    currentAssetId: string | null;
     updateNode: (id: string, patch: Partial<ConditionNodeData & GroupNodeData>) => void;
 }
 
 export const BuilderContext = createContext<BuilderContextValue>({
     channels: [],
+    currentAssetId: null,
     updateNode: () => {},
 });
 

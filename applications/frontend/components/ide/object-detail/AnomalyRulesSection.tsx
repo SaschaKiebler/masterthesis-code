@@ -173,6 +173,7 @@ export function AnomalyRulesSection({ objectId }: AnomalyRulesSectionProps) {
             <ConditionBuilder
                 open={builderOpen}
                 channels={channels}
+                currentAssetId={objectId}
                 initialRule={builderRule}
                 onSave={handleBuilderSave}
                 onClose={() => { setBuilderOpen(false); setBuilderRule(null); }}

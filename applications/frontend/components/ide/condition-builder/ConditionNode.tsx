@@ -31,12 +31,30 @@ const AGGREGATES: ConditionAggregate[] = [
  * recent values and a reference line at the entered threshold.
  */
 function ConditionNodeInner({ id, data, selected }: NodeProps<Node<ConditionNodeData, "condition">>) {
-    const { channels, updateNode } = useBuilder();
+    const { channels, currentAssetId, updateNode } = useBuilder();
     const isWeather = data.agg === "t_out";
     const channel = useMemo(
         () => channels.find((c) => c.metricPointId === data.metricPointId),
         [channels, data.metricPointId]
     );
+
+    // Channels grouped by asset, the asset the builder was opened from first.
+    const channelGroups = useMemo(() => {
+        const groups = new Map<string, { label: string; options: typeof channels }>();
+        for (const c of channels) {
+            const key = c.assetId ?? "unassigned";
+            const group = groups.get(key) ?? { label: c.assetName ?? c.deviceId, options: [] };
+            group.options.push(c);
+            groups.set(key, group);
+        }
+        const ordered = [...groups.entries()];
+        ordered.sort(([a], [b]) => {
+            if (a === currentAssetId) return -1;
+            if (b === currentAssetId) return 1;
+            return 0;
+        });
+        return ordered;
+    }, [channels, currentAssetId]);
 
     return (
         <div
@@ -71,10 +89,14 @@ function ConditionNodeInner({ id, data, selected }: NodeProps<Node<ConditionNode
                         className={fieldCls}
                     >
                         <option value="">Select channel…</option>
-                        {channels.map((c) => (
-                            <option key={c.metricPointId} value={c.metricPointId}>
-                                {c.assetName ?? c.deviceId} · {c.metricName}
-                            </option>
+                        {channelGroups.map(([assetId, group]) => (
+                            <optgroup key={assetId} label={group.label}>
+                                {group.options.map((c) => (
+                                    <option key={c.metricPointId} value={c.metricPointId}>
+                                        {c.metricName}{c.unit ? ` (${c.unit})` : ""}
+                                    </option>
+                                ))}
+                            </optgroup>
                         ))}
                     </select>
                 </div>
