@@ -96,6 +96,15 @@ export async function listChannelOptions(): Promise<ChannelOption[]> {
     return res.channels;
 }
 
+/** Metric-point ids belonging to a project — used to scope the builder's
+ * channel catalog when launched outside the IDE. */
+export async function getProjectChannelIds(projectId: string): Promise<Set<string>> {
+    const res = await apiFetch<{ channels: { metricPointId: string }[] }>(
+        `/projects/${projectId}/channels`
+    );
+    return new Set(res.channels.map((c) => c.metricPointId));
+}
+
 export async function listObjectAnomalyRules(objectId: string): Promise<AnomalyRule[]> {
     const res = await apiFetch<{ rules: AnomalyRule[] }>(`/objects/${objectId}/anomaly-rules`);
     return res.rules;

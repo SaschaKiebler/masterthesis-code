@@ -21,6 +21,7 @@ import {
     type NotificationRule,
     type NotificationSeverity,
 } from "@/lib/api/notifications";
+import { AnomalyRuleShortcut } from "@/components/notifications/AnomalyRuleShortcut";
 
 const SEVERITY_STYLE: Record<NotificationSeverity, string> = {
     CRITICAL: "text-red-600 bg-red-50 border-red-200",
@@ -328,12 +329,15 @@ function RulesSection() {
 export default function NotificationsPage() {
     return (
         <div className="space-y-6 p-6">
-            <div>
-                <h1 className="text-2xl font-bold">Meldungen</h1>
-                <p className="text-sm text-muted-foreground">
-                    Stör- und Alarmmeldungen der Plattform sowie die Benachrichtigungsregeln
-                    des Mandanten.
-                </p>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <h1 className="text-2xl font-bold">Meldungen</h1>
+                    <p className="text-sm text-muted-foreground">
+                        Stör- und Alarmmeldungen der Plattform sowie die Benachrichtigungsregeln
+                        des Mandanten.
+                    </p>
+                </div>
+                <AnomalyRuleShortcut />
             </div>
             <MeldungenTable />
             <RulesSection />
