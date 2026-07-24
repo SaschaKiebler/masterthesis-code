@@ -6,7 +6,8 @@ namespace: heating-platform
 resources:
   - namespace.yaml
   - secrets.yaml
-  - timescaledb.yaml
+  - stammdaten-db.yaml
+  - measurement-db.yaml
   - kafka.yaml
   - mosquitto.yaml
   - device-management.yaml

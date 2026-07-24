@@ -32,7 +32,15 @@ async def fetch_metric_point_context(
     pool: asyncpg.Pool,
     metric_point_ids: list[str],
 ) -> list[dict]:
-    """Resolve metric point IDs to device_id, metric_id, display_name, unit."""
+    """Resolve metric point IDs to device_id, metric_id, display_name, unit.
+
+    Registry lookup — reads the master-data store, NOT the measurement store.
+    The passed pool argument is ignored since the store split; the registry
+    pool is acquired internally so the transitional callers stay unchanged.
+    """
+    from .pool import get_registry_pool
+
+    pool = await get_registry_pool()
     rows = await pool.fetch(
         """
         SELECT mp.id, mp.device_id, mp.metric_id, o.display_name, mp.unit

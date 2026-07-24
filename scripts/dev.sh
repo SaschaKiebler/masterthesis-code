@@ -103,15 +103,22 @@ stop_bg() { # stop_bg <name>
 cmd_up() {
   mkdir -p "$LOG_DIR" "$PID_DIR"
 
-  log "starting docker infra (kafka, kafka-ui, mosquitto, timescaledb)"
+  log "starting docker infra (kafka, kafka-ui, mosquitto, stammdaten-db, measurement-db)"
   docker compose -f "$COMPOSE_FILE" up -d
 
   # infra readiness
   local waited=0
-  printf '[dev] waiting for timescaledb '
-  until docker compose -f "$COMPOSE_FILE" exec -T timescaledb pg_isready -U postgres -d digital_demon >/dev/null 2>&1; do
+  printf '[dev] waiting for stammdaten-db '
+  until docker compose -f "$COMPOSE_FILE" exec -T stammdaten-db pg_isready -U postgres -d digital_demon >/dev/null 2>&1; do
     sleep 2; waited=$((waited + 2)); printf '.'
-    if (( waited >= 60 )); then printf '\n'; err "timescaledb not ready after 60s"; exit 1; fi
+    if (( waited >= 60 )); then printf '\n'; err "stammdaten-db not ready after 60s"; exit 1; fi
+  done
+  printf ' up\n'
+  waited=0
+  printf '[dev] waiting for measurement-db '
+  until docker compose -f "$COMPOSE_FILE" exec -T measurement-db pg_isready -U postgres -d digital_demon_measurements >/dev/null 2>&1; do
+    sleep 2; waited=$((waited + 2)); printf '.'
+    if (( waited >= 60 )); then printf '\n'; err "measurement-db not ready after 60s"; exit 1; fi
   done
   printf ' up\n'
   wait_port kafka 9092 60

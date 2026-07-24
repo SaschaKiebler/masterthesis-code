@@ -1,0 +1,109 @@
+# Measurement store (single-node TimescaleDB). In-cluster because Cloud SQL /
+# AlloyDB do not support the timescaledb extension; a StatefulSet with one PVC
+# is enough for the evaluation environment. Schema comes from the init SQL
+# below (mirror of docker/measurement-db/init/001_schema.sql) — written by
+# ingestion, read exclusively by analytics.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: measurement-db-init
+data:
+  001_schema.sql: |
+    CREATE EXTENSION IF NOT EXISTS timescaledb;
+
+    CREATE TABLE measurements (
+        time      TIMESTAMPTZ NOT NULL,
+        device_id TEXT NOT NULL,
+        metric_id SMALLINT NOT NULL,
+        value     DOUBLE PRECISION
+    );
+
+    CREATE INDEX idx_measurements_device_metric_time
+        ON measurements(device_id, metric_id, time DESC);
+
+    SELECT create_hypertable('measurements', 'time', if_not_exists => TRUE);
+
+    CREATE TABLE ingestion_errors (
+        id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+        raw_payload   JSONB,
+        error_message TEXT,
+        created_at    TIMESTAMPTZ DEFAULT NOW()
+    );
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: measurement-db
+spec:
+  selector:
+    app: measurement-db
+  ports:
+    - name: postgres
+      port: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: measurement-db
+spec:
+  serviceName: measurement-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: measurement-db
+  template:
+    metadata:
+      labels:
+        app: measurement-db
+    spec:
+      containers:
+        - name: measurement-db
+          image: timescale/timescaledb:latest-pg16
+          # timescaledb-tune sizes max_connections for the container memory;
+          # too few for the ingestion + analytics pools. Command-line
+          # overrides the tuned value.
+          args: ["-c", "max_connections=100"]
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: digital_demon_measurements
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
+            # Subdirectory so the mounted volume's lost+found does not break initdb
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-d", "digital_demon_measurements"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 500m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+      volumes:
+        - name: init
+          configMap:
+            name: measurement-db-init
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi

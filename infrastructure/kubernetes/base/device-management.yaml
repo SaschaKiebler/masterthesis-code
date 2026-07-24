@@ -33,7 +33,7 @@ spec:
             - containerPort: 8082
           env:
             - name: DB_HOST
-              value: timescaledb
+              value: stammdaten-db
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:

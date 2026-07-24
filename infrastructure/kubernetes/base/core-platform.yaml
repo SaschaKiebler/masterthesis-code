@@ -36,7 +36,7 @@ spec:
             - containerPort: 9090
           env:
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:postgresql://timescaledb:5432/digital_demon
+              value: jdbc:postgresql://stammdaten-db:5432/digital_demon
             - name: SPRING_DATASOURCE_USERNAME
               value: postgres
             - name: SPRING_DATASOURCE_PASSWORD

@@ -60,12 +60,14 @@ impl Default for MqttConfig {
 
 impl Default for DatabaseConfig {
     fn default() -> Self {
+        // The dedicated measurement store (TimescaleDB) — ingestion writes
+        // measurements/ingestion_errors only and never touches master data.
         Self {
             host: "localhost".to_string(),
-            port: 5432,
+            port: 5433,
             user: "postgres".to_string(),
             password: "password".to_string(),
-            dbname: "digital_demon".to_string(),
+            dbname: "digital_demon_measurements".to_string(),
         }
     }
 }
@@ -106,10 +108,10 @@ pub fn load_config() -> Result<AppConfig> {
         port: std::env::var("DB_PORT")
             .ok()
             .and_then(|p| p.parse().ok())
-            .unwrap_or(5432),
+            .unwrap_or(5433),
         user: std::env::var("DB_USER").unwrap_or_else(|_| "postgres".to_string()),
         password: std::env::var("DB_PASSWORD").unwrap_or_else(|_| "password".to_string()),
-        dbname: std::env::var("DB_NAME").unwrap_or_else(|_| "digital_demon".to_string()),
+        dbname: std::env::var("DB_NAME").unwrap_or_else(|_| "digital_demon_measurements".to_string()),
     };
 
     let kafka = KafkaConfig {

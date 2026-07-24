@@ -38,7 +38,9 @@ spec:
                   name: platform-secrets
                   key: DB_PASSWORD
             - name: DATABASE_URL
-              value: postgresql://postgres:$(DB_PASSWORD)@timescaledb:5432/digital_demon
+              value: postgresql://postgres:$(DB_PASSWORD)@measurement-db:5432/digital_demon_measurements
+            - name: REGISTRY_DATABASE_URL
+              value: postgresql://postgres:$(DB_PASSWORD)@stammdaten-db:5432/digital_demon
           readinessProbe:
             httpGet:
               path: /health

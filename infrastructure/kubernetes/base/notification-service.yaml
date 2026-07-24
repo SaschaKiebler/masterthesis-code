@@ -22,6 +22,20 @@ spec:
           env:
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: kafka:9092
+            # Own table area in the shared master-data store (rules + Meldungen)
+            - name: DB_HOST
+              value: stammdaten-db
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
+            # Shared HS256 secret for the REST API resource server
+            - name: LOCAL_AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: LOCAL_AUTH_JWT_SECRET
             # Optional webhook delivery (e.g. n8n):
             # - name: NOTIFICATION_WEBHOOK_URL
             #   value: https://...

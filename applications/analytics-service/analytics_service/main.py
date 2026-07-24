@@ -6,13 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .db.pool import init_pool, close_pool
+from .db.pool import init_pools, close_pools
 from .routers import descriptive, timeseries, regression, boxplot, compute, histogram, heatmap, live
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_pool()
+    await init_pools()
     runner = None
     if settings.kafka_enabled:
         from .detection.runner import DetectionRunner
@@ -22,7 +22,7 @@ async def lifespan(app: FastAPI):
     yield
     if runner is not None:
         await runner.stop()
-    await close_pool()
+    await close_pools()
 
 
 app = FastAPI(

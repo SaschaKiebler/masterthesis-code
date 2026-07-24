@@ -19,7 +19,7 @@ spec:
             - seed
             - --sites=10
             - --rooms=3
-            - --dsn=postgresql://postgres:$(DB_PASSWORD)@timescaledb:5432/digital_demon
+            - --dsn=postgresql://postgres:$(DB_PASSWORD)@stammdaten-db:5432/digital_demon
           env:
             - name: DB_PASSWORD
               valueFrom:

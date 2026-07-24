@@ -1,11 +1,17 @@
 # Local development stack for the heating-monitoring platform.
 #
-# Matches the services' config defaults, so ingestion-service and
-# core-platform run locally without any env overrides:
-#   Kafka       localhost:9092   (inter-service events, see docs/architecture/event-catalog.md)
-#   Kafka UI    localhost:8081
-#   Mosquitto   localhost:1883   (edge device transport)
-#   TimescaleDB localhost:5432   (db digital_demon, schema via core-platform Flyway)
+# Matches the services' config defaults, so the services run locally
+# without any env overrides (ingestion + analytics point at 5433):
+#   Kafka          localhost:9092   (inter-service events, see docs/architecture/event-catalog.md)
+#   Kafka UI       localhost:8081
+#   Mosquitto      localhost:1883   (edge device transport)
+#   stammdaten-db  localhost:5432   (PostgreSQL, db digital_demon, schema via core-platform Flyway)
+#   measurement-db localhost:5433   (TimescaleDB, db digital_demon_measurements, schema via init SQL)
+#
+# Separate stores per the thesis design (ch. 4.4.6): master data in plain
+# PostgreSQL, raw measurements in TimescaleDB with analytics as the single
+# reader. Switching from the former single instance discards the old
+# volumes — reseed once via `scripts/dev.sh down -v` and a fresh `up`.
 #
 # Usage: docker compose -f docker/docker-compose-kafka.yaml up -d
 
@@ -49,8 +55,8 @@ services:
     volumes:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
 
-  timescaledb:
-    image: timescale/timescaledb:latest-pg16
+  stammdaten-db:                      # Stammdaten-Speicher (PostgreSQL)
+    image: postgres:16
     ports:
       - "5432:5432"
     environment:
@@ -58,7 +64,20 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     volumes:
-      - timescale-data:/var/lib/postgresql/data
+      - stammdaten-data:/var/lib/postgresql/data
+
+  measurement-db:                     # Messwertspeicher (TimescaleDB)
+    image: timescale/timescaledb:latest-pg16
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_DB: digital_demon_measurements
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - measurement-data:/var/lib/postgresql/data
+      - ./measurement-db/init:/docker-entrypoint-initdb.d:ro
 
 volumes:
-  timescale-data:
+  stammdaten-data:
+  measurement-data:
