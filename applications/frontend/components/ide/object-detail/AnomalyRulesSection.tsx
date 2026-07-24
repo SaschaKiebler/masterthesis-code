@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, AlertCircle, Loader2, Plus, Trash2 } from "lucide-react";
+import { Activity, AlertCircle, Loader2, Pencil, Plus, Trash2, Wand2 } from "lucide-react";
 import { Section } from "./Section";
 import type { RuleSeverity } from "@/lib/api/thresholdRules";
 import {
@@ -16,10 +16,10 @@ import {
     type AnomalyRuleTemplate,
     type ChannelBinding,
     type ChannelOption,
-    type ConditionAggregate,
-    type ConditionLeaf,
-    type ConditionOperator,
+    type ConditionTree,
 } from "@/lib/api/anomalyRules";
+import { ConditionBuilder } from "../condition-builder/ConditionBuilder";
+import { describeRule, parseNumber } from "../condition-builder/graph-model";
 
 const inputCls =
     "w-full min-w-0 max-w-full text-xs h-7 px-2 rounded border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
@@ -31,11 +31,6 @@ const SEVERITY_COLOR: Record<string, string> = {
     ERROR: "text-orange-500",
     CRITICAL: "text-red-500",
 };
-
-/** Parse a user-typed number, accepting both "." and "," as separator. */
-function parseNumber(raw: string): number {
-    return parseFloat(raw.trim().replace(",", "."));
-}
 
 function channelLabel(channel: ChannelOption): string {
     const asset = channel.assetName ?? channel.deviceId;
@@ -56,6 +51,8 @@ export function AnomalyRulesSection({ objectId }: AnomalyRulesSectionProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showForm, setShowForm] = useState(false);
+    const [builderOpen, setBuilderOpen] = useState(false);
+    const [builderRule, setBuilderRule] = useState<AnomalyRule | null>(null);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -99,6 +96,23 @@ export function AnomalyRulesSection({ objectId }: AnomalyRulesSectionProps) {
         setRules((prev) => prev.filter((r) => r.id !== ruleId));
     }, []);
 
+    const openBuilder = useCallback((rule: AnomalyRule | null) => {
+        setBuilderRule(rule);
+        setBuilderOpen(true);
+        setShowForm(false);
+    }, []);
+
+    const handleBuilderSave = useCallback(async (input: AnomalyRuleInput) => {
+        if (builderRule) {
+            await updateAnomalyRule(builderRule.id, input);
+        } else {
+            await createAnomalyRule(input);
+        }
+        setBuilderOpen(false);
+        setBuilderRule(null);
+        await load();
+    }, [builderRule, load]);
+
     return (
         <Section
             title="Anomaly Rules"
@@ -135,37 +149,15 @@ export function AnomalyRulesSection({ objectId }: AnomalyRulesSectionProps) {
             )}
 
             {!loading && rules.map((rule) => (
-                <div key={rule.id} className="flex items-center gap-2 py-1.5 border-b border-border/50 last:border-0">
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs text-foreground truncate">{rule.name}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                            {templateLabel(rule.detector)}
-                            {" · "}
-                            <span className={SEVERITY_COLOR[rule.severity] ?? ""}>{rule.severity}</span>
-                        </p>
-                    </div>
-                    <button
-                        type="button"
-                        role="switch"
-                        aria-checked={rule.enabled}
-                        onClick={() => handleToggle(rule.id, !rule.enabled)}
-                        className={`relative w-8 h-4.5 rounded-full transition-colors shrink-0 ${
-                            rule.enabled ? "bg-primary" : "bg-border"
-                        }`}
-                        title={rule.enabled ? "Disable rule" : "Enable rule"}
-                    >
-                        <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform ${
-                            rule.enabled ? "translate-x-3.5" : ""
-                        }`} />
-                    </button>
-                    <button
-                        onClick={() => handleDelete(rule.id)}
-                        className="p-0.5 rounded text-muted-foreground hover:text-red-500 hover:bg-muted transition-colors shrink-0"
-                        title="Delete rule"
-                    >
-                        <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                </div>
+                <RuleRow
+                    key={rule.id}
+                    rule={rule}
+                    channels={channels}
+                    templateLabel={templateLabel(rule.detector)}
+                    onToggle={(enabled) => handleToggle(rule.id, enabled)}
+                    onEdit={rule.detector === "condition" ? () => openBuilder(rule) : undefined}
+                    onDelete={() => handleDelete(rule.id)}
+                />
             ))}
 
             {showForm && !loading && (
@@ -173,40 +165,109 @@ export function AnomalyRulesSection({ objectId }: AnomalyRulesSectionProps) {
                     templates={templates}
                     channels={channels}
                     onSave={handleAdd}
+                    onOpenBuilder={() => openBuilder(null)}
                     onCancel={() => setShowForm(false)}
                 />
             )}
+
+            <ConditionBuilder
+                open={builderOpen}
+                channels={channels}
+                initialRule={builderRule}
+                onSave={handleBuilderSave}
+                onClose={() => { setBuilderOpen(false); setBuilderRule(null); }}
+            />
         </Section>
     );
 }
 
-// ── Add form ──────────────────────────────────────────────────────────────────
+// ── Rule row ──────────────────────────────────────────────────────────────────
 
-interface ConditionRow {
-    agg: ConditionAggregate;
-    metricPointId: string;
-    windowMin: string;
-    op: ConditionOperator;
-    value: string;
+function RuleRow({
+    rule,
+    channels,
+    templateLabel,
+    onToggle,
+    onEdit,
+    onDelete,
+}: {
+    rule: AnomalyRule;
+    channels: ChannelOption[];
+    templateLabel: string;
+    onToggle: (enabled: boolean) => void;
+    onEdit?: () => void;
+    onDelete: () => void;
+}) {
+    const description = useMemo(() => {
+        if (rule.detector !== "condition") return null;
+        return describeRule(
+            rule.params?.condition as ConditionTree | undefined,
+            rule.bindings,
+            channels
+        );
+    }, [rule, channels]);
+
+    return (
+        <div className="flex items-center gap-2 py-1.5 border-b border-border/50 last:border-0">
+            <div className="flex-1 min-w-0">
+                <p className="text-xs text-foreground truncate">{rule.name}</p>
+                <p className="text-[10px] text-muted-foreground truncate" title={description ?? undefined}>
+                    {templateLabel}
+                    {" · "}
+                    <span className={SEVERITY_COLOR[rule.severity] ?? ""}>{rule.severity}</span>
+                    {description ? ` · ${description}` : ""}
+                </p>
+            </div>
+            {onEdit && (
+                <button
+                    onClick={onEdit}
+                    className="p-0.5 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                    title="Edit in condition builder"
+                >
+                    <Pencil className="h-3.5 w-3.5" />
+                </button>
+            )}
+            <button
+                type="button"
+                role="switch"
+                aria-checked={rule.enabled}
+                onClick={() => onToggle(!rule.enabled)}
+                className={`relative w-8 h-4.5 rounded-full transition-colors shrink-0 ${
+                    rule.enabled ? "bg-primary" : "bg-border"
+                }`}
+                title={rule.enabled ? "Disable rule" : "Enable rule"}
+            >
+                <span className={`absolute top-0.5 left-0.5 w-3.5 h-3.5 rounded-full bg-white transition-transform ${
+                    rule.enabled ? "translate-x-3.5" : ""
+                }`} />
+            </button>
+            <button
+                onClick={onDelete}
+                className="p-0.5 rounded text-muted-foreground hover:text-red-500 hover:bg-muted transition-colors shrink-0"
+                title="Delete rule"
+            >
+                <Trash2 className="h-3.5 w-3.5" />
+            </button>
+        </div>
+    );
 }
+
+// ── Add form (templates; custom conditions go to the builder) ────────────────
 
 interface AnomalyRuleFormProps {
     templates: AnomalyRuleTemplate[];
     channels: ChannelOption[];
     onSave: (input: AnomalyRuleInput) => Promise<void>;
+    onOpenBuilder: () => void;
     onCancel: () => void;
 }
 
-function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleFormProps) {
+function AnomalyRuleForm({ templates, channels, onSave, onOpenBuilder, onCancel }: AnomalyRuleFormProps) {
     const [name, setName] = useState("");
     const [templateKey, setTemplateKey] = useState(templates[0]?.key ?? "");
     const [roleBindings, setRoleBindings] = useState<Record<string, string>>({});
     const [suppressId, setSuppressId] = useState("");
     const [paramDrafts, setParamDrafts] = useState<Record<string, string>>({});
-    const [combine, setCombine] = useState<"all" | "any">("all");
-    const [conditionRows, setConditionRows] = useState<ConditionRow[]>([
-        { agg: "duty", metricPointId: "", windowMin: "30", op: "GT", value: "0.9" },
-    ]);
     const [severity, setSeverity] = useState<RuleSeverity>("WARNING");
     const [cooldown, setCooldown] = useState("1800");
     const [saving, setSaving] = useState(false);
@@ -233,54 +294,23 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
         const bindings: ChannelBinding[] = [];
         const params: Record<string, unknown> = {};
 
-        if (!template.dynamicRoles) {
-            for (const role of template.roles) {
-                const metricPointId = roleBindings[role.role] ?? "";
-                if (!metricPointId) {
-                    if (role.required) throw new Error(`Bind the '${role.label}' channel`);
-                    continue;
-                }
-                bindings.push({ role: role.role, metricPointId });
+        for (const role of template.roles) {
+            const metricPointId = roleBindings[role.role] ?? "";
+            if (!metricPointId) {
+                if (role.required) throw new Error(`Bind the '${role.label}' channel`);
+                continue;
             }
-            for (const param of template.params) {
-                const draft = paramDrafts[param.key];
-                if (draft === undefined || draft.trim() === "") {
-                    params[param.key] = param.defaultValue;
-                    continue;
-                }
-                const parsed = parseNumber(draft);
-                if (isNaN(parsed)) throw new Error(`'${param.label}' must be a number`);
-                params[param.key] = parsed;
+            bindings.push({ role: role.role, metricPointId });
+        }
+        for (const param of template.params) {
+            const draft = paramDrafts[param.key];
+            if (draft === undefined || draft.trim() === "") {
+                params[param.key] = param.defaultValue;
+                continue;
             }
-        } else {
-            // Condition builder: one role per distinct channel, leaves reference roles.
-            const roleByChannel = new Map<string, string>();
-            const leaves: ConditionLeaf[] = [];
-            for (const row of conditionRows) {
-                const value = parseNumber(row.value);
-                if (isNaN(value)) throw new Error("Every condition needs a numeric value");
-                if (row.agg === "t_out") {
-                    leaves.push({ agg: "t_out", op: row.op, value });
-                    continue;
-                }
-                if (!row.metricPointId) throw new Error("Every condition needs a channel");
-                const windowMin = parseNumber(row.windowMin);
-                if (isNaN(windowMin) || windowMin <= 0) {
-                    throw new Error("Every condition needs a positive window");
-                }
-                let role = roleByChannel.get(row.metricPointId);
-                if (!role) {
-                    role = `c${roleByChannel.size + 1}`;
-                    roleByChannel.set(row.metricPointId, role);
-                    bindings.push({ role, metricPointId: row.metricPointId });
-                }
-                leaves.push({ agg: row.agg, role, window_s: Math.round(windowMin * 60), op: row.op, value });
-            }
-            if (leaves.length === 0) throw new Error("Add at least one condition");
-            if (bindings.length === 0) {
-                throw new Error("At least one condition must reference a channel");
-            }
-            params.condition = { [combine]: leaves };
+            const parsed = parseNumber(draft);
+            if (isNaN(parsed)) throw new Error(`'${param.label}' must be a number`);
+            params[param.key] = parsed;
         }
 
         if (suppressId) {
@@ -294,7 +324,7 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
             severity,
             cooldownSeconds: cooldownSec,
         };
-    }, [template, name, cooldown, roleBindings, paramDrafts, conditionRows, combine, suppressId, severity]);
+    }, [template, name, cooldown, roleBindings, paramDrafts, suppressId, severity]);
 
     const handleSubmit = useCallback(async () => {
         setError(null);
@@ -331,17 +361,6 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
     return (
         <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border space-y-2 min-w-0 overflow-hidden">
             <div>
-                <label className={labelCls}>Name</label>
-                <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Distribution pump without demand"
-                    className={inputCls}
-                />
-            </div>
-
-            <div>
                 <label className={labelCls}>Template</label>
                 <select
                     value={templateKey}
@@ -357,9 +376,29 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
                 )}
             </div>
 
-            {template && !template.dynamicRoles && (
+            {template?.dynamicRoles ? (
+                // Custom conditions are built in the full-screen graphical builder.
+                <button
+                    onClick={onOpenBuilder}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs px-2.5 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                >
+                    <Wand2 className="h-3.5 w-3.5" />
+                    Open condition builder
+                </button>
+            ) : (
                 <>
-                    {template.roles.map((role) => (
+                    <div>
+                        <label className={labelCls}>Name</label>
+                        <input
+                            type="text"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                            placeholder="e.g. Short cycling boiler"
+                            className={inputCls}
+                        />
+                    </div>
+
+                    {template?.roles.map((role) => (
                         <div key={role.role}>
                             <label className={labelCls}>
                                 {role.label}{role.required ? "" : " (optional)"}
@@ -372,7 +411,7 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
                             />
                         </div>
                     ))}
-                    {template.params.length > 0 && (
+                    {template && template.params.length > 0 && (
                         <div className="grid grid-cols-2 gap-2">
                             {template.params.map((param) => (
                                 <div key={param.key} className="min-w-0">
@@ -391,88 +430,44 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
                             ))}
                         </div>
                     )}
-                </>
-            )}
 
-            {template?.dynamicRoles && (
-                <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                        <label className={`${labelCls} mb-0`}>Conditions</label>
-                        <div className="flex gap-1">
-                            {(["all", "any"] as const).map((mode) => (
-                                <button
-                                    key={mode}
-                                    onClick={() => setCombine(mode)}
-                                    className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded transition-colors ${
-                                        combine === mode
-                                            ? "bg-primary text-primary-foreground"
-                                            : "bg-muted text-muted-foreground hover:text-foreground"
-                                    }`}
-                                >
-                                    {mode === "all" ? "AND" : "OR"}
-                                </button>
-                            ))}
+                    <div>
+                        <label className={labelCls}>Suppress while active (optional)</label>
+                        <ChannelSelect
+                            channels={channels}
+                            value={suppressId}
+                            allowEmpty
+                            onChange={setSuppressId}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="min-w-0">
+                            <label className={labelCls}>Severity</label>
+                            <select
+                                value={severity}
+                                onChange={(e) => setSeverity(e.target.value as RuleSeverity)}
+                                className={inputCls}
+                            >
+                                <option value="INFO">Info</option>
+                                <option value="WARNING">Warning</option>
+                                <option value="ERROR">Error</option>
+                                <option value="CRITICAL">Critical</option>
+                            </select>
+                        </div>
+                        <div className="min-w-0">
+                            <label className={labelCls}>Cooldown (sec)</label>
+                            <input
+                                type="text"
+                                inputMode="numeric"
+                                value={cooldown}
+                                onChange={(e) => setCooldown(e.target.value)}
+                                className={inputCls}
+                            />
                         </div>
                     </div>
-                    {conditionRows.map((row, index) => (
-                        <ConditionRowEditor
-                            key={index}
-                            row={row}
-                            channels={channels}
-                            onChange={(next) => setConditionRows((prev) =>
-                                prev.map((r, i) => (i === index ? next : r)))}
-                            onRemove={conditionRows.length > 1
-                                ? () => setConditionRows((prev) => prev.filter((_, i) => i !== index))
-                                : undefined}
-                        />
-                    ))}
-                    <button
-                        onClick={() => setConditionRows((prev) => [
-                            ...prev,
-                            { agg: "duty", metricPointId: "", windowMin: "30", op: "GT", value: "0.5" },
-                        ])}
-                        className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                        <Plus className="h-3 w-3" /> Add condition
-                    </button>
-                </div>
+                </>
             )}
-
-            <div>
-                <label className={labelCls}>Suppress while active (optional)</label>
-                <ChannelSelect
-                    channels={channels}
-                    value={suppressId}
-                    allowEmpty
-                    onChange={setSuppressId}
-                />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-                <div className="min-w-0">
-                    <label className={labelCls}>Severity</label>
-                    <select
-                        value={severity}
-                        onChange={(e) => setSeverity(e.target.value as RuleSeverity)}
-                        className={inputCls}
-                    >
-                        <option value="INFO">Info</option>
-                        <option value="WARNING">Warning</option>
-                        <option value="ERROR">Error</option>
-                        <option value="CRITICAL">Critical</option>
-                    </select>
-                </div>
-                <div className="min-w-0">
-                    <label className={labelCls}>Cooldown (sec)</label>
-                    <input
-                        type="text"
-                        inputMode="numeric"
-                        value={cooldown}
-                        onChange={(e) => setCooldown(e.target.value)}
-                        className={inputCls}
-                    />
-                </div>
-            </div>
 
             {error && (
                 <p className="text-[11px] text-red-500 flex items-center gap-1">
@@ -481,14 +476,16 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
             )}
 
             <div className="flex gap-2 pt-1">
-                <button
-                    onClick={handleSubmit}
-                    disabled={saving}
-                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
-                >
-                    {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                    Add Rule
-                </button>
+                {!template?.dynamicRoles && (
+                    <button
+                        onClick={handleSubmit}
+                        disabled={saving}
+                        className="flex items-center gap-1 text-xs px-2.5 py-1 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
+                        Add Rule
+                    </button>
+                )}
                 <button
                     onClick={onCancel}
                     className="text-xs px-2.5 py-1 rounded border border-border text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -526,90 +523,5 @@ function ChannelSelect({
                 </option>
             ))}
         </select>
-    );
-}
-
-const AGGREGATES: { key: ConditionAggregate; label: string }[] = [
-    { key: "duty", label: "duty cycle" },
-    { key: "mean", label: "mean" },
-    { key: "min", label: "min" },
-    { key: "max", label: "max" },
-    { key: "last", label: "last value" },
-    { key: "edges_per_hour", label: "starts/h" },
-    { key: "t_out", label: "outdoor °C" },
-];
-
-function ConditionRowEditor({
-    row,
-    channels,
-    onChange,
-    onRemove,
-}: {
-    row: ConditionRow;
-    channels: ChannelOption[];
-    onChange: (row: ConditionRow) => void;
-    onRemove?: () => void;
-}) {
-    const isWeather = row.agg === "t_out";
-    return (
-        <div className="p-2 rounded border border-border bg-background/60 space-y-1.5 min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0">
-                <select
-                    value={row.agg}
-                    onChange={(e) => onChange({ ...row, agg: e.target.value as ConditionAggregate })}
-                    className={`${inputCls} flex-1 min-w-0`}
-                >
-                    {AGGREGATES.map((agg) => (
-                        <option key={agg.key} value={agg.key}>{agg.label}</option>
-                    ))}
-                </select>
-                <select
-                    value={row.op}
-                    onChange={(e) => onChange({ ...row, op: e.target.value as ConditionOperator })}
-                    className={`${inputCls} w-14 shrink-0`}
-                >
-                    <option value="GT">{">"}</option>
-                    <option value="LT">{"<"}</option>
-                    <option value="GTE">≥</option>
-                    <option value="LTE">≤</option>
-                </select>
-                <input
-                    type="text"
-                    inputMode="decimal"
-                    value={row.value}
-                    onChange={(e) => onChange({ ...row, value: e.target.value })}
-                    className={`${inputCls} w-16 shrink-0 text-right`}
-                />
-                {onRemove && (
-                    <button
-                        onClick={onRemove}
-                        className="p-0.5 rounded text-muted-foreground hover:text-red-500 transition-colors shrink-0"
-                        title="Remove condition"
-                    >
-                        <Trash2 className="h-3 w-3" />
-                    </button>
-                )}
-            </div>
-            {!isWeather && (
-                <div className="flex items-center gap-1.5 min-w-0">
-                    <div className="flex-1 min-w-0">
-                        <ChannelSelect
-                            channels={channels}
-                            value={row.metricPointId}
-                            onChange={(id) => onChange({ ...row, metricPointId: id })}
-                        />
-                    </div>
-                    <input
-                        type="text"
-                        inputMode="decimal"
-                        value={row.windowMin}
-                        onChange={(e) => onChange({ ...row, windowMin: e.target.value })}
-                        className={`${inputCls} w-16 shrink-0 text-right`}
-                        title="Window (minutes)"
-                    />
-                    <span className="text-[10px] text-muted-foreground shrink-0">min</span>
-                </div>
-            )}
-        </div>
     );
 }

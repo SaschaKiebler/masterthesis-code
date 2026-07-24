@@ -84,6 +84,7 @@ public class AnomalyRuleController {
         List<Map<String, Object>> channels = jdbc.query("""
                 SELECT mp.id, mp.device_id, mp.metric_id, mp.unit,
                        COALESCE(o.display_name, 'metric_' || mp.metric_id) AS metric_name,
+                       asset.id AS asset_id,
                        asset.display_name AS asset_name
                 FROM metric_points mp
                 JOIN objects o ON o.id = mp.id
@@ -102,6 +103,7 @@ public class AnomalyRuleController {
                     dto.put("metricId", rs.getInt("metric_id"));
                     dto.put("unit", rs.getString("unit"));
                     dto.put("metricName", rs.getString("metric_name"));
+                    dto.put("assetId", rs.getString("asset_id"));
                     dto.put("assetName", rs.getString("asset_name"));
                     return dto;
                 });

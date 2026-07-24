@@ -80,6 +80,7 @@ export interface ChannelOption {
     metricId: number;
     unit: string | null;
     metricName: string;
+    assetId: string | null;
     assetName: string | null;
 }
 
