@@ -22,7 +22,7 @@ import {
 } from "@/lib/api/anomalyRules";
 
 const inputCls =
-    "w-full text-xs h-7 px-2 rounded border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
+    "w-full min-w-0 max-w-full text-xs h-7 px-2 rounded border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
 const labelCls = "text-[10px] text-muted-foreground uppercase tracking-wide block mb-1";
 
 const SEVERITY_COLOR: Record<string, string> = {
@@ -329,7 +329,7 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
     }
 
     return (
-        <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border space-y-2">
+        <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border space-y-2 min-w-0 overflow-hidden">
             <div>
                 <label className={labelCls}>Name</label>
                 <input
@@ -375,7 +375,7 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
                     {template.params.length > 0 && (
                         <div className="grid grid-cols-2 gap-2">
                             {template.params.map((param) => (
-                                <div key={param.key}>
+                                <div key={param.key} className="min-w-0">
                                     <label className={labelCls}>{param.label}</label>
                                     <input
                                         type="text"
@@ -449,7 +449,7 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-                <div>
+                <div className="min-w-0">
                     <label className={labelCls}>Severity</label>
                     <select
                         value={severity}
@@ -462,7 +462,7 @@ function AnomalyRuleForm({ templates, channels, onSave, onCancel }: AnomalyRuleF
                         <option value="CRITICAL">Critical</option>
                     </select>
                 </div>
-                <div>
+                <div className="min-w-0">
                     <label className={labelCls}>Cooldown (sec)</label>
                     <input
                         type="text"
@@ -552,12 +552,12 @@ function ConditionRowEditor({
 }) {
     const isWeather = row.agg === "t_out";
     return (
-        <div className="p-2 rounded border border-border bg-background/60 space-y-1.5">
-            <div className="flex items-center gap-1.5">
+        <div className="p-2 rounded border border-border bg-background/60 space-y-1.5 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
                 <select
                     value={row.agg}
                     onChange={(e) => onChange({ ...row, agg: e.target.value as ConditionAggregate })}
-                    className={`${inputCls} flex-1`}
+                    className={`${inputCls} flex-1 min-w-0`}
                 >
                     {AGGREGATES.map((agg) => (
                         <option key={agg.key} value={agg.key}>{agg.label}</option>
@@ -591,8 +591,8 @@ function ConditionRowEditor({
                 )}
             </div>
             {!isWeather && (
-                <div className="flex items-center gap-1.5">
-                    <div className="flex-1">
+                <div className="flex items-center gap-1.5 min-w-0">
+                    <div className="flex-1 min-w-0">
                         <ChannelSelect
                             channels={channels}
                             value={row.metricPointId}
