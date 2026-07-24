@@ -174,28 +174,7 @@ function FieldInput({
             );
 
         case "number":
-            return (
-                <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs text-muted-foreground shrink-0">{field.label}</label>
-                    <div className="flex items-center gap-1">
-                        <input
-                            type="number"
-                            value={value !== undefined && value !== null ? String(value) : ""}
-                            onChange={(e) => {
-                                const v = e.target.value;
-                                onChange(v === "" ? undefined : parseFloat(v));
-                            }}
-                            min={field.min}
-                            max={field.max}
-                            step="any"
-                            className={`${inputClasses} max-w-[120px] text-right`}
-                        />
-                        {field.unit && (
-                            <span className="text-[10px] text-muted-foreground shrink-0 w-10">{field.unit}</span>
-                        )}
-                    </div>
-                </div>
-            );
+            return <NumberFieldInput field={field} value={value} onChange={onChange} inputClasses={inputClasses} />;
 
         case "boolean":
             return (
@@ -250,4 +229,69 @@ function FieldInput({
         default:
             return null;
     }
+}
+
+/**
+ * Number field with a local text draft: a controlled type="number" input that
+ * round-trips through parseFloat on every keystroke swallows the decimal
+ * separator ("47." parses to 47, so the dot never sticks). The draft keeps
+ * whatever the user typed; only valid parses propagate upwards. Accepts both
+ * "." and "," as decimal separator.
+ */
+function NumberFieldInput({
+    field,
+    value,
+    onChange,
+    inputClasses,
+}: {
+    field: PropertyFieldDefinition;
+    value: unknown;
+    onChange: (value: unknown) => void;
+    inputClasses: string;
+}) {
+    const [draft, setDraft] = useState(value !== undefined && value !== null ? String(value) : "");
+    const focusedRef = useRef(false);
+
+    // Sync from outside (object switch, discard) — but never while typing
+    useEffect(() => {
+        if (!focusedRef.current) {
+            setDraft(value !== undefined && value !== null ? String(value) : "");
+        }
+    }, [value]);
+
+    return (
+        <div className="flex items-center justify-between gap-2">
+            <label className="text-xs text-muted-foreground shrink-0">{field.label}</label>
+            <div className="flex items-center gap-1">
+                <input
+                    type="text"
+                    inputMode="decimal"
+                    value={draft}
+                    onFocus={() => { focusedRef.current = true; }}
+                    onBlur={() => {
+                        focusedRef.current = false;
+                        // Normalize the draft to the committed value on leave
+                        setDraft(value !== undefined && value !== null ? String(value) : "");
+                    }}
+                    onChange={(e) => {
+                        const raw = e.target.value;
+                        setDraft(raw);
+                        if (raw.trim() === "") {
+                            onChange(undefined);
+                            return;
+                        }
+                        const parsed = parseFloat(raw.replace(",", "."));
+                        if (!Number.isNaN(parsed)) {
+                            onChange(parsed);
+                        }
+                    }}
+                    placeholder={field.description}
+                    className={`${inputClasses} max-w-[120px] text-right`}
+                />
+                {field.unit && (
+                    <span className="text-[10px] text-muted-foreground shrink-0 w-10">{field.unit}</span>
+                )}
+            </div>
+        </div>
+    );
 }

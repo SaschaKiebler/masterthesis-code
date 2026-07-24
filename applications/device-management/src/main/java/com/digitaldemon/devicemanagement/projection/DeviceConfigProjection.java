@@ -257,7 +257,11 @@ public class DeviceConfigProjection {
                 return new double[] {lat.asDouble(), lon.asDouble()};
             }
             if (lat.isTextual() && lon.isTextual()) {
-                return new double[] {Double.parseDouble(lat.asText()), Double.parseDouble(lon.asText())};
+                // Values entered through the UI may carry a locale decimal comma
+                return new double[] {
+                        Double.parseDouble(lat.asText().trim().replace(',', '.')),
+                        Double.parseDouble(lon.asText().trim().replace(',', '.'))
+                };
             }
             return null;
         } catch (Exception e) {
