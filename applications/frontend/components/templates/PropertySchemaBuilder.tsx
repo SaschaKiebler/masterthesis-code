@@ -484,8 +484,14 @@ export function PropertySchemaBuilder({
             {/* ── Field rows ── */}
             {value.length > 0 && (
                 <div className="space-y-2" role="list" aria-label="Property fields">
+                    {/* Index as key on purpose: for custom fields the key is
+                        re-derived from the label on every keystroke, so a
+                        field.key-based React key would remount the row (and
+                        drop input focus) per character. The transient option
+                        inputs are index-keyed and reindexed on delete, so the
+                        index stays consistent. */}
                     {value.map((field, index) => (
-                        <div key={`${field.key}-${index}`} role="listitem">
+                        <div key={index} role="listitem">
                             <FieldRow
                                 field={field}
                                 index={index}
