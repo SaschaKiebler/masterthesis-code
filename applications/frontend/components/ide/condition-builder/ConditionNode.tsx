@@ -8,8 +8,10 @@ import { getMeasurements } from "@/lib/api/assets";
 import type { ConditionAggregate, ConditionOperator } from "@/lib/api/anomalyRules";
 import { useBuilder } from "./builder-context";
 import {
+    AGGREGATE_HINT,
     AGGREGATE_LABEL,
     CONDITION_NODE_SIZE,
+    editorToStoredValue,
     parseNumber,
     type ConditionNodeData,
 } from "./graph-model";
@@ -78,6 +80,9 @@ function ConditionNodeInner({ id, data, selected }: NodeProps<Node<ConditionNode
                         <option key={agg} value={agg}>{AGGREGATE_LABEL[agg]}</option>
                     ))}
                 </select>
+                <p className="text-[9px] leading-tight text-muted-foreground mt-0.5">
+                    {AGGREGATE_HINT[data.agg]}
+                </p>
             </div>
 
             {!isWeather && (
@@ -136,9 +141,12 @@ function ConditionNodeInner({ id, data, selected }: NodeProps<Node<ConditionNode
                             inputMode="decimal"
                             value={data.value}
                             onChange={(e) => updateNode(id, { value: e.target.value })}
-                            placeholder={isWeather ? "°C" : channel?.unit ?? "value"}
+                            placeholder={data.agg === "duty" ? "%" : isWeather ? "°C" : channel?.unit ?? "value"}
                             className={`${fieldCls} flex-1 min-w-0 text-right`}
                         />
+                        {data.agg === "duty" && (
+                            <span className="text-[9px] text-muted-foreground shrink-0">%</span>
+                        )}
                     </div>
                 </div>
             </div>
@@ -147,7 +155,7 @@ function ConditionNodeInner({ id, data, selected }: NodeProps<Node<ConditionNode
                 <ChannelSparkline
                     assetId={channel.assetId}
                     metricName={channel.metricName}
-                    threshold={parseNumber(data.value)}
+                    threshold={editorToStoredValue(data.agg, parseNumber(data.value))}
                 />
             )}
 

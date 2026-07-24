@@ -44,14 +44,34 @@ export const OP_SYMBOL: Record<ConditionOperator, string> = {
 };
 
 export const AGGREGATE_LABEL: Record<ConditionAggregate, string> = {
-    duty: "duty cycle",
-    mean: "average",
-    min: "minimum",
-    max: "maximum",
-    last: "last value",
-    edges_per_hour: "starts/h",
-    t_out: "outdoor °C",
+    duty: "ON-time share (%)",
+    mean: "average value",
+    min: "lowest value",
+    max: "highest value",
+    last: "current value",
+    edges_per_hour: "switch-ons per hour",
+    t_out: "outdoor temperature (°C)",
 };
+
+/** One-line explanation shown under the aggregate picker. */
+export const AGGREGATE_HINT: Record<ConditionAggregate, string> = {
+    duty: "How much of the window the signal was ON. 100 % = running the whole time.",
+    mean: "Average of the signal's values within the window.",
+    min: "Lowest value the signal reached within the window.",
+    max: "Highest value the signal reached within the window.",
+    last: "The signal's most recent value, no window needed.",
+    edges_per_hour: "How often the signal switched from OFF to ON, per hour.",
+    t_out: "Current outdoor temperature at the asset's site (weather service).",
+};
+
+/** duty is edited as a percentage but stored as a 0..1 fraction. */
+export function editorToStoredValue(agg: ConditionAggregate, value: number): number {
+    return agg === "duty" ? value / 100 : value;
+}
+
+export function storedToEditorValue(agg: ConditionAggregate, value: number): number {
+    return agg === "duty" ? Math.round(value * 100 * 100) / 100 : value;
+}
 
 let idCounter = 0;
 export function nextId(prefix: string): string {
@@ -136,6 +156,10 @@ export function graphToCondition(
                 errors.push("Every condition needs a numeric value.");
                 return null;
             }
+            if (data.agg === "duty" && (value < 0 || value > 100)) {
+                errors.push("ON-time share must be between 0 and 100 %.");
+                return null;
+            }
             if (data.agg === "t_out") {
                 return { agg: "t_out", op: data.op, value };
             }
@@ -159,7 +183,7 @@ export function graphToCondition(
                 role,
                 window_s: Math.round(windowMin * 60),
                 op: data.op,
-                value,
+                value: editorToStoredValue(data.agg, value),
             };
         }
 
@@ -229,11 +253,14 @@ export function describeCondition(
     const leaf = node as ConditionLeaf;
     const op = OP_SYMBOL[leaf.op] ?? leaf.op;
     if (leaf.agg === "t_out") {
-        return `outdoor °C ${op} ${leaf.value}`;
+        return `outdoor temperature ${op} ${leaf.value} °C`;
     }
     const label = leaf.role ? roleLabels.get(leaf.role) ?? leaf.role : "?";
     const window = leaf.window_s ? ` over ${Math.round(leaf.window_s / 60)} min` : "";
-    return `${AGGREGATE_LABEL[leaf.agg] ?? leaf.agg}(${label})${window} ${op} ${leaf.value}`;
+    const shown = leaf.agg === "duty"
+        ? `${storedToEditorValue("duty", leaf.value)} %`
+        : String(leaf.value);
+    return `${AGGREGATE_LABEL[leaf.agg] ?? leaf.agg} of ${label}${window} ${op} ${shown}`;
 }
 
 /** Description straight from a stored rule (for the sidebar rule list). */
@@ -283,7 +310,7 @@ export function conditionToGraph(
                 metricPointId: leaf.role ? channelByRole.get(leaf.role) ?? "" : "",
                 windowMin: leaf.window_s ? String(Math.round(leaf.window_s / 60)) : "30",
                 op: leaf.op,
-                value: String(leaf.value),
+                value: String(storedToEditorValue(leaf.agg, leaf.value)),
             },
         });
         return id;

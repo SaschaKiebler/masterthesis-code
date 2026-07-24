@@ -90,7 +90,7 @@ function initialGraph(
             id: conditionId,
             type: "condition",
             position: { x: 0, y: 0 },
-            data: { agg: "duty", metricPointId: defaultChannelId, windowMin: "30", op: "GT", value: "0.9" },
+            data: { agg: "duty", metricPointId: defaultChannelId, windowMin: "30", op: "GT", value: "90" },
         },
         { id: groupId, type: "group", position: { x: 0, y: 0 }, data: { mode: "all" } },
     ];
@@ -161,7 +161,7 @@ function BuilderInner({ channels, currentAssetId, initialRule, onSave, onClose }
             id,
             type: "condition",
             position: { x: 40, y },
-            data: { agg: "duty", metricPointId: defaultChannelId, windowMin: "30", op: "GT", value: "0.5" },
+            data: { agg: "duty", metricPointId: defaultChannelId, windowMin: "30", op: "GT", value: "50" },
         }]);
         if (rootGroupId) {
             setEdges((prev) => [...prev, makeEdge(id, rootGroupId)]);
