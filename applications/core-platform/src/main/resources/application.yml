@@ -82,6 +82,7 @@ kafka:
     threshold-breached: threshold.breached
     anomaly-detected: anomaly.detected
     rule-configured: rule.configured
+    anomaly-rule-configured: anomaly-rule.configured
   topic-defaults:
     partitions: ${KAFKA_TOPIC_PARTITIONS:3}
     replicas: ${KAFKA_TOPIC_REPLICAS:1}

@@ -9,6 +9,7 @@ cd "$(dirname "$0")/.."
   ../../apis/proto/core/v1/measurement_ingestion.proto \
   ../../apis/proto/detection/v1/detection_event.proto \
   ../../apis/proto/detection/v1/rule_config.proto \
+  ../../apis/proto/detection/v1/anomaly_rule_config.proto \
   ../../apis/proto/device/v1/device_config.proto
 touch analytics_service/proto_gen/__init__.py \
       analytics_service/proto_gen/core/__init__.py \

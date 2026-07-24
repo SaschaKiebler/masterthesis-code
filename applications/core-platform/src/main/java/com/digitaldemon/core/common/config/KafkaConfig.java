@@ -68,6 +68,20 @@ public class KafkaConfig {
     }
 
     /**
+     * Compacted anomaly-rule projection topic, owned by core (the rule
+     * owner). The analytics anomaly engine replays it to rebuild its rule
+     * state, mirror of rule.configured.
+     */
+    @Bean
+    public NewTopic anomalyRuleConfiguredTopic() {
+        return TopicBuilder.name(props.getTopics().getAnomalyRuleConfigured())
+                .partitions(props.getTopicDefaults().getPartitions())
+                .replicas(props.getTopicDefaults().getReplicas())
+                .compact()
+                .build();
+    }
+
+    /**
      * DLQs for core's detection-event subscriptions. Per the event catalog a
      * consumer owns the DLQs of its own subscriptions; the source topics
      * (threshold.breached, anomaly.detected) are provisioned by their

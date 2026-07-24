@@ -17,6 +17,7 @@ import { LinkRow } from "./LinkRow";
 import { AddLinkInline } from "./AddLinkInline";
 import { DashboardsSection } from "./DashboardsSection";
 import { DeviceAlertRulesSection } from "./DeviceAlertRulesSection";
+import { AnomalyRulesSection } from "./AnomalyRulesSection";
 import { KpiFormulasSection } from "./KpiFormulasSection";
 import { SpecificationsSection } from "./SpecificationsSection";
 
@@ -188,6 +189,11 @@ export function ObjectDetailView({
                 {/* Alert Rules section (only for device-category objects) */}
                 {isDeviceCategory(object.objectTypeCategory) && (
                     <DeviceAlertRulesSection objectId={object.id} />
+                )}
+
+                {/* Anomaly Rules section (only for device-category objects) */}
+                {isDeviceCategory(object.objectTypeCategory) && (
+                    <AnomalyRulesSection objectId={object.id} />
                 )}
 
                 {/* KPI Formulas section — available for all object types */}

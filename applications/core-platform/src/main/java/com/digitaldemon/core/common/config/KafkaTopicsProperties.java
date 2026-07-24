@@ -32,6 +32,8 @@ public class KafkaTopicsProperties {
         private String anomalyDetected = "anomaly.detected";
         /** Compacted detection-rule projection, published and owned by core. */
         private String ruleConfigured = "rule.configured";
+        /** Compacted anomaly-rule projection, published and owned by core. */
+        private String anomalyRuleConfigured = "anomaly-rule.configured";
     }
 
     @Data

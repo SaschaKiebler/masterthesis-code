@@ -18,11 +18,15 @@ links and rules), which also exercises the projection's tombstone path.
 
 from __future__ import annotations
 
+import json
 import logging
+import uuid
 
 import psycopg
 
 from .fleet import (
+    KIND_BOILER,
+    UUID_NAMESPACE,
     DeviceSpec,
     build_fleet,
     building_name,
@@ -334,6 +338,60 @@ def _seed_device(
                 rule.severity,
                 rule.cooldown_seconds,
                 tid,
+            ),
+        )
+        counts["rules"] += 1
+
+    _seed_anomaly_rules(cur, spec, prefix, tid, counts)
+
+
+# Default anomaly rules per boiler: the former hardcoded weather-context
+# detector as data — template instances bound to the pump switch channel.
+_BOILER_ANOMALY_RULES = (
+    ("short_cycle", "Short cycling", {}),
+    ("weather_heating", "Heating despite warm weather", {}),
+)
+_ANOMALY_SWITCH_METRIC_ID = 4  # Pump Running
+
+
+def _seed_anomaly_rules(
+    cur: psycopg.Cursor,
+    spec: DeviceSpec,
+    prefix: str,
+    tid: str,
+    counts: dict[str, int],
+) -> None:
+    if spec.kind != KIND_BOILER:
+        return
+    cur.execute(
+        "SELECT id FROM metric_points WHERE device_id = %s AND metric_id = %s",
+        (spec.device_id, _ANOMALY_SWITCH_METRIC_ID),
+    )
+    row = cur.fetchone()
+    if row is None:
+        return
+    bindings = json.dumps([{"role": "switch", "metricPointId": str(row[0])}])
+    for detector, label, params in _BOILER_ANOMALY_RULES:
+        rule_id = str(
+            uuid.uuid5(UUID_NAMESPACE, f"{prefix}:anomaly:{spec.device_id}:{detector}")
+        )
+        cur.execute(
+            """
+            INSERT INTO anomaly_rules
+                (id, tenant_id, name, detector, params, bindings,
+                 severity, cooldown_seconds, enabled)
+            VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, 'WARNING', 1800, true)
+            ON CONFLICT (id) DO UPDATE
+                SET bindings = EXCLUDED.bindings, params = EXCLUDED.params,
+                    enabled = true, updated_at = now()
+            """,
+            (
+                rule_id,
+                tid,
+                f"{label} ({spec.asset_name or spec.device_id})",
+                detector,
+                json.dumps(params),
+                bindings,
             ),
         )
         counts["rules"] += 1

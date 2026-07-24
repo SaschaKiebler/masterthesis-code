@@ -1,0 +1,40 @@
+// Compacted anomaly-rule projection topic (anomaly-rule.configured,
+// key = rule_id), published and owned by core-platform (the rule owner).
+// The analytics anomaly engine replays it to rebuild its rule state —
+// event-carried state transfer, mirror of rule.configured.
+//
+// An anomaly rule is a detector template instance: the template declares
+// roles, the rule binds each role to a channel. Parameters (and, for the
+// generic `condition` template, the condition tree) travel as a JSON string
+// so the wire contract stays stable while the template library evolves.
+// Channel identity is denormalised at publish time; the engine never reads
+// the registry.
+
+syntax = "proto3";
+
+package detection.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.digitaldemon.detection.proto.v1";
+option java_multiple_files = true;
+option java_outer_classname = "AnomalyRuleConfigProto";
+
+message AnomalyRuleConfig {
+  string rule_id = 1;              // UUID, auch Kafka-Key
+  string tenant_id = 2;            // UUID; wandert in DetectionEvent.tenant_id
+  string name = 3;                 // Anzeigename, erscheint im Finding-Detail
+  string detector = 4;             // short_cycle | weather_heating | actuator_without_demand | condition
+  string params_json = 5;          // Template-Parameter; bei `condition` inkl. Bedingungsbaum
+  repeated ChannelBinding bindings = 6;
+  string severity = 7;             // INFO | WARNING | ERROR | CRITICAL
+  int32 cooldown_seconds = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ChannelBinding {
+  string role = 1;                 // Template-Rolle (switch, demand, actuator, suppress_while, ...)
+  string metric_point_id = 2;      // erste Binding-Rolle liefert DetectionEvent.asset_ref
+  string device_id = 3;            // Channel-Identität (denormalisiert)
+  int32 metric_id = 4;
+}
