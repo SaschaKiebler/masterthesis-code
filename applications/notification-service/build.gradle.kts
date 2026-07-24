@@ -40,8 +40,8 @@ dependencies {
 	// Own table area in the shared master-data store (notification_rules,
 	// notifications) — plain JDBC plus Flyway with a service-own history table
 	implementation("org.springframework.boot:spring-boot-starter-jdbc")
-	implementation("org.flywaydb:flyway-core")
-	runtimeOnly("org.flywaydb:flyway-database-postgresql")
+	implementation("org.springframework.boot:spring-boot-starter-flyway")
+	implementation("org.flywaydb:flyway-database-postgresql")
 	runtimeOnly("org.postgresql:postgresql")
 
 	// Kafka — consumes the detection-event topics (threshold.breached, ...)

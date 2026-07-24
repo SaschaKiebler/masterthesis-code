@@ -15,7 +15,10 @@ spring:
   flyway:
     enabled: true
     table: flyway_schema_history_notification
+    # The shared schema already holds core's tables, so Flyway must baseline —
+    # at version 0, otherwise V1__notification_schema.sql would be skipped.
     baseline-on-migrate: true
+    baseline-version: 0
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}

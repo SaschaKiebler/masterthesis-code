@@ -80,6 +80,8 @@ kafka:
     measurement-ingested: measurement.ingested
     device-discovered: device.discovered
     threshold-breached: threshold.breached
+    anomaly-detected: anomaly.detected
+    rule-configured: rule.configured
   topic-defaults:
     partitions: ${KAFKA_TOPIC_PARTITIONS:3}
     replicas: ${KAFKA_TOPIC_REPLICAS:1}

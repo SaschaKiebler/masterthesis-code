@@ -11,6 +11,7 @@ import asyncio
 import logging
 
 from aiokafka import AIOKafkaConsumer, TopicPartition
+from aiokafka.admin import AIOKafkaAdminClient
 
 from ..config import settings
 
@@ -36,7 +37,7 @@ class CompactedStore:
         await consumer.start()
         self._consumer = consumer
 
-        partitions = await self._wait_for_topic(consumer)
+        partitions = await self._wait_for_topic()
         tps = [TopicPartition(self.topic, p) for p in partitions]
         consumer.assign(tps)
         for tp in tps:
@@ -66,14 +67,24 @@ class CompactedStore:
         if self._consumer:
             await self._consumer.stop()
 
-    async def _wait_for_topic(self, consumer: AIOKafkaConsumer) -> set[int]:
-        while True:
-            partitions = consumer.partitions_for_topic(self.topic)
-            if partitions:
-                return partitions
-            log.info("Waiting for topic %s to appear (owned by its producer)...", self.topic)
-            await asyncio.sleep(2)
-            await consumer.topics()  # refresh metadata
+    async def _wait_for_topic(self) -> set[int]:
+        """Partition ids via the admin client — the consumer's cached cluster
+        metadata does not expose partitions for unsubscribed topics."""
+        admin = AIOKafkaAdminClient(bootstrap_servers=settings.kafka_bootstrap_servers)
+        await admin.start()
+        try:
+            while True:
+                try:
+                    described = await admin.describe_topics([self.topic])
+                    for topic in described:
+                        if topic.get("topic") == self.topic and topic.get("error_code") == 0:
+                            return {p["partition"] for p in topic.get("partitions", [])}
+                except Exception:  # noqa: BLE001 — topic not there yet
+                    pass
+                log.info("Waiting for topic %s to appear (owned by its producer)...", self.topic)
+                await asyncio.sleep(2)
+        finally:
+            await admin.close()
 
     async def _follow(self) -> None:
         assert self._consumer is not None

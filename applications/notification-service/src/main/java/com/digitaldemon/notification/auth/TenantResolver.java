@@ -41,7 +41,8 @@ public class TenantResolver {
                         HttpStatus.FORBIDDEN, "Unknown user"));
 
         UUID userId = user.id();
-        boolean systemAdmin = "SYSTEM_ADMIN".equals(user.globalRole());
+        // global_role is stored lowercase (core parses it case-insensitively)
+        boolean systemAdmin = "SYSTEM_ADMIN".equalsIgnoreCase(user.globalRole());
 
         if (systemAdmin) {
             if (requestedTenantId != null) {

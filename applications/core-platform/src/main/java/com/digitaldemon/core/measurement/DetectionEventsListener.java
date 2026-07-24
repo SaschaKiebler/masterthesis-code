@@ -40,7 +40,8 @@ public class DetectionEventsListener {
     private final EventService eventService;
     private final MetricPointRepository metricPointRepository;
     private final OntologyService ontologyService;
-    private final ObjectMapper objectMapper;
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @KafkaListener(topics = {
             "${kafka.topics.threshold-breached}",

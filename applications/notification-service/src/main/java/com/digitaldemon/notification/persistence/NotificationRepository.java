@@ -47,10 +47,10 @@ public class NotificationRepository {
                 SELECT * FROM notifications
                 WHERE tenant_id = :tenantId
                   AND (CAST(:since AS timestamptz) IS NULL OR created_at >= :since)
-                  AND (:severity IS NULL OR severity = :severity)
-                  AND (:acknowledged IS NULL
-                       OR (:acknowledged = TRUE  AND acknowledged_at IS NOT NULL)
-                       OR (:acknowledged = FALSE AND acknowledged_at IS NULL))
+                  AND (CAST(:severity AS text) IS NULL OR severity = :severity)
+                  AND (CAST(:acknowledged AS boolean) IS NULL
+                       OR (CAST(:acknowledged AS boolean) = TRUE  AND acknowledged_at IS NOT NULL)
+                       OR (CAST(:acknowledged AS boolean) = FALSE AND acknowledged_at IS NULL))
                 ORDER BY created_at DESC
                 LIMIT :limit OFFSET :offset
                 """)
