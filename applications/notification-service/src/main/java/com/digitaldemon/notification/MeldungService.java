@@ -1,6 +1,7 @@
 package com.digitaldemon.notification;
 
 import com.digitaldemon.detection.proto.v1.DetectionEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.digitaldemon.notification.delivery.AlertDeliverer;
 import com.digitaldemon.notification.persistence.NotificationRepository;
 import com.digitaldemon.notification.persistence.NotificationRule;
@@ -34,7 +35,9 @@ public class MeldungService {
     private final NotificationRepository notificationRepository;
     private final AlertDeliverer deliverer;
 
-    /** (tenant|rule|type|device|metric) → last persisted Meldung. */
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    /** (tenant|rule|type|device|metric|kind) → last persisted Meldung. */
     private final ConcurrentHashMap<String, Instant> lastPersisted = new ConcurrentHashMap<>();
 
     public void process(UUID tenantId, DetectionEvent event) {
@@ -79,14 +82,14 @@ public class MeldungService {
         if (cooldownMinutes <= 0) {
             return false;
         }
-        String key = tenantId + "|" + rule.id() + "|" + event.getType()
-                + "|" + event.getChannel().getDeviceId() + "|" + event.getChannel().getMetricId();
+        String key = dedupKey(tenantId, rule, event);
         Instant now = Instant.now();
         Instant last = lastPersisted.get(key);
         if (last == null) {
             // Restart backstop: consult the newest persisted Meldung.
             last = notificationRepository.lastCreatedAt(tenantId, rule.id(), event.getType(),
-                            event.getChannel().getDeviceId(), event.getChannel().getMetricId())
+                            event.getChannel().getDeviceId(), event.getChannel().getMetricId(),
+                            findingKind(event))
                     .orElse(null);
         }
         if (last != null && Duration.between(last, now).toMinutes() < cooldownMinutes) {
@@ -117,9 +120,32 @@ public class MeldungService {
                 event.getDetail(),
                 detectedAt);
 
-        String key = tenantId + "|" + rule.id() + "|" + event.getType()
-                + "|" + event.getChannel().getDeviceId() + "|" + event.getChannel().getMetricId();
-        lastPersisted.put(key, Instant.now());
+        lastPersisted.put(dedupKey(tenantId, rule, event), Instant.now());
+    }
+
+    /**
+     * Dedup key per finding: one detection topic can carry several distinct
+     * finding kinds on the same channel (e.g. the weather-context detector's
+     * short_cycle and warm_weather_heating), which must not suppress each
+     * other. The kind travels in the detail JSON.
+     */
+    private static String dedupKey(UUID tenantId, NotificationRule rule, DetectionEvent event) {
+        return tenantId + "|" + rule.id() + "|" + event.getType()
+                + "|" + event.getChannel().getDeviceId() + "|" + event.getChannel().getMetricId()
+                + "|" + findingKind(event);
+    }
+
+    /** The finding kind from the detail JSON; empty when absent. */
+    private static String findingKind(DetectionEvent event) {
+        String detail = event.getDetail();
+        if (detail == null || detail.isBlank()) {
+            return "";
+        }
+        try {
+            return objectMapper.readTree(detail).path("kind").asText("");
+        } catch (Exception e) {
+            return "";
+        }
     }
 
     private static String emptyToNull(String value) {

@@ -249,7 +249,7 @@ class WeatherContextDetector:
             registry_ref, registry_tenant = await self._registry_lookup(device_id, metric_id)
             asset_ref = asset_ref or registry_ref
             tenant_id = tenant_id or registry_tenant
-        detail = {**detail, "metric_point_id": asset_ref or None}
+        detail = {**detail, "kind": kind, "metric_point_id": asset_ref or None}
 
         event = self._publisher.build_event(
             topic=settings.topic_anomaly_detected,

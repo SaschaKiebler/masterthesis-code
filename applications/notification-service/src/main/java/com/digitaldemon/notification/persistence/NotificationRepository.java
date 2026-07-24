@@ -83,18 +83,20 @@ public class NotificationRepository {
      * Meldung for the same finding key and rule.
      */
     public Optional<Instant> lastCreatedAt(UUID tenantId, UUID ruleId, String type,
-                                           String deviceId, int metricId) {
+                                           String deviceId, int metricId, String kind) {
         return jdbc.sql("""
                 SELECT max(created_at) AS last FROM notifications
                 WHERE tenant_id = :tenantId
                   AND rule_id IS NOT DISTINCT FROM :ruleId
                   AND type = :type AND device_id = :deviceId AND metric_id = :metricId
+                  AND COALESCE(detail ->> 'kind', '') = :kind
                 """)
                 .param("tenantId", tenantId)
                 .param("ruleId", ruleId)
                 .param("type", type)
                 .param("deviceId", deviceId)
                 .param("metricId", metricId)
+                .param("kind", kind == null ? "" : kind)
                 .query((rs, i) -> {
                     Timestamp last = rs.getTimestamp("last");
                     return last == null ? null : last.toInstant();
