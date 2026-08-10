@@ -1,5 +1,6 @@
 package com.digitaldemon.core.common.config;
 
+import com.digitaldemon.core.audit.AccessAuditFilter;
 import com.digitaldemon.core.user.LocalTokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +35,7 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final N8nServiceTokenAuthenticationFilter n8nServiceTokenAuthenticationFilter;
+    private final AccessAuditFilter accessAuditFilter;
     private final LocalTokenService localTokenService;
 
     /**
@@ -49,6 +51,9 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(n8nServiceTokenAuthenticationFilter, BearerTokenAuthenticationFilter.class)
+            // After authentication, so the caller is already resolved when the
+            // audit filter reads the security context on the way in.
+            .addFilterAfter(accessAuditFilter, BearerTokenAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api/v1/auth/**").permitAll()
@@ -77,6 +82,8 @@ public class SecurityConfig {
             .sessionManagement(session ->
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .addFilterBefore(n8nServiceTokenAuthenticationFilter, BearerTokenAuthenticationFilter.class)
+            // Also active in dev so the audit trail can be exercised locally.
+            .addFilterAfter(accessAuditFilter, BearerTokenAuthenticationFilter.class)
             .authorizeHttpRequests(auth -> auth
                 .anyRequest().permitAll()
             )
