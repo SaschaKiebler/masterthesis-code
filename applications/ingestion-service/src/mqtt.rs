@@ -5,6 +5,7 @@
 //! 
 
 use anyhow::{anyhow, Result};
+use chrono::{DateTime, Utc};
 use deadpool_postgres::Pool;
 use rumqttc::{AsyncClient, Event, MqttOptions, Packet, QoS};
 use std::sync::Arc;
@@ -53,6 +54,11 @@ pub async fn run(
     loop {
         match eventloop.poll().await {
             Ok(Event::Incoming(Packet::Publish(publish))) => {
+                // System entry for the evaluation (thesis ch. 6). Stamped here
+                // on the event loop rather than inside the spawned task, so the
+                // queueing and parsing cost below counts towards ingest latency
+                // instead of vanishing before the first measurement is built.
+                let received_at = Utc::now();
                 let topic = publish.topic.clone();
                 let payload = String::from_utf8_lossy(&publish.payload).to_string();
 
@@ -64,7 +70,7 @@ pub async fn run(
 
                 let publisher_clone = publisher.clone();
                 tokio::spawn(async move {
-                    if let Err(e) = process_message(&pool_clone, &state_clone, &publisher_clone, &topic, &payload).await {
+                    if let Err(e) = process_message(&pool_clone, &state_clone, &publisher_clone, &topic, &payload, received_at).await {
                         error!("Error processing message on {}: {:?}", topic, e);
 
                         // Log to ingestion_errors table
@@ -102,12 +108,19 @@ pub async fn run(
 /// 1. Try Shelly native format (topic-based detection via `/status/` in topic)
 /// 2. Try Tasmota format (`tele/<device_id>/<type>` or `stat/<device_id>/<type>`)
 /// 3. Try generic device format (first topic segment = device_id, rest = source)
+///
+/// `received_at` is when the event loop took this message off MQTT. It is
+/// persisted per measurement for the evaluation, and it is handed to the
+/// parsers as the fallback measurement timestamp: each route prefers a clock
+/// carried in the payload and falls back to this one when the wire format has
+/// none (see `parser::resolve_source_time`).
 async fn process_message(
     pool: &Pool,
     device_state: &DeviceStateStore,
     publisher: &MeasurementPublisher,
     topic: &str,
     payload: &str,
+    received_at: DateTime<Utc>,
 ) -> Result<()> {
     // Route 1: Check if this is a native Shelly message (topic-based detection)
     if let Some(shelly_info) = parser::parse_shelly_topic(topic) {
@@ -120,7 +133,8 @@ async fn process_message(
             return Ok(());
         }
 
-        let timestamp = chrono::Utc::now();
+        // Fallback measurement time; the parser prefers a payload clock.
+        let timestamp = received_at;
 
         // Signal map from the device.configured projection resolves channel → metric_id
         let signal_map = device_state.signal_map(&shelly_info.device_id).await;
@@ -129,7 +143,7 @@ async fn process_message(
         let count = measurements.len();
 
         for m in &measurements {
-            db::insert_measurement(pool, &shelly_info.device_id, m.metric_id, m.value, m.time).await?;
+            db::insert_measurement(pool, &shelly_info.device_id, m.metric_id, m.value, m.time, received_at).await?;
             debug!(
                 "Inserted (Shelly): device={}, metric={}, value={}",
                 shelly_info.device_id, m.metric_id, m.value
@@ -162,14 +176,15 @@ async fn process_message(
             return Ok(());
         }
 
-        let timestamp = chrono::Utc::now();
+        // Fallback measurement time; the parser prefers a payload clock.
+        let timestamp = received_at;
         let signal_map = device_state.signal_map(&tasmota_info.device_id).await;
 
         let measurements = parser::parse_tasmota(&tasmota_info, payload, timestamp, signal_map.as_ref())?;
         let count = measurements.len();
 
         for m in &measurements {
-            db::insert_measurement(pool, &tasmota_info.device_id, m.metric_id, m.value, m.time).await?;
+            db::insert_measurement(pool, &tasmota_info.device_id, m.metric_id, m.value, m.time, received_at).await?;
             info!(
                 "Inserted (Tasmota): device={}, metric={}, value={}",
                 tasmota_info.device_id, m.metric_id, m.value
@@ -201,14 +216,15 @@ async fn process_message(
             return Ok(());
         }
 
-        let timestamp = chrono::Utc::now();
+        // Fallback measurement time; the parser prefers a payload clock.
+        let timestamp = received_at;
         let signal_map = device_state.signal_map(&generic_info.device_id).await;
 
         let measurements = parser::parse_generic(&generic_info, payload, timestamp, signal_map.as_ref())?;
         let count = measurements.len();
 
         for m in &measurements {
-            db::insert_measurement(pool, &generic_info.device_id, m.metric_id, m.value, m.time).await?;
+            db::insert_measurement(pool, &generic_info.device_id, m.metric_id, m.value, m.time, received_at).await?;
             info!(
                 "Inserted (Generic): device={}, metric={}, value={}",
                 generic_info.device_id, m.metric_id, m.value

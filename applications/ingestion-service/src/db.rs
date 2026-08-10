@@ -31,19 +31,26 @@ pub async fn create_pool(cfg: &DatabaseConfig) -> Result<Pool> {
     Ok(pool)
 }
 
-/// Insert a measurement into the database
+/// Insert a measurement into the database.
+///
+/// `received_at` is the moment this service took the message off MQTT. It is
+/// stored alongside the value so the evaluation can compute ingest latency as
+/// `persisted_at - received_at`; `persisted_at` is filled by the database
+/// default, which keeps this a single round trip.
 pub async fn insert_measurement(
     pool: &Pool,
     device_id: &str,
     metric_id: i16,
     value: f64,
     time: DateTime<Utc>,
+    received_at: DateTime<Utc>,
 ) -> Result<()> {
     let client = pool.get().await?;
 
     client.execute(
-        "INSERT INTO measurements (time, device_id, metric_id, value) VALUES ($1, $2, $3, $4)",
-        &[&time, &device_id, &metric_id, &value],
+        "INSERT INTO measurements (time, device_id, metric_id, value, received_at) \
+         VALUES ($1, $2, $3, $4, $5)",
+        &[&time, &device_id, &metric_id, &value, &received_at],
     ).await?;
 
     Ok(())

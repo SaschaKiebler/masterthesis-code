@@ -49,7 +49,11 @@ pub fn parse_generic(
     let json: serde_json::Value = serde_json::from_str(payload)
         .map_err(|e| anyhow!("Failed to parse generic device JSON: {}", e))?;
 
-    let measurements = extract_by_signal_map(&topic_info.source, &json, timestamp, signal_map);
+    // Gateway-published documents normally carry their own clock; this is the
+    // route on which measurement time and receive time genuinely differ.
+    let (measured_at, _from_device) = super::resolve_source_time(&json, timestamp);
+
+    let measurements = extract_by_signal_map(&topic_info.source, &json, measured_at, signal_map);
 
     if measurements.is_empty() {
         return Err(anyhow!(
@@ -162,6 +166,55 @@ mod tests {
 
         let result = parse_generic(&info, "not json", ts, None);
         assert!(result.is_err());
+    }
+
+    /// The boiler document the mock fleet publishes carries its own clock. The
+    /// measurement must be stamped with that, not with the receive time —
+    /// otherwise the evaluation cannot separate transport from processing.
+    /// Timestamps are fixed rather than derived from `Utc::now()` so the clock
+    /// skew guard behaves the same whenever the test runs.
+    #[test]
+    fn test_parse_generic_prefers_payload_clock() {
+        let received = DateTime::parse_from_rfc3339("2026-08-10T12:00:05Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let info = GenericTopicInfo {
+            device_id: "mock-boiler-001".to_string(),
+            source: "data".to_string(),
+        };
+        let payload =
+            r#"{"flow_c":40.1,"return_c":23.1,"pump":true,"ts":"2026-08-10T12:00:00+00:00"}"#;
+        let signal_map = serde_json::json!({
+            "1": {"name": "Flow", "source": "data", "field": "flow_c"},
+            "2": {"name": "Return", "source": "data", "field": "return_c"}
+        });
+
+        let measurements = parse_generic(&info, payload, received, Some(&signal_map)).unwrap();
+        assert_eq!(measurements.len(), 2);
+        for m in &measurements {
+            assert_eq!(m.time.to_rfc3339(), "2026-08-10T12:00:00+00:00");
+        }
+    }
+
+    /// A gateway that sends no clock still has to yield measurements, stamped
+    /// with the receive time.
+    #[test]
+    fn test_parse_generic_falls_back_to_receive_time() {
+        let received = DateTime::parse_from_rfc3339("2026-08-10T12:00:05Z")
+            .unwrap()
+            .with_timezone(&Utc);
+        let info = GenericTopicInfo {
+            device_id: "mock-boiler-001".to_string(),
+            source: "data".to_string(),
+        };
+        let signal_map = serde_json::json!({
+            "1": {"name": "Flow", "source": "data", "field": "flow_c"}
+        });
+
+        let measurements =
+            parse_generic(&info, r#"{"flow_c":40.1}"#, received, Some(&signal_map)).unwrap();
+        assert_eq!(measurements.len(), 1);
+        assert_eq!(measurements[0].time, received);
     }
 
     #[test]

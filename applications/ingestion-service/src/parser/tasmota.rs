@@ -60,7 +60,10 @@ pub fn parse_tasmota(
     let json: serde_json::Value = serde_json::from_str(payload)
         .map_err(|e| anyhow!("Failed to parse Tasmota JSON: {}", e))?;
 
-    let measurements = extract_by_signal_map(&topic_info.message_type, &json, timestamp, signal_map);
+    // Tasmota stamps every tele/ message with a top-level `Time` field.
+    let (measured_at, _from_device) = super::resolve_source_time(&json, timestamp);
+
+    let measurements = extract_by_signal_map(&topic_info.message_type, &json, measured_at, signal_map);
 
     if measurements.is_empty() {
         return Err(anyhow!(

@@ -82,8 +82,13 @@ fn parse_gen2(
     let json: serde_json::Value = serde_json::from_str(payload)
         .map_err(|e| anyhow!("Failed to parse Shelly Gen2 JSON: {}", e))?;
 
+    // Per-component status payloads carry no clock, so this resolves to the
+    // receive time. Kept uniform with the other routes so a firmware that does
+    // send one (Gen2 NotifyStatus) is picked up without a code change.
+    let (measured_at, _from_device) = super::resolve_source_time(&json, timestamp);
+
     // ADR-010: Try data-driven field-based extraction first
-    let field_based = extract_by_signal_map(component, &json, timestamp, signal_map);
+    let field_based = extract_by_signal_map(component, &json, measured_at, signal_map);
     if !field_based.is_empty() {
         debug!(
             "Shelly Gen2: component={}, extracted {} measurements via signal_map fields",

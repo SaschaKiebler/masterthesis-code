@@ -12,10 +12,18 @@ data:
     CREATE EXTENSION IF NOT EXISTS timescaledb;
 
     CREATE TABLE measurements (
-        time      TIMESTAMPTZ NOT NULL,
-        device_id TEXT NOT NULL,
-        metric_id SMALLINT NOT NULL,
-        value     DOUBLE PRECISION
+        time         TIMESTAMPTZ NOT NULL,
+        device_id    TEXT NOT NULL,
+        metric_id    SMALLINT NOT NULL,
+        value        DOUBLE PRECISION,
+
+        -- Evaluation instrumentation (thesis ch. 6: QS-PER-01/02, QS-INT-02).
+        -- received_at  = when ingestion took the message off MQTT (system
+        --                entry); nullable so pre-instrumentation rows stay
+        --                valid. persisted_at = when the row reached the store.
+        -- Ingest latency is persisted_at - received_at.
+        received_at  TIMESTAMPTZ,
+        persisted_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
 
     CREATE INDEX idx_measurements_device_metric_time
