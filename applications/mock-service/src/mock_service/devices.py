@@ -47,7 +47,18 @@ class SimDevice:
     def device_id(self) -> str:
         return self.spec.device_id
 
-    def tick(self, now: datetime, dt: float) -> list[tuple[str, str]]:
+    def _metric_count(self, source: str) -> int:
+        """How many measurements a message on this source carries.
+
+        Taken from the device's own metric declaration, the same list the seed
+        commissions, so the generator and the platform agree on what one
+        message is worth. The evaluation compares MEASUREMENTS, not messages
+        (a boiler document carries four, a Shelly status one) — see P0.6 in the
+        evaluation plan.
+        """
+        return sum(1 for m in self.spec.metrics if m.source == source)
+
+    def tick(self, now: datetime, dt: float) -> list[tuple[str, str, int]]:
         if self.fault == "dropout":
             return []
         if self.fault == "stuck" and self._last_state is not None:
@@ -66,8 +77,10 @@ class SimDevice:
         self._last_state = state
         return messages
 
-    def _render(self, state: dict, now: datetime) -> list[tuple[str, str]]:
+    def _render(self, state: dict, now: datetime) -> list[tuple[str, str, int]]:
         """Render model state as the wire messages the real device would send.
+
+        Each entry is (topic, payload, measurement_count).
 
         The boiler document is gateway-published, so it carries its own clock in
         `ts` — that is what lets the platform tell measurement time from receive
@@ -76,17 +89,21 @@ class SimDevice:
         receive time for them, and the evaluation reports that split.
         """
         if self._boiler is not None:
-            return [(f"{self.device_id}/data", _dump({**state, "ts": now.isoformat()}))]
+            return [(f"{self.device_id}/data",
+                     _dump({**state, "ts": now.isoformat()}),
+                     self._metric_count("data"))]
 
         assert self._room is not None
         messages = [
             (
                 f"{self.device_id}/status/temperature:0",
                 _dump({"id": 0, "tC": state["tC"], "tF": round(state["tC"] * 9 / 5 + 32, 1)}),
+                self._metric_count("temperature:0"),
             ),
             (
                 f"{self.device_id}/status/humidity:0",
                 _dump({"id": 0, "rh": state["rh"]}),
+                self._metric_count("humidity:0"),
             ),
         ]
         if self._ticks % BATTERY_EVERY_N_TICKS == 0:
@@ -100,6 +117,7 @@ class SimDevice:
                             "external": {"present": False},
                         }
                     ),
+                    self._metric_count("devicepower:0"),
                 )
             )
         return messages

@@ -1,4 +1,8 @@
-# One evaluation run of the mock fleet (fleet shape must match mock-seed).
+# Functional in-cluster smoke run of the mock fleet (fleet shape must match
+# mock-seed). NOT used for the thesis measurements — those run mock-service
+# from outside the cluster against the mosquitto LB (see eval/external-access
+# .yaml and infrastructure/README.md), so the generator does not compete with
+# the services under test for cluster resources.
 # Example: 10 sites x 3 rooms at 10 s interval for 10 min with one overheat
 # alert scenario. kubectl delete + apply to rerun with new parameters.
 apiVersion: batch/v1

@@ -1,0 +1,11 @@
+# Load harness for the thesis evaluation (QS-PER-03, QS-SEC-01 background
+# load). Runs outside the cluster — see locustfile.py for the rationale and
+# infrastructure/kubernetes/eval/external-access.yaml for the exposure.
+[project]
+name = "evaluation-load"
+version = "0.1.0"
+description = "Locust load profile against the platform query APIs"
+requires-python = ">=3.10"
+dependencies = [
+    "locust>=2.20",
+]

@@ -1,0 +1,75 @@
+# Temporary external exposure for evaluation sessions ONLY.
+#
+# The load generators (locust, mock-service run) deliberately run OUTSIDE the
+# cluster: real load originates outside, and an in-cluster generator would
+# compete with the services under test for pod resources. These LoadBalancer
+# services are the controlled way in.
+#
+# Usage per measurement session:
+#   1. MY_IP=$(curl -s ifconfig.me)
+#   2. sed "s|MEINE_IP|$MY_IP|" infrastructure/kubernetes/eval/external-access.yaml \
+#        | kubectl apply -f -
+#   3. kubectl -n heating-platform get svc -l eval=external -w   # wait for EXTERNAL-IP
+#   4. run the generators against the external IPs
+#   5. kubectl -n heating-platform delete svc -l eval=external
+#
+# loadBalancerSourceRanges is NOT optional: mosquitto runs with
+# allow_anonymous, an unrestricted MQTT listener on a public IP would accept
+# anyone's publishes (and taint the measurements). Locking every LB to the
+# operator's /32 keeps the window shut.
+#
+# IMPORTANT: delete these services BEFORE terraform destroy — forwarding rules
+# created by GKE for live services can otherwise survive the cluster.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto-external
+  namespace: heating-platform
+  labels:
+    eval: external
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - MEINE_IP/32
+  selector:
+    app: mosquitto
+  ports:
+    - name: mqtt
+      port: 1883
+      targetPort: 1883
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-platform-external
+  namespace: heating-platform
+  labels:
+    eval: external
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - MEINE_IP/32
+  selector:
+    app: core-platform
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-external
+  namespace: heating-platform
+  labels:
+    eval: external
+spec:
+  type: LoadBalancer
+  loadBalancerSourceRanges:
+    - MEINE_IP/32
+  selector:
+    app: analytics-service
+  ports:
+    - name: http
+      port: 8100
+      targetPort: 8100

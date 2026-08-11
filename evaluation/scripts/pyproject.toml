@@ -1,0 +1,15 @@
+# Evaluation probes (thesis ch. 6). Run from the measuring machine, outside
+# the cluster, like the load harness in ../load.
+[project]
+name = "evaluation-scripts"
+version = "0.1.0"
+description = "Probes for QS-SEC-01 (tenant isolation) and QS-PER-01 (visibility latency)"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.31",
+]
+
+[project.optional-dependencies]
+# Only needed for --dsn, i.e. checking the audit trail directly during a local
+# dev-stack run. In a cluster session the databases are not exposed outside.
+db = ["psycopg[binary]>=3.1"]

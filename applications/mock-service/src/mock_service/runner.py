@@ -25,7 +25,15 @@ STATS_EVERY_S = 10.0
 
 @dataclass
 class RunStats:
-    published: int = 0
+    published: int = 0          # MQTT messages
+    # Measurements inside those messages, counted from each device's metric
+    # declaration. The load scenarios are specified in measurements per second,
+    # and one boiler document carries four while a Shelly status carries one —
+    # so this, not `published`, is the basis for the loss rate (P0.6).
+    measurements: int = 0
+    # Same, but only for commissioned devices. Rogue traffic is dropped by
+    # ingestion on purpose, so it must not inflate the expected row count.
+    seeded_measurements: int = 0
     dropped: int = 0
     publish_errors: int = 0
     active_faults: dict[str, int] = field(default_factory=dict)
@@ -68,9 +76,9 @@ async def _device_loop(
     loop = asyncio.get_running_loop()
     next_tick = loop.time()
     while not stop.is_set():
-        for topic, payload in device.tick(datetime.now(timezone.utc), interval):
+        for topic, payload, metric_count in device.tick(datetime.now(timezone.utc), interval):
             try:
-                queue.put_nowait((topic, payload))
+                queue.put_nowait((topic, payload, metric_count, device.spec.seeded))
             except asyncio.QueueFull:
                 stats.dropped += 1
         next_tick += interval
@@ -107,6 +115,9 @@ async def _publisher_worker(
                             continue
                     await client.publish(pending[0], pending[1], qos=1)
                     stats.published += 1
+                    stats.measurements += pending[2]
+                    if pending[3]:
+                        stats.seeded_measurements += pending[2]
                     queue.task_done()
                     pending = None
         except aiomqtt.MqttError as exc:
@@ -160,6 +171,7 @@ async def _stats_reporter(queue: asyncio.Queue, stop: asyncio.Event, stats: RunS
     loop = asyncio.get_running_loop()
     t0 = loop.time()
     last_published = 0
+    last_measurements = 0
     while not stop.is_set():
         try:
             await asyncio.wait_for(stop.wait(), timeout=STATS_EVERY_S)
@@ -167,13 +179,18 @@ async def _stats_reporter(queue: asyncio.Queue, stop: asyncio.Event, stats: RunS
         except asyncio.TimeoutError:
             pass
         rate = (stats.published - last_published) / STATS_EVERY_S
+        measurement_rate = (stats.measurements - last_measurements) / STATS_EVERY_S
         last_published = stats.published
+        last_measurements = stats.measurements
         faults = ", ".join(f"{k}×{v}" for k, v in stats.active_faults.items() if v > 0) or "none"
         log.info(
-            "t=+%.0fs published=%d (%.1f msg/s) queue=%d dropped=%d errors=%d faults=%s",
+            "t=+%.0fs published=%d (%.1f msg/s) measurements=%d (%.1f val/s) "
+            "queue=%d dropped=%d errors=%d faults=%s",
             loop.time() - t0,
             stats.published,
             rate,
+            stats.measurements,
+            measurement_rate,
             queue.qsize(),
             stats.dropped,
             stats.publish_errors,
@@ -234,9 +251,13 @@ async def run_scenario(scenario: Scenario) -> RunStats:
         except asyncio.TimeoutError:
             log.warning("shutdown with %d unpublished messages in queue", queue.qsize())
         await asyncio.gather(*tasks, return_exceptions=True)
+        # seeded_measurements is the number to compare against the row count in
+        # the measurement store; rogue traffic is dropped by design.
         log.info(
-            "run finished: published=%d dropped=%d errors=%d",
+            "run finished: published=%d measurements=%d (seeded=%d) dropped=%d errors=%d",
             stats.published,
+            stats.measurements,
+            stats.seeded_measurements,
             stats.dropped,
             stats.publish_errors,
         )
