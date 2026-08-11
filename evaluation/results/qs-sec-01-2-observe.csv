@@ -1,0 +1,107 @@
+actor,target_tenant,service,method,path,status,outcome,leaked_identifiers
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673,200,LEAK,"[""204879c0-8508-5ec8-9aff-b0c5f3e4dd33"", ""c429819e-f88c-5048-b918-75c12b81c673"", ""a066ed6b-dda1-5cf4-bcaa-e51438aa53e3"", ""a066ed6b-dda1-5cf4-bcaa-e51438aa53e3""]"
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/metric-points,200,LEAK,"[""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""7572f190-a65c-5c3e-8000-d7f086882783"", ""14be761e-0d08-5ee2-b6a7-2bd4d94397bf"", ""127c4b28-db3a-5303-be87-36df7de53363"", ""10c4284f-4f15-5b35-9952-e2a84dfe0b20"", ""74c905a2-0124-50bd-ac36-d6cb4f28a145"", ""add14008-1a30-5751-bbcd-a36be2238328"", ""b14f9662-e707-5baa-9e70-3df2be514106"", ""bc3d06e4-5973-50df-8740-62bf49fa44c0"", ""6433b9d0-382d-5bf1-ac86-17330c82e993"", ""3e33d1d1-4009-5848-9318-5d3f7c9edf96"", ""tenantb-boiler-001"", ""tenantb-ht-001-01"", ""tenantb-ht-001-02"", ""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""ed116f2a-1636-5f63-822c-af6dc9be936a"", ""bbcedc53-ea5e-5d55-891e-398595084271""]"
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/latest-values,200,LEAK,"[""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""7572f190-a65c-5c3e-8000-d7f086882783"", ""14be761e-0d08-5ee2-b6a7-2bd4d94397bf"", ""127c4b28-db3a-5303-be87-36df7de53363"", ""10c4284f-4f15-5b35-9952-e2a84dfe0b20"", ""74c905a2-0124-50bd-ac36-d6cb4f28a145"", ""add14008-1a30-5751-bbcd-a36be2238328"", ""b14f9662-e707-5baa-9e70-3df2be514106"", ""bc3d06e4-5973-50df-8740-62bf49fa44c0"", ""6433b9d0-382d-5bf1-ac86-17330c82e993"", ""3e33d1d1-4009-5848-9318-5d3f7c9edf96"", ""tenantb-boiler-001"", ""tenantb-ht-001-01"", ""tenantb-ht-001-02"", ""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""ed116f2a-1636-5f63-822c-af6dc9be936a"", ""bbcedc53-ea5e-5d55-891e-398595084271""]"
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/health,200,LEAK,"[""a066ed6b-dda1-5cf4-bcaa-e51438aa53e3"", ""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""tenantb-boiler-001"", ""tenantb-ht-001-01"", ""tenantb-ht-001-02"", ""a066ed6b-dda1-5cf4-bcaa-e51438aa53e3"", ""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""ed116f2a-1636-5f63-822c-af6dc9be936a"", ""bbcedc53-ea5e-5d55-891e-398595084271""]"
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/graph,200,LEAK,"[""a066ed6b-dda1-5cf4-bcaa-e51438aa53e3"", ""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""a066ed6b-dda1-5cf4-bcaa-e51438aa53e3"", ""01e9a4b5-c446-5c6b-9279-e02c552fbf54"", ""f0f7a99e-3605-52d3-92a6-78b29ed6d385"", ""67d5e0d0-3129-55e9-9de2-8d1cdd64fc04"", ""424865ca-5b48-5834-ace7-164d7320c7be"", ""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""ed116f2a-1636-5f63-822c-af6dc9be936a"", ""bbcedc53-ea5e-5d55-891e-398595084271""]"
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/channels,200,LEAK,"[""7572f190-a65c-5c3e-8000-d7f086882783"", ""14be761e-0d08-5ee2-b6a7-2bd4d94397bf"", ""127c4b28-db3a-5303-be87-36df7de53363"", ""10c4284f-4f15-5b35-9952-e2a84dfe0b20"", ""74c905a2-0124-50bd-ac36-d6cb4f28a145"", ""add14008-1a30-5751-bbcd-a36be2238328"", ""b14f9662-e707-5baa-9e70-3df2be514106"", ""bc3d06e4-5973-50df-8740-62bf49fa44c0"", ""6433b9d0-382d-5bf1-ac86-17330c82e993"", ""3e33d1d1-4009-5848-9318-5d3f7c9edf96"", ""tenantb-boiler-001"", ""tenantb-ht-001-01"", ""tenantb-ht-001-02""]"
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/dashboards,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/settings,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/derived-properties,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/events?limit=50,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/metric-pairs?quantity1=Flow%20Temperature&quantity2=Return%20Temperature,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/projects/c429819e-f88c-5048-b918-75c12b81c673/quantity-channels?quantityName=Flow%20Temperature,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/sites/a066ed6b-dda1-5cf4-bcaa-e51438aa53e3/objects,403,DENIED,[]
+tenanta,tenantb,core,GET,/api/v1/sites/a066ed6b-dda1-5cf4-bcaa-e51438aa53e3/graph,403,DENIED,[]
+tenanta,tenantb,core,GET,/api/v1/sites/a066ed6b-dda1-5cf4-bcaa-e51438aa53e3/spaces,403,DENIED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/83058c18-b465-56fe-abf4-7fec149c8b1b/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/83058c18-b465-56fe-abf4-7fec149c8b1b/events,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/metric-points/7572f190-a65c-5c3e-8000-d7f086882783,200,LEAK,"[""7572f190-a65c-5c3e-8000-d7f086882783"", ""tenantb-boiler-001""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/14be761e-0d08-5ee2-b6a7-2bd4d94397bf,200,LEAK,"[""14be761e-0d08-5ee2-b6a7-2bd4d94397bf"", ""tenantb-boiler-001""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/127c4b28-db3a-5303-be87-36df7de53363,200,LEAK,"[""127c4b28-db3a-5303-be87-36df7de53363"", ""tenantb-boiler-001""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/10c4284f-4f15-5b35-9952-e2a84dfe0b20,200,LEAK,"[""10c4284f-4f15-5b35-9952-e2a84dfe0b20"", ""tenantb-boiler-001""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/74c905a2-0124-50bd-ac36-d6cb4f28a145,200,LEAK,"[""74c905a2-0124-50bd-ac36-d6cb4f28a145"", ""tenantb-ht-001-01""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/add14008-1a30-5751-bbcd-a36be2238328,200,LEAK,"[""add14008-1a30-5751-bbcd-a36be2238328"", ""tenantb-ht-001-01""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/b14f9662-e707-5baa-9e70-3df2be514106,200,LEAK,"[""b14f9662-e707-5baa-9e70-3df2be514106"", ""tenantb-ht-001-01""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/bc3d06e4-5973-50df-8740-62bf49fa44c0,200,LEAK,"[""bc3d06e4-5973-50df-8740-62bf49fa44c0"", ""tenantb-ht-001-02""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/6433b9d0-382d-5bf1-ac86-17330c82e993,200,LEAK,"[""6433b9d0-382d-5bf1-ac86-17330c82e993"", ""tenantb-ht-001-02""]"
+tenanta,tenantb,core,GET,/api/v1/metric-points/3e33d1d1-4009-5848-9318-5d3f7c9edf96,200,LEAK,"[""3e33d1d1-4009-5848-9318-5d3f7c9edf96"", ""tenantb-ht-001-02""]"
+tenanta,tenantb,core,GET,/api/v1/objects/a066ed6b-dda1-5cf4-bcaa-e51438aa53e3/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/01e9a4b5-c446-5c6b-9279-e02c552fbf54/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/f0f7a99e-3605-52d3-92a6-78b29ed6d385/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/67d5e0d0-3129-55e9-9de2-8d1cdd64fc04/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/424865ca-5b48-5834-ace7-164d7320c7be/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/83058c18-b465-56fe-abf4-7fec149c8b1b/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/ed116f2a-1636-5f63-822c-af6dc9be936a/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/objects/bbcedc53-ea5e-5d55-891e-398595084271/metrics,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/tenants/204879c0-8508-5ec8-9aff-b0c5f3e4dd33,403,DENIED,[]
+tenanta,tenantb,core,GET,/api/v1/tenants/204879c0-8508-5ec8-9aff-b0c5f3e4dd33/members,403,DENIED,[]
+tenanta,tenantb,core,GET,/api/v1/sites?page=1&pageSize=100&tenantId=204879c0-8508-5ec8-9aff-b0c5f3e4dd33,403,DENIED,[]
+tenanta,tenantb,core,GET,/api/v1/projects,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/tenants,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/events?limit=50,200,FILTERED,[]
+tenanta,tenantb,core,GET,/api/v1/fleet/status,403,DENIED,[]
+tenanta,tenantb,core,GET,/api/v1/discovered-devices,403,DENIED,[]
+tenanta,tenantb,analytics,POST,/stats/latest,200,LEAK,"[""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""7572f190-a65c-5c3e-8000-d7f086882783"", ""14be761e-0d08-5ee2-b6a7-2bd4d94397bf"", ""127c4b28-db3a-5303-be87-36df7de53363"", ""10c4284f-4f15-5b35-9952-e2a84dfe0b20"", ""74c905a2-0124-50bd-ac36-d6cb4f28a145"", ""add14008-1a30-5751-bbcd-a36be2238328"", ""b14f9662-e707-5baa-9e70-3df2be514106"", ""bc3d06e4-5973-50df-8740-62bf49fa44c0"", ""6433b9d0-382d-5bf1-ac86-17330c82e993"", ""3e33d1d1-4009-5848-9318-5d3f7c9edf96"", ""tenantb-boiler-001"", ""tenantb-ht-001-01"", ""tenantb-ht-001-02"", ""83058c18-b465-56fe-abf4-7fec149c8b1b"", ""ed116f2a-1636-5f63-822c-af6dc9be936a"", ""bbcedc53-ea5e-5d55-891e-398595084271""]"
+tenanta,tenantb,analytics,POST,/stats/timeseries,200,FILTERED,[]
+tenanta,tenantb,analytics,POST,/stats/descriptive,200,FILTERED,[]
+tenanta,tenantb,analytics,POST,/stats/histogram,200,FILTERED,[]
+tenanta,tenantb,analytics,POST,/stats/boxplot,200,FILTERED,[]
+tenanta,tenantb,analytics,POST,/stats/heatmap,200,LEAK,"[""7572f190-a65c-5c3e-8000-d7f086882783""]"
+tenanta,tenantb,analytics,POST,/stats/ingest-rate,200,FILTERED,[]
+tenanta,tenantb,analytics,POST,/stats/difference,200,FILTERED,[]
+tenanta,tenantb,analytics,POST,/stats/series,200,FILTERED,[]
+tenanta,tenantb,analytics,POST,/stats/latest-by-channel,200,LEAK,"[""tenantb-boiler-001"", ""tenantb-ht-001-01"", ""tenantb-ht-001-02""]"
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37,200,LEAK,"[""320897be-472f-53c0-be38-73dd0a6a2ff6"", ""5a471841-3b4a-5837-bda5-b221be68be37"", ""fa441d68-83da-5f30-b584-e8d0f4a0354e"", ""fa441d68-83da-5f30-b584-e8d0f4a0354e""]"
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/metric-points,200,LEAK,"[""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2"", ""ffe275e7-1a52-50e0-865d-ce0bc4417c5e"", ""e4734ff9-7867-52aa-a166-55679b73ef52"", ""322823ad-270d-5c3f-bb34-542df169527b"", ""6b208294-f465-544c-8cc1-e2391957b76f"", ""297a1dbb-670a-525c-839a-b641e735bc48"", ""14dfcdad-8173-57d7-926c-69a404f149a4"", ""cf36a830-523b-5bc8-a457-c187cb7a175e"", ""7ff7db15-0e56-571c-8d58-f638626eb1fe"", ""tenanta-boiler-001"", ""tenanta-ht-001-01"", ""tenanta-ht-001-02"", ""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""b430da23-e089-52bf-b17c-03f712f19f15"", ""ccb881d5-6c2b-55c2-88a2-8dacdc42b868""]"
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/latest-values,200,LEAK,"[""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2"", ""ffe275e7-1a52-50e0-865d-ce0bc4417c5e"", ""e4734ff9-7867-52aa-a166-55679b73ef52"", ""322823ad-270d-5c3f-bb34-542df169527b"", ""6b208294-f465-544c-8cc1-e2391957b76f"", ""297a1dbb-670a-525c-839a-b641e735bc48"", ""14dfcdad-8173-57d7-926c-69a404f149a4"", ""cf36a830-523b-5bc8-a457-c187cb7a175e"", ""7ff7db15-0e56-571c-8d58-f638626eb1fe"", ""tenanta-boiler-001"", ""tenanta-ht-001-01"", ""tenanta-ht-001-02"", ""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""b430da23-e089-52bf-b17c-03f712f19f15"", ""ccb881d5-6c2b-55c2-88a2-8dacdc42b868""]"
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/health,200,LEAK,"[""fa441d68-83da-5f30-b584-e8d0f4a0354e"", ""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""tenanta-boiler-001"", ""tenanta-ht-001-01"", ""tenanta-ht-001-02"", ""fa441d68-83da-5f30-b584-e8d0f4a0354e"", ""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""b430da23-e089-52bf-b17c-03f712f19f15"", ""ccb881d5-6c2b-55c2-88a2-8dacdc42b868""]"
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/graph,200,LEAK,"[""fa441d68-83da-5f30-b584-e8d0f4a0354e"", ""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""fa441d68-83da-5f30-b584-e8d0f4a0354e"", ""121868f4-7b67-50d1-9ede-b6386b7cdd7e"", ""9c4a9fe8-eea4-51c4-b4ad-66ac9e476c37"", ""5f71b465-cdf4-540c-8ee3-501744a18d1e"", ""6361755c-c190-5f55-90be-08aa1f77eff5"", ""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""b430da23-e089-52bf-b17c-03f712f19f15"", ""ccb881d5-6c2b-55c2-88a2-8dacdc42b868""]"
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/channels,200,LEAK,"[""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2"", ""ffe275e7-1a52-50e0-865d-ce0bc4417c5e"", ""e4734ff9-7867-52aa-a166-55679b73ef52"", ""322823ad-270d-5c3f-bb34-542df169527b"", ""6b208294-f465-544c-8cc1-e2391957b76f"", ""297a1dbb-670a-525c-839a-b641e735bc48"", ""14dfcdad-8173-57d7-926c-69a404f149a4"", ""cf36a830-523b-5bc8-a457-c187cb7a175e"", ""7ff7db15-0e56-571c-8d58-f638626eb1fe"", ""tenanta-boiler-001"", ""tenanta-ht-001-01"", ""tenanta-ht-001-02""]"
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/dashboards,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/settings,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/derived-properties,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/events?limit=50,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/metric-pairs?quantity1=Flow%20Temperature&quantity2=Return%20Temperature,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/projects/5a471841-3b4a-5837-bda5-b221be68be37/quantity-channels?quantityName=Flow%20Temperature,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/sites/fa441d68-83da-5f30-b584-e8d0f4a0354e/objects,403,DENIED,[]
+tenantb,tenanta,core,GET,/api/v1/sites/fa441d68-83da-5f30-b584-e8d0f4a0354e/graph,403,DENIED,[]
+tenantb,tenanta,core,GET,/api/v1/sites/fa441d68-83da-5f30-b584-e8d0f4a0354e/spaces,403,DENIED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/90df1a30-5841-5189-be32-4f7cb4f7e320/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/90df1a30-5841-5189-be32-4f7cb4f7e320/events,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/metric-points/5a2266fe-16af-5da8-a39b-2b8576b398e0,200,LEAK,"[""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""tenanta-boiler-001""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/81b3dc11-ba3f-5bbe-bda8-80af8658d7c2,200,LEAK,"[""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2"", ""tenanta-boiler-001""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/ffe275e7-1a52-50e0-865d-ce0bc4417c5e,200,LEAK,"[""ffe275e7-1a52-50e0-865d-ce0bc4417c5e"", ""tenanta-boiler-001""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/e4734ff9-7867-52aa-a166-55679b73ef52,200,LEAK,"[""e4734ff9-7867-52aa-a166-55679b73ef52"", ""tenanta-boiler-001""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/322823ad-270d-5c3f-bb34-542df169527b,200,LEAK,"[""322823ad-270d-5c3f-bb34-542df169527b"", ""tenanta-ht-001-01""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/6b208294-f465-544c-8cc1-e2391957b76f,200,LEAK,"[""6b208294-f465-544c-8cc1-e2391957b76f"", ""tenanta-ht-001-01""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/297a1dbb-670a-525c-839a-b641e735bc48,200,LEAK,"[""297a1dbb-670a-525c-839a-b641e735bc48"", ""tenanta-ht-001-01""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/14dfcdad-8173-57d7-926c-69a404f149a4,200,LEAK,"[""14dfcdad-8173-57d7-926c-69a404f149a4"", ""tenanta-ht-001-02""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/cf36a830-523b-5bc8-a457-c187cb7a175e,200,LEAK,"[""cf36a830-523b-5bc8-a457-c187cb7a175e"", ""tenanta-ht-001-02""]"
+tenantb,tenanta,core,GET,/api/v1/metric-points/7ff7db15-0e56-571c-8d58-f638626eb1fe,200,LEAK,"[""7ff7db15-0e56-571c-8d58-f638626eb1fe"", ""tenanta-ht-001-02""]"
+tenantb,tenanta,core,GET,/api/v1/objects/fa441d68-83da-5f30-b584-e8d0f4a0354e/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/121868f4-7b67-50d1-9ede-b6386b7cdd7e/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/9c4a9fe8-eea4-51c4-b4ad-66ac9e476c37/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/5f71b465-cdf4-540c-8ee3-501744a18d1e/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/6361755c-c190-5f55-90be-08aa1f77eff5/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/90df1a30-5841-5189-be32-4f7cb4f7e320/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/b430da23-e089-52bf-b17c-03f712f19f15/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/objects/ccb881d5-6c2b-55c2-88a2-8dacdc42b868/metrics,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/tenants/320897be-472f-53c0-be38-73dd0a6a2ff6,403,DENIED,[]
+tenantb,tenanta,core,GET,/api/v1/tenants/320897be-472f-53c0-be38-73dd0a6a2ff6/members,403,DENIED,[]
+tenantb,tenanta,core,GET,/api/v1/sites?page=1&pageSize=100&tenantId=320897be-472f-53c0-be38-73dd0a6a2ff6,403,DENIED,[]
+tenantb,tenanta,core,GET,/api/v1/projects,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/tenants,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/events?limit=50,200,FILTERED,[]
+tenantb,tenanta,core,GET,/api/v1/fleet/status,403,DENIED,[]
+tenantb,tenanta,core,GET,/api/v1/discovered-devices,403,DENIED,[]
+tenantb,tenanta,analytics,POST,/stats/latest,200,LEAK,"[""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2"", ""ffe275e7-1a52-50e0-865d-ce0bc4417c5e"", ""e4734ff9-7867-52aa-a166-55679b73ef52"", ""322823ad-270d-5c3f-bb34-542df169527b"", ""6b208294-f465-544c-8cc1-e2391957b76f"", ""297a1dbb-670a-525c-839a-b641e735bc48"", ""14dfcdad-8173-57d7-926c-69a404f149a4"", ""cf36a830-523b-5bc8-a457-c187cb7a175e"", ""7ff7db15-0e56-571c-8d58-f638626eb1fe"", ""tenanta-boiler-001"", ""tenanta-ht-001-01"", ""tenanta-ht-001-02"", ""90df1a30-5841-5189-be32-4f7cb4f7e320"", ""b430da23-e089-52bf-b17c-03f712f19f15"", ""ccb881d5-6c2b-55c2-88a2-8dacdc42b868""]"
+tenantb,tenanta,analytics,POST,/stats/timeseries,200,LEAK,"[""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2"", ""ffe275e7-1a52-50e0-865d-ce0bc4417c5e"", ""e4734ff9-7867-52aa-a166-55679b73ef52"", ""322823ad-270d-5c3f-bb34-542df169527b""]"
+tenantb,tenanta,analytics,POST,/stats/descriptive,200,LEAK,"[""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2"", ""ffe275e7-1a52-50e0-865d-ce0bc4417c5e"", ""e4734ff9-7867-52aa-a166-55679b73ef52"", ""322823ad-270d-5c3f-bb34-542df169527b"", ""tenanta-boiler-001"", ""tenanta-ht-001-01""]"
+tenantb,tenanta,analytics,POST,/stats/histogram,200,LEAK,"[""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2""]"
+tenantb,tenanta,analytics,POST,/stats/boxplot,200,LEAK,"[""5a2266fe-16af-5da8-a39b-2b8576b398e0"", ""81b3dc11-ba3f-5bbe-bda8-80af8658d7c2""]"
+tenantb,tenanta,analytics,POST,/stats/heatmap,200,LEAK,"[""5a2266fe-16af-5da8-a39b-2b8576b398e0""]"
+tenantb,tenanta,analytics,POST,/stats/ingest-rate,200,FILTERED,[]
+tenantb,tenanta,analytics,POST,/stats/difference,200,FILTERED,[]
+tenantb,tenanta,analytics,POST,/stats/series,200,LEAK,"[""tenanta-boiler-001"", ""tenanta-ht-001-01"", ""tenanta-ht-001-02""]"
+tenantb,tenanta,analytics,POST,/stats/latest-by-channel,200,LEAK,"[""tenanta-boiler-001"", ""tenanta-ht-001-01"", ""tenanta-ht-001-02""]"

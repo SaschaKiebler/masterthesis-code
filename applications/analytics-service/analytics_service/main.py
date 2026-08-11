@@ -6,6 +6,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .auth import require_token
+from .tenancy import require_tenant_scope
 from .config import settings
 from .db.pool import init_pools, close_pools
 from .routers import descriptive, timeseries, regression, boxplot, compute, histogram, heatmap, live, series
@@ -39,8 +40,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# All /stats routes require the platform's HS256 bearer token; /health stays open.
-_auth = [Depends(require_token)]
+# All /stats routes require the platform's HS256 bearer token AND that the
+# addressed channels belong to the caller's tenant. require_tenant_scope
+# depends on require_token itself, so the order is fixed by the dependency
+# graph rather than by this list's order. /health stays open.
+_auth = [Depends(require_token), Depends(require_tenant_scope)]
 app.include_router(descriptive.router, dependencies=_auth)
 app.include_router(timeseries.router, dependencies=_auth)
 app.include_router(regression.router, dependencies=_auth)

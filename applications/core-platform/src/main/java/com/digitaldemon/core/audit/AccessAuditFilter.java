@@ -1,5 +1,6 @@
 package com.digitaldemon.core.audit;
 
+import com.digitaldemon.core.tenancy.TenantScopeAttribute;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -74,16 +75,35 @@ public class AccessAuditFilter extends OncePerRequestFilter {
         // Read the caller before running the chain: Spring Security clears the
         // security context on the way out, so afterwards it would be gone.
         String subject = currentSubject();
-        UUID requestedTenant = tenantFromRequest(request);
 
         filterChain.doFilter(request, response);
 
         try {
-            audit(request, response.getStatus(), subject, requestedTenant);
+            // The tenant, unlike the subject, is read AFTER the chain: the
+            // interceptor that resolves a resource id to its owner runs inside
+            // the dispatcher, i.e. between this filter's two halves.
+            audit(request, response.getStatus(), subject, resolvedTenant(request));
         } catch (RuntimeException e) {
             log.warn("Access audit failed for {} {}: {}",
                     request.getMethod(), request.getRequestURI(), e.toString());
         }
+    }
+
+    /**
+     * The tenant this request addressed.
+     *
+     * <p>Primarily whatever {@code TenantScopeInterceptor} resolved from the
+     * addressed resource. The URL-derived value stays as a fallback because it
+     * covers what the interceptor never sees: a 401 rejected in the security
+     * chain before the dispatcher, a 404 with no handler mapping, and OPTIONS
+     * preflight.
+     */
+    private UUID resolvedTenant(HttpServletRequest request) {
+        Object attribute = request.getAttribute(TenantScopeAttribute.KEY);
+        if (attribute instanceof TenantScopeAttribute scope && scope.effectiveTenant() != null) {
+            return scope.effectiveTenant();
+        }
+        return tenantFromRequest(request);
     }
 
     private void audit(HttpServletRequest request, int status, String subject, UUID requestedTenant) {

@@ -5,6 +5,7 @@ import {
   coreGet,
   parseEpoch,
   serviceUnavailable,
+  downstreamError,
   toAnalyticsChannels,
 } from "../../../../_compose/helpers";
 
@@ -37,7 +38,7 @@ export async function GET(
       end: to,
     });
     if (!statsResponse.ok) {
-      return serviceUnavailable("Analytics service");
+      return downstreamError(statsResponse, "Analytics service");
     }
     const { statistics } = (await statsResponse.json()) as {
       statistics: Array<{

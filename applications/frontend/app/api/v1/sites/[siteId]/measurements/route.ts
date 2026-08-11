@@ -7,6 +7,7 @@ import {
   parseEpoch,
   seriesToMeasurements,
   serviceUnavailable,
+  downstreamError,
   toAnalyticsChannels,
 } from "../../../_compose/helpers";
 
@@ -43,7 +44,7 @@ export async function GET(
       ...bucketParams(bucketMinutes),
     });
     if (!seriesResponse.ok) {
-      return serviceUnavailable("Analytics service");
+      return downstreamError(seriesResponse, "Analytics service");
     }
     const { series, bucketSeconds } = await seriesResponse.json();
     const measurements = seriesToMeasurements(series, channels);

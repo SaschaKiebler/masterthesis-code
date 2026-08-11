@@ -4,6 +4,7 @@ import {
   ChannelDto,
   coreGet,
   serviceUnavailable,
+  downstreamError,
   toAnalyticsChannels,
 } from "../../../../_compose/helpers";
 
@@ -36,7 +37,7 @@ export async function GET(
       channels: toAnalyticsChannels(channels),
     });
     if (!latestResponse.ok) {
-      return serviceUnavailable("Analytics service");
+      return downstreamError(latestResponse, "Analytics service");
     }
     const { values } = (await latestResponse.json()) as {
       values: Array<{ deviceId: string; metricId: number; value: number | null; time: number | null }>;

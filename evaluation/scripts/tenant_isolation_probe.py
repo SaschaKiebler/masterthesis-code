@@ -10,15 +10,23 @@ seeded fleets with different prefixes give the tenants; the users are created
 through the public invitation flow (invite as admin, accept with a password),
 so no direct database writes are required.
 
-Each attempt is classified into the same vocabulary the AccessAuditFilter uses,
-which is what makes the result a coverage map rather than a pass/fail bit:
+Each attempt is classified into the vocabulary the AccessAuditFilter uses, which
+is what makes the result a coverage map rather than a pass/fail bit:
 
-  DENIED    4xx — the endpoint refused outright.
-  FILTERED  2xx, but no foreign identifier in the body: the endpoint narrowed
-            its query instead of refusing. No data leaves, yet nothing signals
-            the attempt either. This is the case the audit trail exists for.
-  LEAK      2xx AND a foreign identifier in the body. A QS-SEC-01 failure.
-  ERROR     transport failure, counted separately so it cannot hide a leak.
+  DENIED     401/403 — the endpoint refused. The only status that proves
+             enforcement.
+  NOT_FOUND  404 — says nothing about enforcement. An endpoint with no tenant
+             check answers 404 for an id it cannot find, which looks like a
+             refusal but is not one. Counting it as DENIED (as an earlier
+             version of this script did) inflates the apparent enforcement.
+  BAD_REQUEST 400/422 — the probe's own payload was wrong for that endpoint.
+             A defect in this script, not a result; must be zero in a run that
+             is reported.
+  FILTERED   2xx, but no foreign identifier in the body: the endpoint narrowed
+             its query instead of refusing. No data leaves, yet nothing signals
+             the attempt either. This is the case the audit trail exists for.
+  LEAK       2xx AND a foreign identifier in the body. A QS-SEC-01 failure.
+  ERROR      transport failure, counted separately so it cannot hide a leak.
 
 Leak detection is textual: the response body is searched for the other
 tenant's identifiers (tenant id, project id, device ids, metric point ids,
@@ -106,6 +114,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--probe-password", default="probe-pw-2026")
     p.add_argument("--include-destructive", action="store_true",
                    help="also attempt privacy erasure across tenants (may DELETE on a leak)")
+    p.add_argument("--self-check", action="store_true",
+                   help="run every request against the actor's OWN resources instead. "
+                        "Expect 2xx everywhere and no audit rows: proves the enforcement "
+                        "does not over-block, which a leak count alone cannot show")
     p.add_argument("--csv", help="write every attempt here")
     p.add_argument("--dsn", help="optional master-data DSN to verify audit entries locally")
     return p.parse_args()
@@ -199,8 +211,15 @@ def harvest(core_host: str, admin_token: str, prefix: str,
 # ── Attempts ─────────────────────────────────────────────────────────────────
 
 def classify(resp: requests.Response, foreign_ids: list[str]) -> tuple[str, list[str]]:
-    if resp.status_code >= 400:
+    """Only 401/403 proves enforcement — see the module docstring."""
+    if resp.status_code in (401, 403):
         return "DENIED", []
+    if resp.status_code == 404:
+        return "NOT_FOUND", []
+    if resp.status_code in (400, 422):
+        return "BAD_REQUEST", []
+    if resp.status_code >= 400:
+        return "ERROR", [f"unexpected HTTP {resp.status_code}"]
     body = resp.text
     hits = [i for i in foreign_ids if i and i in body]
     return ("LEAK", hits) if hits else ("FILTERED", [])
@@ -241,7 +260,13 @@ def core_paths(target: TenantFixture) -> list[tuple[str, str, dict | None]]:
     if p:
         for sub in ("", "/metric-points", "/latest-values", "/health", "/graph",
                     "/channels", "/dashboards", "/settings", "/derived-properties",
-                    "/metric-pairs", "/quantity-channels", "/events?limit=50"):
+                    "/events?limit=50",
+                    # These two declare required query parameters; without them
+                    # Spring rejects the request before the handler runs and the
+                    # probe would measure its own malformed call.
+                    "/metric-pairs?quantity1=Flow%20Temperature"
+                    "&quantity2=Return%20Temperature",
+                    "/quantity-channels?quantityName=Flow%20Temperature"):
             paths.append(("GET", f"/api/v1/projects/{p}{sub}", None))
     if s:
         for sub in ("/objects", "/graph", "/spaces"):
@@ -268,7 +293,7 @@ def core_paths(target: TenantFixture) -> list[tuple[str, str, dict | None]]:
               ("GET", "/api/v1/tenants", None),
               ("GET", "/api/v1/events?limit=50", None),
               ("GET", "/api/v1/fleet/status", None),
-              ("GET", "/api/v1/devices/discovered", None)]
+              ("GET", "/api/v1/discovered-devices", None)]
     return paths
 
 
@@ -287,7 +312,8 @@ def analytics_paths(target: TenantFixture) -> list[tuple[str, str, dict | None]]
         ("POST", "/stats/descriptive", {"metric_point_ids": ids[:5], "time_range": window}),
         ("POST", "/stats/histogram", {"metric_point_ids": ids[:2], "time_range": window}),
         ("POST", "/stats/boxplot", {"metric_point_ids": ids[:2], "time_range": window}),
-        ("POST", "/stats/heatmap", {"metric_point_ids": ids[:1], "time_range": window}),
+        # heatmap is the only endpoint taking a SINGULAR metric_point_id.
+        ("POST", "/stats/heatmap", {"metric_point_id": ids[0], "time_range": window}),
         ("POST", "/stats/ingest-rate", {"metric_point_ids": ids, "window_minutes": 60}),
     ]
     if len(ids) >= 2:
@@ -348,6 +374,45 @@ def verify_audit(dsn: str, expected: int) -> None:
           f"{'matches' if total >= expected else 'FEWER THAN ATTEMPTS — finding for 6.3.1'}")
 
 
+def self_check(args, fixtures: list[TenantFixture]) -> int:
+    """Every request against the actor's OWN resources must still succeed.
+
+    The counterpart to the cross-tenant run. Without it "0 leaks" is also what
+    a mechanism that refuses everything would report; together the two runs
+    show the enforcement is placed correctly rather than merely tight.
+    """
+    attempts: list[Attempt] = []
+    for fixture in fixtures:
+        attempts += run_direction(args, fixture, fixture)
+
+    counts = Counter(x.outcome for x in attempts)
+    over_blocked = [x for x in attempts if x.outcome in ("DENIED", "ERROR")]
+
+    print(f"\nSELF-CHECK: {len(attempts)} requests against the caller's own resources")
+    for outcome in ("FILTERED", "LEAK", "DENIED", "NOT_FOUND", "BAD_REQUEST", "ERROR"):
+        print(f"  {outcome:<12} {counts.get(outcome, 0)}")
+    print("  (LEAK here means 'own data returned', which is the expected outcome)")
+
+    if over_blocked:
+        print(f"\n{len(over_blocked)} OVER-BLOCKED — own resources were refused:")
+        for x in over_blocked:
+            print(f"  {x.service:<9} {x.method:<6} {x.path}  HTTP {x.status}")
+    else:
+        print("\nno own resource was refused")
+
+    if args.csv:
+        with open(args.csv, "w", newline="") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(["actor", "target_tenant", "service", "method", "path",
+                             "status", "outcome", "leaked_identifiers"])
+            for x in attempts:
+                writer.writerow([x.actor, x.target_tenant, x.service, x.method, x.path,
+                                 x.status, x.outcome, json.dumps(x.leaked)])
+        print(f"\nall attempts written to {args.csv}")
+
+    return 1 if over_blocked else 0
+
+
 def main() -> int:
     args = parse_args()
 
@@ -368,6 +433,9 @@ def main() -> int:
               f"metric_points={len(f.metric_point_ids)} devices={len(f.device_ids)} "
               f"person={'yes' if f.person_id else 'no'} user={f.email}")
 
+    if args.self_check:
+        return self_check(args, [a, b])
+
     attempts = run_direction(args, a, b) + run_direction(args, b, a)
 
     counts = Counter(x.outcome for x in attempts)
@@ -375,8 +443,11 @@ def main() -> int:
 
     print(f"\n{len(attempts)} cross-tenant attempts "
           f"({'meets' if len(attempts) >= 100 else 'BELOW'} the 100 required by QS-SEC-01)")
-    for outcome in ("DENIED", "FILTERED", "LEAK", "ERROR"):
-        print(f"  {outcome:<9} {counts.get(outcome, 0)}")
+    for outcome in ("DENIED", "FILTERED", "LEAK", "NOT_FOUND", "BAD_REQUEST", "ERROR"):
+        print(f"  {outcome:<12} {counts.get(outcome, 0)}")
+    if counts.get("BAD_REQUEST"):
+        print("  !! BAD_REQUEST means this script sent a malformed payload — fix "
+              "before reporting the run")
 
     if leaks:
         print(f"\n{len(leaks)} LEAKS — foreign data in the response body:")

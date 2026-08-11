@@ -108,3 +108,12 @@ measurement:
     url: ${MEASUREMENT_DB_URL:jdbc:postgresql://localhost:5433/digital_demon_measurements}
     username: ${MEASUREMENT_DB_USERNAME:postgres}
     password: ${MEASUREMENT_DB_PASSWORD:password}
+
+# Central tenant authorisation (see tenancy/TenantScopeInterceptor).
+#   OFF     interceptor does nothing
+#   OBSERVE resolve and record, never block — closes the audit blind spot alone
+#   ENFORCE resolve, record, refuse foreign resources with 403
+# Read per request, so a bad rollout is one env change plus a restart away.
+tenant:
+  enforcement:
+    mode: ${TENANT_ENFORCEMENT_MODE:ENFORCE}

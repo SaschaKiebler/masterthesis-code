@@ -11,6 +11,8 @@ import org.springframework.web.client.RestClient;
 
 import java.util.List;
 import java.util.Map;
+import com.digitaldemon.core.tenancy.TenantUnscoped;
+
 import java.util.UUID;
 
 /**
@@ -23,6 +25,12 @@ import java.util.UUID;
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/device-discovery")
+@TenantUnscoped(reason = "A discovery session id is a handle to transient state inside "
+        + "device-management, not a row in this service's database, so there is nothing to "
+        + "resolve a tenant from. Access is guarded by the consultant/admin role check on "
+        + "every handler instead. Residual gap: two consultants of different tenants could "
+        + "read each other's session ids if one were guessed. Closing it properly means "
+        + "device-management returning the session's tenant, which is out of scope here.")
 public class DeviceDiscoveryController {
 
     private final AuthService authService;

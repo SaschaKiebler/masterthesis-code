@@ -5,6 +5,7 @@ import {
   coreGet,
   parseEpoch,
   serviceUnavailable,
+  downstreamError,
 } from "../../../_compose/helpers";
 
 interface QuantityChannel {
@@ -53,7 +54,7 @@ export async function GET(
       ...bucketParams(bucket),
     });
     if (!seriesResponse.ok) {
-      return serviceUnavailable("Analytics service");
+      return downstreamError(seriesResponse, "Analytics service");
     }
     const { series } = (await seriesResponse.json()) as {
       series: Array<{

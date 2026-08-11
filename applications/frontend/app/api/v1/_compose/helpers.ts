@@ -119,3 +119,26 @@ export function parseEpoch(value: string | null): number | null {
 export function serviceUnavailable(which: string): NextResponse {
   return NextResponse.json({ error: `${which} unavailable` }, { status: 502 });
 }
+
+/**
+ * Turn a failed downstream response into the right client-facing one.
+ *
+ * A 4xx is a verdict about this request and must reach the caller unchanged —
+ * mapping a 403 to 502 would make a correct tenant refusal look like an
+ * infrastructure outage, and would hide it from anyone reading the logs. Only
+ * 5xx and transport failures mean the service really is unavailable.
+ */
+export async function downstreamError(
+  response: Response,
+  which: string,
+): Promise<NextResponse> {
+  if (response.status >= 400 && response.status < 500) {
+    const body = await response.text();
+    try {
+      return NextResponse.json(JSON.parse(body), { status: response.status });
+    } catch {
+      return NextResponse.json({ error: body || which }, { status: response.status });
+    }
+  }
+  return serviceUnavailable(which);
+}

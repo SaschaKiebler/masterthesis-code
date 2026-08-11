@@ -18,6 +18,15 @@ class Settings(BaseSettings):
     auth_enabled: bool = True
     local_auth_jwt_secret: str = "insecure-local-dev-secret-change-me"
 
+    # Tenant authorisation on /stats (see tenancy.py). Twin of the core's
+    # TENANT_ENFORCEMENT_MODE: off | observe | enforce.
+    tenant_enforcement: str = "enforce"
+    tenant_membership_ttl_seconds: int = 5
+    tenant_scope_cache_ttl_seconds: int = 300
+    # Analytics writes denied attempts into the core's access_audit table so
+    # QS-SEC-01's "one entry per attempt" also holds for this service.
+    analytics_audit_enabled: bool = True
+
     # Kafka / detection
     kafka_enabled: bool = True
     kafka_bootstrap_servers: str = "localhost:9092"

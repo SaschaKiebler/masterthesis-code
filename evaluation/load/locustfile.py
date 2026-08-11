@@ -23,6 +23,16 @@ per user regardless of response time: 50 users x 2/s = 100 req/s (QS-PER-03),
 Preconditions: platform up, mock fleet seeded (mock-service seed), some
 telemetry ingested. The test aborts at start with a clear message otherwise.
 
+IMPORTANT for QS-PER-03: log in as a TENANT-BOUND user, not as the bootstrap
+admin. A system admin short-circuits the tenant check on the first line, so a
+run under `admin@local` would report the cost of tenant enforcement as zero.
+Create a probe user once (tenant_isolation_probe.py does this) and run with
+
+    LOGIN_EMAIL=probe-tenanta@example.org LOGIN_PASSWORD=probe-pw-2026
+
+For the cost-of-enforcement delta, run the same profile twice, once with
+TENANT_ENFORCEMENT_MODE=ENFORCE and once with OFF on the core.
+
 The measured client-side p95 includes the WAN leg to the cluster. test_start
 therefore measures a baseline RTT against analytics' unauthenticated /health
 and logs it, so the WAN share is on record for ch. 6.2 (client-side numbers
@@ -217,8 +227,11 @@ class AnalyticsQueryUser(_AuthedUser):
 
     @task(1)
     def ingest_rate(self):
+        # Scoped to this user's channels, like the frontend does. Passing null
+        # would ask for an aggregate over every tenant's data, which is now
+        # admin-only — a tenant-bound load run must not depend on that.
         self._post(
             "/stats/ingest-rate",
             "analytics:ingest-rate",
-            {"metric_point_ids": None, "window_minutes": 15},
+            {"metric_point_ids": self._sample_ids(20), "window_minutes": 15},
         )

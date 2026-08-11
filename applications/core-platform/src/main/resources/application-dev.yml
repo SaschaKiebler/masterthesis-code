@@ -15,3 +15,10 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE
+
+# The dev chain permits every request, so local calls carry no token and no
+# subject. Tenant authorisation has nothing to decide on and is switched off
+# outright rather than relying on the skip-without-subject rule.
+tenant:
+  enforcement:
+    mode: OFF

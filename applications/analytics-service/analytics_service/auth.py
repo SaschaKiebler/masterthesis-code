@@ -20,12 +20,18 @@ def _derive_key() -> bytes:
 
 async def require_token(request: Request) -> None:
     if not settings.auth_enabled:
+        # No principal to speak of; tenancy.require_tenant_scope skips too.
+        request.state.subject = None
         return
     authorization = request.headers.get("authorization", "")
     if not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
     token = authorization[len("Bearer "):]
     try:
-        jwt.decode(token, _derive_key(), algorithms=["HS256"])
+        payload = jwt.decode(token, _derive_key(), algorithms=["HS256"])
     except jwt.InvalidTokenError as e:
         raise HTTPException(status_code=401, detail="Invalid token") from e
+
+    # The caller, kept for the tenant check. Discarding it (as this did before)
+    # is why any valid token could read any tenant's measurements.
+    request.state.subject = payload.get("sub")
