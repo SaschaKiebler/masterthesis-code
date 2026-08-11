@@ -81,6 +81,7 @@ class Scenario:
     sites: int = 2
     rooms_per_site: int = 2
     rogue: int = 0            # extra UNSEEDED H&T devices (exercise drop + discovery path)
+    persons_per_site: int = 0  # PERSON objects with RESIDES_IN links (GDPR path, QS-SEC-02)
 
     # Pacing
     interval_s: float = 10.0  # publish interval per device

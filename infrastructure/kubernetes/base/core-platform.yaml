@@ -44,6 +44,16 @@ spec:
                 secretKeyRef:
                   name: platform-secrets
                   key: DB_PASSWORD
+            # Read-only measurement access for the privacy package (QS-SEC-02).
+            - name: MEASUREMENT_DB_URL
+              value: jdbc:postgresql://measurement-db:5432/digital_demon_measurements
+            - name: MEASUREMENT_DB_USERNAME
+              value: postgres
+            - name: MEASUREMENT_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: kafka:9092
             - name: DEVICE_MANAGEMENT_URL

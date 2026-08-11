@@ -98,3 +98,13 @@ logging:
     org.springframework.web: INFO
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
+
+# Read-only access to the measurement store, used only by the privacy package
+# (GDPR export, QS-SEC-02). Deliberate extra reader on the shared-database
+# deviation — see MeasurementReadConfig. Top-level on purpose: NOT part of the
+# spring: block.
+measurement:
+  datasource:
+    url: ${MEASUREMENT_DB_URL:jdbc:postgresql://localhost:5433/digital_demon_measurements}
+    username: ${MEASUREMENT_DB_USERNAME:postgres}
+    password: ${MEASUREMENT_DB_PASSWORD:password}

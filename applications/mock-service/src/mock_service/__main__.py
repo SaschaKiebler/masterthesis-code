@@ -18,6 +18,7 @@ def _add_fleet_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--sites", type=int, help="number of sites, 1 boiler each (default 2)")
     parser.add_argument("--rooms", type=int, dest="rooms_per_site", help="H&T sensors per site (default 2)")
     parser.add_argument("--rogue", type=int, help="extra UNSEEDED devices (discovery/drop path, default 0)")
+    parser.add_argument("--persons", type=int, dest="persons_per_site", help="PERSON objects per site with RESIDES_IN links (GDPR reference inventory, default 0)")
     parser.add_argument("--seed", type=int, help="RNG seed (default 42)")
     parser.add_argument("--dsn", help="Postgres DSN (default postgresql://postgres:password@localhost:5432/digital_demon)")
 
@@ -44,6 +45,7 @@ def _scenario_from_args(args: argparse.Namespace) -> Scenario:
         "sites": args.sites,
         "rooms_per_site": args.rooms_per_site,
         "rogue": args.rogue,
+        "persons_per_site": args.persons_per_site,
         "seed": args.seed,
         "dsn": args.dsn,
     }

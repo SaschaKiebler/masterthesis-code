@@ -15,6 +15,9 @@ public interface InvitationRepository extends JpaRepository<Invitation, UUID> {
 
     List<Invitation> findByEmailAndAcceptedAtIsNull(String email);
 
+    /** All invitations for this address, used by the GDPR export and erasure. */
+    List<Invitation> findByEmail(String email);
+
     List<Invitation> findByTenantId(UUID tenantId);
 
     List<Invitation> findByTenantIdIn(List<UUID> tenantIds);

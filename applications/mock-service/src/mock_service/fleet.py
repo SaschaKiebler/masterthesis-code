@@ -98,6 +98,11 @@ def room_object_id(prefix: str, site_index: int, room_index: int) -> uuid.UUID:
     return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:room:{site_index:03d}:{room_index:02d}")
 
 
+def person_object_id(prefix: str, site_index: int, person_index: int) -> uuid.UUID:
+    """PERSON objects for the GDPR reference inventory (QS-SEC-02)."""
+    return uuid.uuid5(UUID_NAMESPACE, f"{prefix}:person:{site_index:03d}:{person_index:02d}")
+
+
 SHELLY_HT_METRICS = (
     MetricSpec(1, "Room Temperature", "celsius", "temperature:0", "tC", "Room Temperature"),
     MetricSpec(2, "Relative Humidity", "percent", "humidity:0", "rh", None),

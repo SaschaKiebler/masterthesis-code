@@ -32,6 +32,7 @@ from .fleet import (
     building_name,
     building_object_id,
     floor_object_id,
+    person_object_id,
     project_id,
     room_object_id,
     technical_room_object_id,
@@ -53,12 +54,21 @@ REQUIRED_OBJECT_TYPES = (
     "TECHNICAL_ROOM",
     "BOILER",
     "GENERIC_SENSOR",
+    "PERSON",
 )
 # INSTALLED_AT (asset → site root) puts assets in project scope and feeds the
 # health view, which also requires REALIZED_BY (asset → physical device).
 # CONTAINS builds the spatial hierarchy, INSTALLED_IN places assets in rooms
 # (display only), HAS_METRIC attaches metric points to assets.
-REQUIRED_LINK_TYPES = ("CONTAINS", "INSTALLED_AT", "INSTALLED_IN", "REALIZED_BY", "HAS_METRIC")
+REQUIRED_LINK_TYPES = (
+    "CONTAINS",
+    "INSTALLED_AT",
+    "INSTALLED_IN",
+    "REALIZED_BY",
+    "HAS_METRIC",
+    # person → room, makes the room's consumption data personal (GDPR path)
+    "RESIDES_IN",
+)
 
 
 def _resolve_object_types(cur: psycopg.Cursor) -> dict[str, str]:
@@ -102,7 +112,7 @@ def seed_fleet(scenario: Scenario, with_rules: bool = True) -> dict[str, int]:
     fleet = [d for d in build_fleet(scenario) if d.seeded]
     prefix = scenario.prefix
     tid = str(tenant_id(prefix))
-    counts = {"devices": 0, "metric_points": 0, "rules": 0, "buildings": 0, "links": 0}
+    counts = {"devices": 0, "metric_points": 0, "rules": 0, "buildings": 0, "links": 0, "persons": 0}
 
     with psycopg.connect(scenario.dsn) as conn:
         with conn.cursor() as cur:
@@ -125,19 +135,70 @@ def seed_fleet(scenario: Scenario, with_rules: bool = True) -> dict[str, int]:
             for spec in fleet:
                 _seed_device(cur, spec, prefix, tid, types, quantities, with_rules, counts)
                 _seed_asset_ontology(cur, spec, prefix, tid, types, link_types, counts)
+
+            _seed_persons(cur, scenario, tid, types, link_types, counts)
         conn.commit()
 
     log.info(
-        "seeded %d devices, %d metric points, %d rules, %d buildings, %d links (project '%s', tenant %s)",
+        "seeded %d devices, %d metric points, %d rules, %d buildings, %d persons, %d links (project '%s', tenant %s)",
         counts["devices"],
         counts["metric_points"],
         counts["rules"],
         counts["buildings"],
+        counts["persons"],
         counts["links"],
         PROJECT_NAME,
         tid,
     )
     return counts
+
+
+def _seed_persons(
+    cur: psycopg.Cursor,
+    scenario: Scenario,
+    tid: str,
+    types: dict[str, str],
+    link_types: dict[str, str],
+    counts: dict[str, int],
+) -> None:
+    """PERSON objects with RESIDES_IN links onto rooms — the GDPR reference
+    inventory for QS-SEC-02. Person i of a site resides in room (i mod rooms)+1,
+    so every person reaches at least one H&T sensor through the graph. Contact
+    data is synthetic and clearly marked (example.org). Deterministic ids make
+    the manifest reproducible: the seed parameters ARE the coverage target list.
+    """
+    if scenario.persons_per_site <= 0:
+        return
+    if scenario.rooms_per_site <= 0:
+        log.warning("persons requested but no rooms to reside in; skipping persons")
+        return
+
+    prefix = scenario.prefix
+    for site in range(1, scenario.sites + 1):
+        for i in range(1, scenario.persons_per_site + 1):
+            pid = str(person_object_id(prefix, site, i))
+            room = str(room_object_id(prefix, site, ((i - 1) % scenario.rooms_per_site) + 1))
+            name = f"{prefix.capitalize()} Person {site:03d}-{i:02d}"
+            properties = json.dumps(
+                {
+                    "email": f"person-{site:03d}-{i:02d}@{prefix}.example.org",
+                    "phone": f"+49 000 {site:03d}{i:02d}",
+                    "role": "resident",
+                }
+            )
+            cur.execute(
+                """
+                INSERT INTO objects (id, object_type_id, tenant_id, display_name, properties)
+                VALUES (%s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (id) DO UPDATE
+                    SET display_name = EXCLUDED.display_name,
+                        properties = EXCLUDED.properties,
+                        updated_at = now()
+                """,
+                (pid, types["PERSON"], tid, name, properties),
+            )
+            _upsert_link(cur, link_types["RESIDES_IN"], pid, room, counts)
+            counts["persons"] += 1
 
 
 def _upsert_object(cur: psycopg.Cursor, oid: str, type_id: str, tid: str, name: str) -> None:
@@ -416,6 +477,12 @@ def remove_fleet(scenario: Scenario) -> int:
         str(room_object_id(prefix, d.site_index, d.room_index))
         for d in fleet
         if d.room_index is not None
+    ]
+    # GDPR reference inventory (links cascade with the objects).
+    object_ids += [
+        str(person_object_id(prefix, site, i))
+        for site in range(1, scenario.sites + 1)
+        for i in range(1, scenario.persons_per_site + 1)
     ]
     with psycopg.connect(scenario.dsn) as conn:
         with conn.cursor() as cur:
