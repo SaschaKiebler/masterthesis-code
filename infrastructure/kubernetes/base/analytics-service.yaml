@@ -41,6 +41,20 @@ spec:
               value: postgresql://postgres:$(DB_PASSWORD)@measurement-db:5432/digital_demon_measurements
             - name: REGISTRY_DATABASE_URL
               value: postgresql://postgres:$(DB_PASSWORD)@stammdaten-db:5432/digital_demon
+            # Must be the SAME secret core signs with: analytics verifies the
+            # caller's token and resolves their tenant from it. Without this it
+            # silently fell back to the config default, which happened to match
+            # — changing the secret for a real cluster would have made every
+            # /stats call 401.
+            - name: LOCAL_AUTH_JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: LOCAL_AUTH_JWT_SECRET
+            # Tenant authorisation twin of the core's switch; OBSERVE lets the
+            # QS-SEC-01 before/after run happen in one cluster session.
+            - name: TENANT_ENFORCEMENT
+              value: enforce
           readinessProbe:
             httpGet:
               path: /health

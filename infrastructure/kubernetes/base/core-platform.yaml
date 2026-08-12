@@ -54,6 +54,11 @@ spec:
                 secretKeyRef:
                   name: platform-secrets
                   key: DB_PASSWORD
+            # Central tenant authorisation: OFF | OBSERVE | ENFORCE.
+            # Toggling this between probe runs is what lets the QS-SEC-01
+            # before/after comparison happen inside one cluster session.
+            - name: TENANT_ENFORCEMENT_MODE
+              value: ENFORCE
             - name: KAFKA_BOOTSTRAP_SERVERS
               value: kafka:9092
             - name: DEVICE_MANAGEMENT_URL

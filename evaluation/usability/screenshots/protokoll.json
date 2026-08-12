@@ -1,0 +1,123 @@
+{
+  "counted_from_login": 16,
+  "counted_from_dashboard": 13,
+  "counted_until_commissioned": 11,
+  "limit": 10,
+  "duration_seconds": 25.7,
+  "steps": [
+    {
+      "nr": 1,
+      "label": "Anmeldemaske",
+      "screenshot": "01-anmeldemaske.png",
+      "counted": false
+    },
+    {
+      "nr": 2,
+      "label": "E-Mail eingegeben",
+      "screenshot": "02-e-mail-eingegeben.png",
+      "counted": true
+    },
+    {
+      "nr": 3,
+      "label": "Passwort eingegeben",
+      "screenshot": "03-passwort-eingegeben.png",
+      "counted": true
+    },
+    {
+      "nr": 4,
+      "label": "Anmeldung bestaetigt",
+      "screenshot": "04-anmeldung-bestaetigt.png",
+      "counted": true
+    },
+    {
+      "nr": 5,
+      "label": "Startseite nach Anmeldung",
+      "screenshot": "05-startseite-nach-anmeldung.png",
+      "counted": false
+    },
+    {
+      "nr": 6,
+      "label": "Wizard geoeffnet",
+      "screenshot": "06-wizard-geoeffnet.png",
+      "counted": true
+    },
+    {
+      "nr": 7,
+      "label": "Ort gewaehlt",
+      "screenshot": "07-ort-gewaehlt.png",
+      "counted": true
+    },
+    {
+      "nr": 8,
+      "label": "Weiter zu Sensortyp",
+      "screenshot": "08-weiter-zu-sensortyp.png",
+      "counted": true
+    },
+    {
+      "nr": 9,
+      "label": "Sensortyp gewaehlt",
+      "screenshot": "09-sensortyp-gewaehlt.png",
+      "counted": true
+    },
+    {
+      "nr": 10,
+      "label": "Weiter zu Vorlage",
+      "screenshot": "10-weiter-zu-vorlage.png",
+      "counted": true
+    },
+    {
+      "nr": 11,
+      "label": "Vorlage gewaehlt",
+      "screenshot": "11-vorlage-gewaehlt.png",
+      "counted": true
+    },
+    {
+      "nr": 12,
+      "label": "Weiter zu Details",
+      "screenshot": "12-weiter-zu-details.png",
+      "counted": true
+    },
+    {
+      "nr": 13,
+      "label": "Sensorname eingegeben",
+      "screenshot": "13-sensorname-eingegeben.png",
+      "counted": true
+    },
+    {
+      "nr": 14,
+      "label": "Geraete-ID eingegeben",
+      "screenshot": "14-geraete-id-eingegeben.png",
+      "counted": true
+    },
+    {
+      "nr": 15,
+      "label": "Sensor angelegt",
+      "screenshot": "15-sensor-angelegt.png",
+      "counted": true
+    },
+    {
+      "nr": 16,
+      "label": "Sensor in der Topologie",
+      "screenshot": "16-sensor-in-der-topologie.png",
+      "counted": false
+    },
+    {
+      "nr": 17,
+      "label": "Geraet in Betrieb, Konfiguration sichtbar",
+      "screenshot": "17-geraet-in-betrieb-konfiguration-sichtbar.png",
+      "counted": true
+    },
+    {
+      "nr": 18,
+      "label": "Zurueck zur Startseite",
+      "screenshot": "18-zurueck-zur-startseite.png",
+      "counted": true
+    },
+    {
+      "nr": 19,
+      "label": "Messbetrieb sichtbar in der Projektuebersicht",
+      "screenshot": "19-messbetrieb-sichtbar-in-der-projektuebersicht.png",
+      "counted": true
+    }
+  ]
+}

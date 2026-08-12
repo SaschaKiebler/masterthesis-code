@@ -5,7 +5,10 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
+
+import javax.sql.DataSource;
 
 /**
  * Read-only access to the measurement store, used exclusively by the privacy
@@ -24,6 +27,24 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 @Configuration
 public class MeasurementReadConfig {
+
+    /**
+     * The master-data JdbcTemplate, declared explicitly and marked primary.
+     *
+     * <p>This bean is not optional. Spring Boot's auto-configured
+     * {@code jdbcTemplate} carries {@code @ConditionalOnMissingBean(JdbcOperations.class)},
+     * so the moment the measurement template below exists, the auto-configuration
+     * backs off entirely — and every unqualified {@code JdbcTemplate} injection
+     * in the application silently switches to the measurement store. That hit
+     * {@code AnomalyRuleConfigProjection} and {@code ThresholdRuleConfigProjection},
+     * whose sweeps then queried tables that only exist in the master data,
+     * breaking the rule projections without a single failing test.
+     */
+    @Bean
+    @Primary
+    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
 
     @Value("${measurement.datasource.url}")
     private String url;
