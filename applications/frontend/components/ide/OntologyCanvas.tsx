@@ -11,6 +11,7 @@
  * - Shift+click / Shift+drag → multi-select
  * - Ctrl/Cmd+D → duplicate selected objects
  * - Toolbar: auto-layout toggle, manual layout, zoom-to-fit
+ * - Top-left: shortcut back to the project dashboard
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -34,7 +35,7 @@ import { computeLayout, buildEdges, NODE_WIDTH, NODE_HEIGHT } from "@/components
 import { Button } from "@/components/ui/Button";
 import { Select } from "@/components/ui/Select";
 import type { GraphObject, GraphLink, ApiLinkType, CreateLinkRequest } from "@/lib/api/types";
-import { LayoutGrid, Maximize2, X, Pencil, Trash2, ArrowRightLeft, Lock, Unlock, Copy } from "lucide-react";
+import { LayoutGrid, Maximize2, X, Pencil, Trash2, ArrowRightLeft, Lock, Unlock, Copy, Gauge } from "lucide-react";
 
 const nodeTypes = { objectNode: ObjectNode };
 
@@ -77,6 +78,7 @@ interface OntologyCanvasProps {
     onDeleteObject?: (objectId: string) => Promise<void>;
     onDuplicateObject?: (objectId: string) => Promise<GraphObject | undefined>;
     onDuplicateObjects?: (objectIds: string[]) => Promise<GraphObject[]>;
+    onOpenDashboard?: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -95,6 +97,7 @@ export function OntologyCanvas({
     onDeleteObject,
     onDuplicateObject,
     onDuplicateObjects,
+    onOpenDashboard,
 }: OntologyCanvasProps) {
     const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
@@ -479,6 +482,21 @@ export function OntologyCanvas({
                     maskColor="rgba(0,0,0,0.08)"
                     className="bg-card! border-border!"
                 />
+
+                {/* Dashboard shortcut */}
+                {onOpenDashboard && (
+                    <Panel position="top-left">
+                        <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={onOpenDashboard}
+                            className="shadow-md"
+                            title="Open the monitoring dashboard for this project"
+                        >
+                            <Gauge className="h-4 w-4 mr-1.5" /> Dashboard
+                        </Button>
+                    </Panel>
+                )}
 
                 {/* Toolbar */}
                 <Panel position="top-right" className="flex gap-1.5">

@@ -98,6 +98,10 @@ export default function BuildPage({ params }: BuildPageProps) {
         handleSelectObject(created);
     }, [graph, resolvedTenantId, projectId, handleSelectObject]);
 
+    const goToDashboard = useCallback(() => {
+        router.push(`/projects/${projectId}`);
+    }, [router, projectId]);
+
     const handleOpenCreateObject = useCallback((category?: string) => {
         setCreateObjectCategory(category);
         setShowCreateObject(true);
@@ -226,6 +230,7 @@ export default function BuildPage({ params }: BuildPageProps) {
                             onDeleteObject={handleDeleteObject}
                             onDuplicateObject={handleDuplicateObject}
                             onDuplicateObjects={handleDuplicateObjects}
+                            onOpenDashboard={goToDashboard}
                         />
                     </ReactFlowProvider>
                 }
@@ -251,7 +256,7 @@ export default function BuildPage({ params }: BuildPageProps) {
                         projectId={projectId}
                         objectCount={graph.objects.length}
                         linkCount={graph.links.length}
-                        onBack={() => router.back()}
+                        onBack={goToDashboard}
                     />
                 }
             />
@@ -307,7 +312,7 @@ function StatusBar({
                 className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
                 <ArrowLeft className="h-3 w-3" />
-                Back
+                Back to Dashboard
             </button>
             <span className="text-border">·</span>
             <span className="flex items-center gap-1">
