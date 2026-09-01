@@ -1,16 +1,29 @@
 # Rust ingestion: MQTT in, TimescaleDB + measurement.ingested out.
 # No HTTP surface, hence no probes; it blocks at startup until it has
 # replayed device.configured (device-management must be up).
+#
+# Horizontally scalable. Two properties make replicas safe:
+#  - every pod connects under its own MQTT client id, derived from the pod
+#    name, so the broker no longer kicks the older connection on each connect;
+#  - all pods subscribe through the shared-subscription group MQTT_SHARE_GROUP,
+#    so Mosquitto hands each message to exactly one pod instead of to all of
+#    them. A pod leaving the group (rollout, crash) redistributes its share to
+#    the remaining members.
+# The device.configured projection is replayed in full by every pod (manual
+# assign, no offsets committed), so all replicas gate on identical state.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ingestion-service
 spec:
-  replicas: 1
-  # Recreate: two overlapping pods would fight over the same MQTT client id
-  # (the broker kicks the older connection on every new connect).
+  replicas: 2
+  # maxUnavailable 0 keeps a group member subscribed throughout the rollout,
+  # so telemetry keeps flowing instead of pausing as it did under Recreate.
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: ingestion-service
@@ -25,6 +38,10 @@ spec:
           env:
             - name: MQTT_HOST
               value: mosquitto
+            # Same group name in every pod; a different name would make that
+            # pod an independent reader receiving a full copy of the stream.
+            - name: MQTT_SHARE_GROUP
+              value: ingestion
             - name: DB_HOST
               value: measurement-db
             - name: DB_NAME
@@ -42,3 +59,42 @@ spec:
               memory: 256Mi
             limits:
               memory: 512Mi
+---
+# Elastic scale-out on ingest load. CPU is the usable signal here: the service
+# has no HTTP surface to scale on, and parse plus insert work is what a
+# telemetry burst turns into. Scaling on MQTT queue depth would need KEDA and
+# a broker-side metric Mosquitto does not expose.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: ingestion-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: ingestion-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
+  behavior:
+    # Each new pod replays device.configured before it takes traffic, so scale
+    # up in steps rather than doubling on a single spike, and scale down slowly
+    # to avoid churning through that replay.
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60

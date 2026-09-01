@@ -40,15 +40,13 @@ pub async fn run(
 
     let (client, mut eventloop) = AsyncClient::new(mqtt_options, 100);
 
-    // Subscribe to the primary topic (envelope format from edge gateways)
-    client.subscribe(&cfg.topic, QoS::AtLeastOnce).await?;
-    info!("Subscribed to MQTT topic: {}", cfg.topic);
-
-    // Subscribe to extra topics (Shelly native, etc.)
-    for extra_topic in &cfg.extra_topics {
-        client.subscribe(extra_topic, QoS::AtLeastOnce).await?;
-        info!("Subscribed to extra MQTT topic: {}", extra_topic);
-    }
+    let filters = subscription_filters(cfg);
+    info!(
+        client_id = %cfg.client_id,
+        share_group = cfg.share_group.as_deref().unwrap_or("<none>"),
+        "Connecting to MQTT broker"
+    );
+    subscribe_all(&client, &filters).await?;
 
     // Process incoming messages
     loop {
@@ -84,11 +82,10 @@ pub async fn run(
                 info!("Connected to MQTT broker");
                 // Re-establish subscriptions on every (re)connect: rumqttc
                 // does not restore them after a reconnect, which would leave
-                // the service connected but deaf to device traffic.
-                client.subscribe(&cfg.topic, QoS::AtLeastOnce).await?;
-                for extra_topic in &cfg.extra_topics {
-                    client.subscribe(extra_topic, QoS::AtLeastOnce).await?;
-                }
+                // the service connected but deaf to device traffic. For a
+                // shared subscription it also re-enters the group, so the
+                // broker resumes routing its share of the stream here.
+                subscribe_all(&client, &filters).await?;
             }
             Ok(_) => {
                 // Other events (ping, etc.)
@@ -98,6 +95,74 @@ pub async fn run(
                 // Brief pause before reconnecting
                 tokio::time::sleep(Duration::from_secs(1)).await;
             }
+        }
+    }
+}
+
+/// Subscribe to every effective filter, logging each one as it goes out.
+async fn subscribe_all(client: &AsyncClient, filters: &[String]) -> Result<()> {
+    for filter in filters {
+        client.subscribe(filter, QoS::AtLeastOnce).await?;
+        info!("Subscribed to MQTT filter: {}", filter);
+    }
+    Ok(())
+}
+
+/// The topic filters this instance actually subscribes to.
+///
+/// Two things happen here. Overlapping filters are collapsed, because the
+/// broker delivers a message once per matching subscription: with the default
+/// catch-all `#` in `extra_topics`, a `house/…` message also matched by the
+/// primary filter would arrive twice and be inserted twice. Under a shared
+/// subscription that would be worse than a duplicate row, since each filter
+/// forms its own group and the two copies would land on two different pods.
+///
+/// Each surviving filter is then wrapped as `$share/<group>/<filter>` when a
+/// share group is configured. The wrapping is a subscriber-side concern only:
+/// publishers address plain topics, and the broker delivers the message under
+/// its original topic name, so the parsers below never see the prefix.
+fn subscription_filters(cfg: &MqttConfig) -> Vec<String> {
+    let mut kept: Vec<&str> = Vec::new();
+
+    for candidate in std::iter::once(cfg.topic.as_str())
+        .chain(cfg.extra_topics.iter().map(String::as_str))
+    {
+        if candidate.is_empty() || kept.iter().any(|k| covers(k, candidate)) {
+            continue;
+        }
+        // A broader filter arriving later replaces the narrower ones it subsumes.
+        kept.retain(|k| !covers(candidate, k));
+        kept.push(candidate);
+    }
+
+    kept.into_iter()
+        .map(|filter| match &cfg.share_group {
+            Some(group) => format!("$share/{group}/{filter}"),
+            None => filter.to_string(),
+        })
+        .collect()
+}
+
+/// Does topic filter `outer` match every topic that `inner` matches?
+fn covers(outer: &str, inner: &str) -> bool {
+    // Wildcards never match topics starting with `$` (MQTT-4.7.2-1), so a
+    // catch-all does not subsume a `$SYS/…` filter.
+    if (outer.starts_with('#') || outer.starts_with('+')) && inner.starts_with('$') {
+        return false;
+    }
+
+    let mut outer_segments = outer.split('/');
+    let mut inner_segments = inner.split('/');
+
+    loop {
+        match (outer_segments.next(), inner_segments.next()) {
+            // `#` covers this level and everything below it, `a/#` also `a`.
+            (Some("#"), _) => return true,
+            // `+` is exactly one level, so it cannot cover a multi-level `#`.
+            (Some("+"), Some(inner_segment)) if inner_segment != "#" => continue,
+            (Some(outer_segment), Some(inner_segment)) if outer_segment == inner_segment => continue,
+            (None, None) => return true,
+            _ => return false,
         }
     }
 }
@@ -248,3 +313,7 @@ async fn process_message(
 
     Err(anyhow!("Unsupported MQTT message format (topic={})", topic))
 }
+
+#[cfg(test)]
+#[path = "mqtt_tests.rs"]
+mod tests;

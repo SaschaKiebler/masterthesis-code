@@ -55,7 +55,13 @@ impl MeasurementPublisher {
     }
 
     /// Encode a `MeasurementBatch` and publish it keyed by `device_id`, so all
-    /// batches of one device land on the same partition and stay ordered.
+    /// batches of one device land on the same partition.
+    ///
+    /// Partition affinity does not imply source order. Each message is handled
+    /// in its own task, and across replicas the shared MQTT subscription hands
+    /// consecutive messages of one device to different pods, so two batches can
+    /// reach the partition in a different order than the device sent them. The
+    /// authoritative clock is the per-measurement `time`, not arrival order.
     ///
     /// This is fire-and-forget: a delivery failure is logged as a warning but
     /// never propagates — the DB write has already succeeded and that is the
