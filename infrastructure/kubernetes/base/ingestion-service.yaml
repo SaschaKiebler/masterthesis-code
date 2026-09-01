@@ -44,6 +44,13 @@ spec:
               value: ingestion
             - name: DB_HOST
               value: measurement-db
+            # Must be set: the code falls back to 5433, which is the port the
+            # local compose stack publishes. In-cluster the service listens on
+            # 5432, and a connect to an undefined service port is blackholed
+            # rather than refused, so the pod hangs in create_pool and looks
+            # healthy while ingesting nothing (no probes on this service).
+            - name: DB_PORT
+              value: "5432"
             - name: DB_NAME
               value: digital_demon_measurements
             - name: DB_PASSWORD

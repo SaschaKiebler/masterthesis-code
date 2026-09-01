@@ -55,6 +55,12 @@ spec:
             # QS-SEC-01 before/after run happen in one cluster session.
             - name: TENANT_ENFORCEMENT
               value: enforce
+            # Without this the detection runner bootstraps against the
+            # pydantic default localhost:9092 and the container exits on
+            # startup (KafkaConnectionError), which is why analytics never
+            # came up in the cluster.
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
           readinessProbe:
             httpGet:
               path: /health

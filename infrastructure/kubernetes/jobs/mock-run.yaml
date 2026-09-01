@@ -3,8 +3,10 @@
 # from outside the cluster against the mosquitto LB (see eval/external-access
 # .yaml and infrastructure/README.md), so the generator does not compete with
 # the services under test for cluster resources.
-# Example: 10 sites x 3 rooms at 10 s interval for 10 min with one overheat
-# alert scenario. kubectl delete + apply to rerun with new parameters.
+# Example: 25 sites x 3 rooms at 10 s interval for 10 min with one overheat
+# alert scenario. The fleet shape mirrors mock-seed (100 devices); the interval
+# stays deliberately slow, because this job is a smoke test and not a load run.
+# kubectl delete + apply to rerun with new parameters.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -21,7 +23,7 @@ spec:
           image: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/mock-service:latest
           args:
             - run
-            - --sites=10
+            - --sites=25
             - --rooms=3
             - --interval=10
             - --duration=600
