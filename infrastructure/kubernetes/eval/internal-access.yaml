@@ -1,0 +1,74 @@
+# VPC-internal entry points for load generators that run OUTSIDE the cluster
+# but INSIDE the project, i.e. Cloud Run jobs with direct VPC egress.
+#
+# This is the preferred setup for a measurement session. It keeps the
+# methodological point of external generation (the generator does not compete
+# with the services under test for pod resources) while needing no public
+# exposure at all, so eval/external-access.yaml and its firewall juggling can
+# stay unused. It also takes the operator's uplink out of the measurement:
+# QS-PER-02 asks for ~1750 messages/s, which a laptop behind a campus NAT may
+# not be able to produce in the first place.
+#
+# What it costs: the WAN leg disappears. The response measure of QS-PER-01/02
+# is persisted_at - received_at and both stamps are server-side, so that is
+# unaffected. The end-to-end figure (persisted_at - time) becomes optimistic
+# and must be reported as such.
+#
+# Usage per session:
+#   kubectl apply -f infrastructure/kubernetes/eval/internal-access.yaml
+#   kubectl -n heating-platform get svc -l eval=internal -w   # wait for the IPs
+#   ... run the Cloud Run job against those IPs ...
+#   kubectl -n heating-platform delete svc -l eval=internal
+apiVersion: v1
+kind: Service
+metadata:
+  name: mosquitto-internal
+  namespace: heating-platform
+  labels:
+    eval: internal
+  annotations:
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  selector:
+    app: mosquitto
+  ports:
+    - name: mqtt
+      port: 1883
+      targetPort: 1883
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core-platform-internal
+  namespace: heating-platform
+  labels:
+    eval: internal
+  annotations:
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  selector:
+    app: core-platform
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: analytics-internal
+  namespace: heating-platform
+  labels:
+    eval: internal
+  annotations:
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  selector:
+    app: analytics-service
+  ports:
+    - name: http
+      port: 8100
+      targetPort: 8100

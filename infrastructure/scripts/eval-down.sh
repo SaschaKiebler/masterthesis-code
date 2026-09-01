@@ -22,9 +22,11 @@ MODE=${1:-cluster}
 
 step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 
-step "Remove external LoadBalancers"
-if kubectl -n $NS get svc -l eval=external --no-headers 2>/dev/null | grep -q .; then
-  kubectl -n $NS delete svc -l eval=external
+step "Remove the session entry points (external and internal)"
+# The label key is what matters: eval=external are the public LoadBalancers,
+# eval=internal the VPC-only ones the Cloud Run generators use.
+if kubectl -n $NS get svc -l eval --no-headers 2>/dev/null | grep -q .; then
+  kubectl -n $NS delete svc -l eval
   # Give GKE a moment to release the forwarding rules before the cluster goes.
   sleep 30
 else
@@ -33,6 +35,8 @@ fi
 
 if [ "$MODE" = "--all" ]; then
   step "Destroy EVERYTHING (cluster, network, registry and all images)"
+  # The generator job pins the VPC, so it has to go before the network does.
+  gcloud run jobs delete mock-load --region="${REGION:-europe-west3}" --project="$PROJECT" --quiet 2>/dev/null || true
   terraform -chdir="$ROOT/infrastructure/terraform" destroy -auto-approve -var project_id="$PROJECT"
 else
   step "Destroy the cluster only (registry and network stay)"

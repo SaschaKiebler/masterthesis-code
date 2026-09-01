@@ -99,10 +99,13 @@ spec:
             periodSeconds: 5
           resources:
             requests:
-              cpu: 500m
-              memory: 1Gi
-            limits:
+              # Raised from 500m/1Gi after the ramp of 2026-09-01 put the
+              # ingest ceiling at ~1400 measurements/s with the store as the
+              # binding constraint (one commit per measurement, see db.rs).
+              cpu: "2"
               memory: 2Gi
+            limits:
+              memory: 4Gi
       volumes:
         - name: init
           configMap:

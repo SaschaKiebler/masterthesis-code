@@ -74,25 +74,51 @@ if [ "$SMOKE" = "--smoke" ]; then
     "select 'p95_ms=' || round((percentile_cont(0.95) within group (order by extract(epoch from persisted_at - received_at)*1000))::numeric,1) from measurements where received_at > now() - interval '3 minutes';"
 fi
 
+step "Internal entry points for the load generators"
+# The generators run outside the cluster but inside the project, as Cloud Run
+# jobs with direct VPC egress. That keeps them from competing with the services
+# under test for pod resources, needs no public endpoint at all, and takes the
+# operator's uplink out of the measurement.
+kubectl apply -f "$ROOT/infrastructure/kubernetes/eval/internal-access.yaml"
+until [ -n "$(kubectl -n $NS get svc mosquitto-internal -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)" ]; do
+  note "waiting for the internal LoadBalancer"
+  sleep 15
+done
+BROKER=$(kubectl -n $NS get svc mosquitto-internal -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+note "mosquitto reachable inside the VPC at $BROKER"
+
+step "Cloud Run generator job"
+gcloud run jobs deploy mock-load \
+  --image="$REGISTRY/mock-service:latest" \
+  --region="$REGION" --project="$PROJECT" \
+  --network="$CLUSTER-vpc" --subnet="$CLUSTER-subnet" --vpc-egress=private-ranges-only \
+  --task-timeout=3600 --max-retries=0 --cpu=2 --memory=2Gi \
+  --args="run,--sites=25,--rooms=3,--interval=2,--duration=60,--broker=$BROKER:1883,--connections=8" \
+  --quiet
+# The args above are only the default; ingest-scenario.sh overrides them per
+# execution, so one job serves every scenario.
+
 step "Ready"
 kubectl -n $NS get hpa,pods
-cat <<'NEXT'
+cat <<NEXT
 
-Next, from OUTSIDE the cluster:
+Next:
 
-  1. Expose the entry points for this session (locks every LB to your own IP):
-       MY_IP=$(curl -s ifconfig.me)
-       sed "s|MEINE_IP|$MY_IP|" infrastructure/kubernetes/eval/external-access.yaml | kubectl apply -f -
-       kubectl -n heating-platform get svc -l eval=external -w
+  1. Capacity first. Twelve minutes, and it tells you whether the 2500
+     measurements/s of QS-PER-02 are inside the store's ceiling at all:
+       evaluation/scripts/ingest-scenario.sh ramp
 
-  2. Ingest scenarios:
-       evaluation/scripts/ingest-scenario.sh qs-per-01 <mosquitto-ip>
-       evaluation/scripts/ingest-scenario.sh qs-per-02 <mosquitto-ip>
+  2. The ingest scenarios:
+       evaluation/scripts/ingest-scenario.sh qs-per-01
+       evaluation/scripts/ingest-scenario.sh qs-per-02
 
-  3. Query APIs (QS-PER-03), while an ingest base load runs:
-       cd evaluation/load && CORE_HOST=http://<core-ip>:8080 ANALYTICS_HOST=http://<analytics-ip>:8100 \
-         locust -f locustfile.py --headless -u 50 -r 10 --run-time 10m --csv ../results/qs-per-03
+  3. Query APIs (QS-PER-03), while an ingest base load runs. locust still runs
+     from this machine, so it needs the public entry points; apply
+     eval/external-access.yaml for that step only, and mind that curl -4 is
+     required when reading your own IP (a dual-stack link answers with IPv6):
+       MY_IP=\$(curl -4 -s ifconfig.me)
+       sed "s|MEINE_IP|\$MY_IP|" infrastructure/kubernetes/eval/external-access.yaml | kubectl apply -f -
 
-  4. Tear down (deletes the LoadBalancers first, then the cluster):
+  4. Tear down (removes both entry-point sets, then the cluster):
        infrastructure/scripts/eval-down.sh
 NEXT
