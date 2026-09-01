@@ -23,6 +23,14 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     client-id: notification-service
+    # The NewTopic beans of this service are only applied once, at startup.
+    # Without fail-fast a broker that is not up yet leaves the topics
+    # uncreated and the service then produces into the void for the rest of
+    # its life (auto-creation is off by design). Failing the context instead
+    # makes the pod restart until Kafka is there, which is the convergence
+    # model the rest of the platform already relies on.
+    admin:
+      fail-fast: true
     consumer:
       group-id: notification
       # Alerts are only meaningful live; do not replay history on first start.

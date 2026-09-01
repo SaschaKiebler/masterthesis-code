@@ -28,6 +28,14 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     client-id: core-platform
+    # The NewTopic beans of this service are only applied once, at startup.
+    # Without fail-fast a broker that is not up yet leaves the topics
+    # uncreated and the service then produces into the void for the rest of
+    # its life (auto-creation is off by design). Failing the context instead
+    # makes the pod restart until Kafka is there, which is the convergence
+    # model the rest of the platform already relies on.
+    admin:
+      fail-fast: true
     consumer:
       group-id: core-platform
       # Only applies when the group has no committed offset yet (first start);
