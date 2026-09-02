@@ -5,7 +5,7 @@
 # builds are pointed at that same GCS object instead of re-uploading per
 # service. All builds run concurrently; the script waits for all of them.
 #
-#   ./cloudbuild-all.sh              all seven images
+#   ./cloudbuild-all.sh              all eight images
 #   ./cloudbuild-all.sh core-platform ingestion-service   only these
 set -euo pipefail
 
@@ -14,19 +14,31 @@ ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 CONFIG=$ROOT/infrastructure/cloudbuild.yaml
 MACHINE=${MACHINE:-E2_HIGHCPU_8}   # the Rust build is slow on the default machine
 
-ALL=(ingestion-service core-platform device-management notification-service analytics-service frontend mock-service)
+ALL=(ingestion-service core-platform device-management notification-service analytics-service frontend mock-service locust-load)
 SERVICES=("${@:-}")
 [ -z "${SERVICES[0]:-}" ] && SERVICES=("${ALL[@]}")
 
-# mock-service is the one image whose Dockerfile copies relative to its own
-# directory instead of the repo root.
-context_for() { [ "$1" = "mock-service" ] && echo "applications/mock-service" || echo "."; }
+# Two images copy paths relative to their own directory rather than the repo
+# root, and one of them does not live under applications/ at all.
+context_for() {
+  case "$1" in
+    mock-service) echo "applications/mock-service" ;;
+    locust-load)  echo "evaluation/load" ;;
+    *)            echo "." ;;
+  esac
+}
+dockerfile_for() {
+  case "$1" in
+    locust-load) echo "evaluation/load/Dockerfile" ;;
+    *)           echo "applications/$1/Dockerfile" ;;
+  esac
+}
 
 cd "$ROOT"
 first=${SERVICES[0]}
 echo "==> $first (uploads the source)"
 out=$(gcloud builds submit . --config "$CONFIG" --project "$PROJECT" \
-  --substitutions _SERVICE="$first",_CONTEXT="$(context_for "$first")" \
+  --substitutions _SERVICE="$first",_CONTEXT="$(context_for "$first")",_DOCKERFILE="$(dockerfile_for "$first")" \
   --timeout=40m --machine-type="$MACHINE" --async --format="value(id)" 2>&1)
 echo "$out" | tail -1
 SRC=$(echo "$out" | grep -o "gs://[^]]*\.tgz" | tail -1)
@@ -35,7 +47,7 @@ SRC=$(echo "$out" | grep -o "gs://[^]]*\.tgz" | tail -1)
 for svc in "${SERVICES[@]:1}"; do
   echo "==> $svc (reusing $SRC)"
   gcloud builds submit "$SRC" --config "$CONFIG" --project "$PROJECT" \
-    --substitutions _SERVICE="$svc",_CONTEXT="$(context_for "$svc")" \
+    --substitutions _SERVICE="$svc",_CONTEXT="$(context_for "$svc")",_DOCKERFILE="$(dockerfile_for "$svc")" \
     --timeout=40m --machine-type="$MACHINE" --async --format="value(id)"
 done
 

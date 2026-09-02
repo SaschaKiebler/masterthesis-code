@@ -1,0 +1,5 @@
+Method,Name,Error,Occurrences,First Seen,Last Seen
+POST,analytics:latest,CatchResponseError('HTTP 500'),28,2026-09-02T11:54:56Z,2026-09-02T11:58:36Z
+POST,analytics:descriptive,CatchResponseError('HTTP 500'),8,2026-09-02T11:54:17Z,2026-09-02T11:58:36Z
+POST,analytics:ingest-rate,CatchResponseError('HTTP 500'),10,2026-09-02T11:54:21Z,2026-09-02T11:58:36Z
+POST,analytics:timeseries,CatchResponseError('HTTP 500'),27,2026-09-02T11:54:14Z,2026-09-02T11:58:36Z

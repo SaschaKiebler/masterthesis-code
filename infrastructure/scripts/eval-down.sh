@@ -33,6 +33,21 @@ else
   echo "    none present"
 fi
 
+step "Release the persistent volumes"
+# Destroying the cluster does NOT delete the disks its CSI driver created: the
+# PVCs vanish with the cluster before anything can reclaim them, and every
+# session then leaves ~30 GB of orphaned pd-balanced behind. Fourteen of those
+# once filled the regional SSD_TOTAL_GB quota and made a later bring-up fail
+# with volumes that would not bind. Deleting the PVCs first lets the driver
+# clean up while it still can.
+if kubectl -n $NS get pvc --no-headers 2>/dev/null | grep -q .; then
+  kubectl -n $NS delete statefulset --all --cascade=foreground --timeout=180s 2>/dev/null || true
+  kubectl -n $NS delete pvc --all --timeout=180s 2>/dev/null || true
+  sleep 20
+else
+  echo "    none present"
+fi
+
 if [ "$MODE" = "--all" ]; then
   step "Destroy EVERYTHING (cluster, network, registry and all images)"
   # The generator job pins the VPC, so it has to go before the network does.

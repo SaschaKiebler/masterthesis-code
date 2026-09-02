@@ -1,0 +1,40 @@
+# Second, deliberately small tenant (one-shot).
+#
+# Not part of any load scenario. QS-SEC-01 needs two tenants to attempt access
+# across, and the probe that creates the tenant-bound login for QS-PER-03
+# builds its fixtures for both tenants at once. Four devices are enough for
+# that, the measured fleet is the `tenanta` one in mock-seed.yaml.
+#
+#   kubectl apply -f mock-seed-tenantb.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: mock-seed-tenantb
+  namespace: heating-platform
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: mock-seed-tenantb
+          image: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/mock-service:latest
+          args:
+            - seed
+            - --prefix=tenantb
+            - --sites=2
+            - --rooms=2
+            - --dsn=postgresql://postgres:$(DB_PASSWORD)@stammdaten-db:5432/digital_demon
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: platform-secrets
+                  key: DB_PASSWORD
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 256Mi

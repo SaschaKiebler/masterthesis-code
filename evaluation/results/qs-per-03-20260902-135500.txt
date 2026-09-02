@@ -1,0 +1,54 @@
+scenario  : qs-per-03
+window    : 2026-09-02 11:53:40+00 .. 2026-09-02 12:03:38+00
+users     : 50, spawn 10/s, run time 10m
+login     : probe-tenanta@example.org (mandantengebunden)
+generator : cloudrun (locust-load), Ingest-Grundlast parallel als mock-load
+
+######## locust, je Endpunkt ########
+Type        Name                   Request Count  Failure Count  Median Response Time  Average Response Time
+POST        analytics:descriptive  325            8              6300                  6781.287613849228
+POST        analytics:ingest-rate  305            10             3800                  3361.6475148426234
+POST        analytics:latest       1256           28             3800                  3157.656242388539
+POST        analytics:timeseries   958            27             9100                  7822.811626992706
+GET         core:dashboards        1114           0              720                   778.3723758590666
+GET         core:events            2379           0              1400                  1484.4615907204713
+GET         core:health            2318           0              790                   858.5409840081979
+GET         core:latest-values     4662           0              1600                  1645.5791695184475
+GET         core:projects          1133           0              430                   467.57577081376934
+Aggregated  14450                  73             1300           2026.275649426707
+
+######## locust, aggregierte Perzentile in ms ########
+p50 1300 | p90 5100 | p95 7600 | p98 10000 | p99 11000 | max 16000
+requests 14450 | failures 73 | Fehlerrate 0.51 %
+
+######## Ingest waehrend der Abfragelast ########
+-------- loss-rate --------
+── Persisted measurements in the window ────────────────────────────────
+ persisted_measurements | devices |        first_received         |         last_received         | measurements_per_second 
+------------------------+---------+-------------------------------+-------------------------------+-------------------------
+                 307914 |     100 | 2026-09-02 11:53:40.001635+00 | 2026-09-02 12:03:37.982187+00 |                   514.9
+(1 row)
+
+── Per device family (boiler vs. Shelly carry different metric counts) ─
+ family | measurements | devices 
+--------+--------------+---------
+ boiler |       119598 |      25
+ sensor |       188316 |      75
+(2 rows)
+
+── Rejected payloads (parse/route failures, NOT silent loss) ───────────
+-------- latency-percentiles --------
+── Ingest latency, system entry to persistence (the response measure) ──
+ samples | p50_ms | p95_ms | p99_ms | max_ms 
+---------+--------+--------+--------+--------
+  307914 |    2.4 |   23.2 |   38.7 |  207.3
+(1 row)
+
+── Ingest latency per minute (QS-PER-02: recovery after the spike) ─────
+         minute         | samples | p95_ms 
+------------------------+---------+--------
+ 2026-09-02 11:53:00+00 |   10299 |   16.4
+ 2026-09-02 11:54:00+00 |   30899 |   18.4
+ 2026-09-02 11:55:00+00 |   30900 |   19.4
+ 2026-09-02 11:56:00+00 |   30897 |   20.0
+ 2026-09-02 11:57:00+00 |   30898 |   22.3

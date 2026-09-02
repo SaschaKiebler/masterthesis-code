@@ -54,10 +54,18 @@ Die Zusammensetzung steht in
 
 ```
 25 Standorte x (1 Heizkessel + 3 Raumsensoren) = 100 Geräte
-Präfix "mock", Seed 42
-mock-boiler-001 .. mock-boiler-025
-mock-ht-001-01  .. mock-ht-025-03
+Präfix "tenanta", Seed 42
+tenanta-boiler-001 .. tenanta-boiler-025
+tenanta-ht-001-01  .. tenanta-ht-025-03
 ```
+
+Das Präfix ist nicht beliebig, denn aus ihm wird die Mandanten-ID abgeleitet.
+Mit `tenanta` liegt die vermessene Flotte im selben Mandanten wie der Nutzer,
+mit dem QS-PER-03 sich anmeldet. Die Abfragelast läuft dadurch **durch** die
+Mandantendurchsetzung hindurch und nicht als Systemadministrator daran vorbei.
+Zusätzlich wird ein zweiter, bewusst kleiner Mandant `tenantb` mit vier Geräten
+angelegt. Er gehört zu keinem Lastszenario und dient nur den Fixtures der
+Mandantenprüfung.
 
 Was ein Gerät je Sendeintervall auf den Broker legt:
 
@@ -120,9 +128,11 @@ Freigabe.
 Definiert in
 [infrastructure/kubernetes/eval/external-access.yaml](../infrastructure/kubernetes/eval/external-access.yaml).
 
-Nur nötig, wenn ein Generator vom eigenen Rechner aus laufen soll, etwa `locust`
-für QS-PER-03. Jeder LoadBalancer wird dabei per `loadBalancerSourceRanges` auf
-eine einzelne Adresse begrenzt. Das ist nicht optional, denn der Broker läuft mit
+Seit auch der Lastgenerator für die Abfrage-APIs als Cloud-Run-Job läuft, wird
+dieser Weg für keines der drei Szenarien mehr gebraucht. Er bleibt als
+Rückfallweg, etwa um die Weboberfläche von Hand anzusehen oder einen Generator
+ausnahmsweise vom eigenen Rechner zu fahren. Jeder LoadBalancer wird dabei per
+`loadBalancerSourceRanges` auf eine einzelne Adresse begrenzt. Das ist nicht optional, denn der Broker läuft mit
 `allow_anonymous`, und ein offener MQTT-Port im Netz würde fremde Publishes
 annehmen und die Messung verfälschen. Diese Services sind **vor** dem Abbau des
 Clusters zu löschen, sonst können die Forwarding-Rules den Cluster überleben.
@@ -176,24 +186,30 @@ evaluation/scripts/ingest-scenario.sh ramp
 evaluation/scripts/ingest-scenario.sh qs-per-01     # 30 Minuten
 evaluation/scripts/ingest-scenario.sh qs-per-02     # 15 Minuten
 
-# 4  Abbauen. Entfernt beide Endpunkt-Sätze, dann den Cluster, und prüft danach
+# 4  Abfrage-APIs unter Last (QS-PER-03). Startet eine Ingest-Grundlast und
+#    fährt locust gegen beide Abfrage-APIs, beides als Cloud-Run-Job.
+evaluation/scripts/query-scenario.sh
+
+# 5  Abbauen. Entfernt beide Endpunkt-Sätze, dann den Cluster, und prüft danach
 #    bei GCP nach, ob wirklich nichts mehr läuft.
 infrastructure/scripts/eval-down.sh
 ```
 
-QS-PER-03 läuft mit `locust` vom eigenen Rechner und braucht dafür die
-öffentlichen Endpunkte.
+Die Anmeldung bei QS-PER-03 erfolgt voreingestellt als
+`probe-tenanta@example.org`, also mandantengebunden. Diesen Nutzer legt
+`eval-up.sh` beim Aufbau an, indem es
+`evaluation/scripts/tenant_isolation_probe.py --setup-only` über einen
+`kubectl port-forward` gegen den Cluster laufen lässt. Auch dafür muss also
+nichts öffentlich freigegeben werden.
+
+Der Grund für den Aufwand: Ein Systemadministrator beendet die Mandantenprüfung
+in ihrer ersten Zeile. Ein Lauf als `admin@local` würde die Kosten der
+Durchsetzung deshalb als null ausweisen. Falls die Nutzeranlage beim Aufbau
+fehlschlägt, warnt `eval-up.sh` und die Anmeldung lässt sich überschreiben.
 
 ```bash
-MY_IP=$(curl -4 -s ifconfig.me)
-sed "s|MEINE_IP|$MY_IP|" infrastructure/kubernetes/eval/external-access.yaml \
-  | kubectl apply -f -
-kubectl -n heating-platform get svc -l eval=external -w
-
-cd evaluation/load && CORE_HOST=http://<core-ip>:8080 \
-  ANALYTICS_HOST=http://<analytics-ip>:8100 \
-  locust -f locustfile.py --headless -u 50 -r 10 --run-time 10m \
-  --csv ../results/qs-per-03
+LOGIN_EMAIL=admin@local LOGIN_PASSWORD=admin \
+  evaluation/scripts/query-scenario.sh   # ohne Mandantendurchsetzung
 ```
 
 Standardmäßig zerstört `eval-down.sh` nur den Cluster. Registry und Netzwerk
@@ -204,8 +220,9 @@ wieder ein vollständiger Build nötig.
 Images neu bauen, falls Quellcode geändert wurde:
 
 ```bash
-infrastructure/scripts/cloudbuild-all.sh                    # alle sieben
+infrastructure/scripts/cloudbuild-all.sh                    # alle acht
 infrastructure/scripts/cloudbuild-all.sh ingestion-service  # gezielt
+infrastructure/scripts/cloudbuild-all.sh locust-load        # nur der Lastgenerator
 ```
 
 Der Generator läuft per Voreinstellung als Cloud-Run-Job. Mit `GEN=local` und
@@ -221,6 +238,17 @@ Jeder Lauf schreibt nach [evaluation/results](results) zwei Dateien.
 |---|---|
 | `<szenario>-<zeitstempel>.txt` | Bericht mit Messfenster, Verlustrate, Latenzperzentilen, Zustand der Erfassung und den Autoskalierungs-Ereignissen |
 | `<szenario>-<zeitstempel>-scaling.csv` | Zeitreihe alle 15 s mit Replicas, bereiten Pods, HPA-Auslastung sowie der CPU von Speicher und Erfassung |
+
+Bei QS-PER-03 kommen die Rohdaten von locust dazu. Ein Cloud-Run-Job hat kein
+abholbares Dateisystem, deshalb schreibt der Container die CSVs zwischen
+Markierungen auf die Standardausgabe, und das Runner-Skript holt sie aus Cloud
+Logging zurück.
+
+| Datei | Inhalt |
+|---|---|
+| `qs-per-03-<zeitstempel>-stats.csv` | Kennzahlen je Endpunkt, darunter p95 und Fehlerzahl |
+| `qs-per-03-<zeitstempel>-failures.csv` | Fehlgeschlagene Requests nach Ursache |
+| `qs-per-03-<zeitstempel>-stats_history.csv` | Sekundenweiser Verlauf, Grundlage für einen Zeitreihenplot |
 
 Der Bericht entsteht aus zwei SQL-Skripten, die sich auch von Hand gegen ein
 beliebiges Fenster fahren lassen.
@@ -269,21 +297,11 @@ Alle folgenden Punkte sind in echten Läufen aufgetreten. Sie sind inzwischen im
 Code oder in den Skripten behoben, stehen hier aber, weil sie sich in einem
 Bericht nicht von einem gültigen Ergebnis unterscheiden lassen.
 
-- **Ein Lauf ohne Spitze sieht aus wie ein vollständiger Lauf.** Schlägt der
-  Start des zweiten Generators fehl, etwa durch einen kurzen Netzausfall, lief
-  das Szenario früher stumm weiter. `ingest-scenario.sh` bricht deshalb heute mit
-  `exit 1` ab, wenn keine Ausführung zustande kommt. Kontrolle im Bericht: das
-  Minutenprofil muss die Spitze zeigen.
 - **Zwei Generatoren mit gleicher MQTT-Client-ID schießen sich gegenseitig ab.**
   Der Broker trennt die ältere Verbindung, sobald sich eine zweite mit derselben
   ID meldet. Beide reconnecten dann in einer Schleife. Sichtbar an hohen
   `dropped`- und `errors`-Zählern des Generators. Behoben durch einen
   prozess-eindeutigen Suffix.
-- **Ein Pod kann laufen und trotzdem nichts tun.** Der Erfassungsdienst hat keine
-  HTTP-Oberfläche und damit keine Probes. Mit falschem DB-Port hing er
-  minutenlang im Verbindungsaufbau und stand dabei als `1/1 Running` da.
-  `eval-up.sh` prüft deshalb auf echte Bereitschaft und bricht nach 15 Minuten
-  mit Podliste ab.
 - **Der Startvorgang hängt an der Reihenfolge.** Core und notification teilen
   sich die Stammdaten-Datenbank. Wer zuerst migriert, entscheidet, ob die
   Baseline korrekt gesetzt wird. Ebenso legen die Dienste ihre Kafka-Topics nur
@@ -302,3 +320,9 @@ Bericht nicht von einem gültigen Ergebnis unterscheiden lassen.
 - **Die Spitze in QS-PER-02 entsteht durch einen zweiten Generator** auf
   derselben Flotte und nicht durch mehr Geräte. Gemessen wird damit eine
   Erhöhung der Melderate und nicht ein Zuwachs an Verbindungen.
+- **Auch der Lastgenerator für die Abfrage-APIs läuft als Cloud-Run-Job.** Damit
+  hängt keines der drei Szenarien mehr an der Leistung oder der Anbindung eines
+  einzelnen Arbeitsrechners. Die im locustfile dokumentierte WAN-Grundlinie
+  misst folglich die Strecke innerhalb der Region und nicht die zum Arbeitsplatz,
+  was die client-seitig gemessenen Antwortzeiten näher an die reine
+  Verarbeitungszeit der Plattform rückt.

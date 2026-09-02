@@ -23,6 +23,7 @@ spec:
           image: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/mock-service:latest
           args:
             - run
+            - --prefix=tenanta
             - --sites=25
             - --rooms=3
             - --interval=10

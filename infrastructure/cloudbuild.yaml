@@ -7,16 +7,20 @@
 substitutions:
   _SERVICE: frontend
   _REGISTRY: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform
-  # Docker build context. Six services build from the repo root because their
-  # Dockerfiles copy apis/ and applications/<svc>/. mock-service copies paths
-  # relative to its OWN directory, so it needs _CONTEXT=applications/mock-service.
+  # Docker build context. Most services build from the repo root because their
+  # Dockerfiles copy apis/ and applications/<svc>/. mock-service and the locust
+  # load generator copy paths relative to their OWN directory and therefore need
+  # _CONTEXT set to that directory.
   _CONTEXT: '.'
+  # Dockerfile path, relative to the repo root. Not every image lives under
+  # applications/, the query-API load generator sits in evaluation/load.
+  _DOCKERFILE: applications/frontend/Dockerfile
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - build
       - '-f'
-      - applications/${_SERVICE}/Dockerfile
+      - ${_DOCKERFILE}
       - '-t'
       - ${_REGISTRY}/${_SERVICE}:latest
       - ${_CONTEXT}

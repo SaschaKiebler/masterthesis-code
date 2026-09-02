@@ -114,6 +114,11 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--probe-password", default="probe-pw-2026")
     p.add_argument("--include-destructive", action="store_true",
                    help="also attempt privacy erasure across tenants (may DELETE on a leak)")
+    p.add_argument("--setup-only", action="store_true",
+                   help="only create the per-tenant probe users and exit. "
+                        "QS-PER-03 needs a tenant-bound login, otherwise it "
+                        "measures the bootstrap admin, who short-circuits the "
+                        "tenant check and would report enforcement as free.")
     p.add_argument("--self-check", action="store_true",
                    help="run every request against the actor's OWN resources instead. "
                         "Expect 2xx everywhere and no audit rows: proves the enforcement "
@@ -432,6 +437,12 @@ def main() -> int:
         print(f"tenant '{f.prefix}': project={f.project_id} "
               f"metric_points={len(f.metric_point_ids)} devices={len(f.device_ids)} "
               f"person={'yes' if f.person_id else 'no'} user={f.email}")
+
+    if args.setup_only:
+        print(f"\nsetup only: probe users exist and can log in. "
+              f"Use LOGIN_EMAIL={a.email} LOGIN_PASSWORD={args.probe_password} "
+              f"for the query-API load (QS-PER-03).")
+        return 0
 
     if args.self_check:
         return self_check(args, [a, b])

@@ -1,0 +1,119 @@
+scenario  : qs-per-02
+generator : cloudrun (broker 10.10.0.98)
+window    : 2026-09-02 11:37:24+00 .. 2026-09-02 11:52:42+00
+
+######## loss-rate ########
+── Persisted measurements in the window ────────────────────────────────
+ persisted_measurements | devices |        first_received         |         last_received         | measurements_per_second 
+------------------------+---------+-------------------------------+-------------------------------+-------------------------
+                1081456 |     100 | 2026-09-02 11:37:34.050103+00 | 2026-09-02 11:52:34.019707+00 |                  1201.7
+(1 row)
+
+── Per device family (boiler vs. Shelly carry different metric counts) ─
+ family | measurements | devices 
+--------+--------------+---------
+ boiler |       419984 |      25
+ sensor |       661472 |      75
+(2 rows)
+
+── Rejected payloads (parse/route failures, NOT silent loss) ───────────
+ ingestion_errors | first_error | last_error 
+------------------+-------------+------------
+                0 |             | 
+(1 row)
+
+── Error reasons, most frequent first ──────────────────────────────────
+ error_message | occurrences 
+---------------+-------------
+(0 rows)
+
+── Per-minute arrival profile (spot the spike and the recovery) ────────
+         minute         | measurements 
+------------------------+--------------
+ 2026-09-02 11:37:00+00 |        13430
+ 2026-09-02 11:38:00+00 |        30898
+ 2026-09-02 11:39:00+00 |        30902
+ 2026-09-02 11:40:00+00 |        30898
+ 2026-09-02 11:41:00+00 |        30901
+ 2026-09-02 11:42:00+00 |        71388
+ 2026-09-02 11:43:00+00 |       154501
+ 2026-09-02 11:44:00+00 |       154498
+ 2026-09-02 11:45:00+00 |       154500
+ 2026-09-02 11:46:00+00 |       154501
+ 2026-09-02 11:47:00+00 |       113977
+ 2026-09-02 11:48:00+00 |        30902
+ 2026-09-02 11:49:00+00 |        30900
+ 2026-09-02 11:50:00+00 |        30900
+ 2026-09-02 11:51:00+00 |        30900
+ 2026-09-02 11:52:00+00 |        17460
+(16 rows)
+
+
+######## latency-percentiles ########
+── Ingest latency, system entry to persistence (the response measure) ──
+ samples | p50_ms | p95_ms | p99_ms | max_ms 
+---------+--------+--------+--------+--------
+ 1081456 |    1.0 |   11.4 |   23.8 |  295.8
+(1 row)
+
+── Ingest latency per minute (QS-PER-02: recovery after the spike) ─────
+         minute         | samples | p95_ms 
+------------------------+---------+--------
+ 2026-09-02 11:37:00+00 |   13430 |    7.7
+ 2026-09-02 11:38:00+00 |   30898 |    8.0
+ 2026-09-02 11:39:00+00 |   30902 |    7.8
+ 2026-09-02 11:40:00+00 |   30898 |    8.2
+ 2026-09-02 11:41:00+00 |   30901 |    7.6
+ 2026-09-02 11:42:00+00 |   71388 |   13.9
+ 2026-09-02 11:43:00+00 |  154501 |   17.8
+ 2026-09-02 11:44:00+00 |  154498 |   11.9
+ 2026-09-02 11:45:00+00 |  154500 |   12.5
+ 2026-09-02 11:46:00+00 |  154501 |   11.5
+ 2026-09-02 11:47:00+00 |  113977 |   11.2
+ 2026-09-02 11:48:00+00 |   30902 |    7.4
+ 2026-09-02 11:49:00+00 |   30900 |    7.3
+ 2026-09-02 11:50:00+00 |   30900 |    7.4
+ 2026-09-02 11:51:00+00 |   30900 |    7.2
+ 2026-09-02 11:52:00+00 |   17460 |    7.3
+(16 rows)
+
+── End to end incl. transport, only where a device clock exists ────────
+        family         | samples | p50_ms | p95_ms 
+-----------------------+---------+--------+--------
+ boiler (device clock) |  419984 |    6.3 |   19.0
+(1 row)
+
+── Coverage: how many rows carry a device clock at all ─────────────────
+ with_device_clock | receive_time_fallback | pre_instrumentation |  total  
+-------------------+-----------------------+---------------------+---------
+            419984 |                661472 |                   0 | 1081456
+(1 row)
+
+
+######## ingestion ########
+NAME                REFERENCE                      TARGETS       MINPODS   MAXPODS   REPLICAS   AGE
+ingestion-service   Deployment/ingestion-service   cpu: 8%/70%   2         10        7          77m
+NAME                                 READY   STATUS        RESTARTS      AGE
+ingestion-service-79fd54cf9c-6ngbq   1/1     Running       0             8m25s
+ingestion-service-79fd54cf9c-7hdvr   1/1     Running       0             8m25s
+ingestion-service-79fd54cf9c-dw67l   1/1     Running       0             7m25s
+ingestion-service-79fd54cf9c-j4hzp   1/1     Terminating   0             7m25s
+ingestion-service-79fd54cf9c-pbkj7   1/1     Running       9 (60m ago)   77m
+ingestion-service-79fd54cf9c-qhmqm   1/1     Running       0             9m40s
+ingestion-service-79fd54cf9c-tgshq   1/1     Running       9 (60m ago)   77m
+ingestion-service-79fd54cf9c-v826l   1/1     Running       0             9m40s
+
+######## scaling over time ########
+peak replicas: 8
+full series in qs-per-02-20260902-133724-scaling.csv
+
+######## autoscaler decisions ########
+Events:
+  Type     Reason                   Age                  From                       Message
+  ----     ------                   ----                 ----                       -------
+  Warning  FailedGetResourceMetric  57m (x71 over 76m)   horizontal-pod-autoscaler  did not receive metrics for targeted pods (pods might be unready)
+  Normal   SuccessfulRescale        9m41s                horizontal-pod-autoscaler  New size: 4; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale        8m25s                horizontal-pod-autoscaler  New size: 6; reason: cpu resource utilization (percentage of request) above target
+  Normal   SuccessfulRescale        7m25s                horizontal-pod-autoscaler  New size: 8; reason: cpu resource utilization (percentage of request) above target
+  Normal   HpaProfilePerformance    10s (x4 over 9m41s)  horizontal-pod-autoscaler  The HPA rescaled target based on performance profile
+  Normal   SuccessfulRescale        10s                  horizontal-pod-autoscaler  New size: 7; reason: cpu resource utilization (percentage of request) below target

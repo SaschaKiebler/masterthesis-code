@@ -15,8 +15,9 @@
 #   ./ingest-scenario.sh qs-per-01 [duration_s]  500 msmt/s, default 30 min
 #   ./ingest-scenario.sh qs-per-02 [duration_s]  base load + 5 min spike to 2500
 #
-# Fleet arithmetic (must match infrastructure/kubernetes/jobs/mock-seed.yaml):
-#   25 sites x (1 boiler + 3 room sensors) = 100 devices
+# Fleet arithmetic (must match infrastructure/kubernetes/jobs/mock-seed.yaml,
+# prefix included, since the tenant id is derived from it):
+#   prefix tenanta, 25 sites x (1 boiler + 3 room sensors) = 100 devices
 #   per publish interval: 175 messages carrying 250 measurements
 #   => measurements/s = 250 / interval
 # Run `ramp` first: it costs twelve minutes and tells you whether the 2500/s of
@@ -50,7 +51,7 @@ echo "generator=$GEN broker=$BROKER"
 # Prints the execution id on async, so the caller can collect its log later.
 run_load() {
   local iv=$1 dur=$2 async=${3:-}
-  local args="run,--sites=25,--rooms=3,--interval=$iv,--duration=$dur,--broker=$BROKER:1883,--connections=8"
+  local args="run,--prefix=tenanta,--sites=25,--rooms=3,--interval=$iv,--duration=$dur,--broker=$BROKER:1883,--connections=8"
   if [ "$GEN" = cloudrun ]; then
     local wait_flag=--wait
     [ -n "$async" ] && wait_flag=--async
@@ -77,7 +78,7 @@ run_load() {
     echo "run_load: could not start the generator after 3 attempts, aborting" >&2
     return 1
   else
-    local flags="--sites=25 --rooms=3 --broker=$BROKER:1883 --interval=$iv --duration=$dur --connections=8"
+    local flags="--prefix=tenanta --sites=25 --rooms=3 --broker=$BROKER:1883 --interval=$iv --duration=$dur --connections=8"
     if [ -n "$async" ]; then "$MOCK" run $flags >"$OUT/$SCENARIO-$STAMP-async.log" 2>&1 & echo $!
     else "$MOCK" run $flags 2>&1 | tail -2; fi
   fi

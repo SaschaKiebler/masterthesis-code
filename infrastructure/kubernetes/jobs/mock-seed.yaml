@@ -7,10 +7,15 @@
 # interval that fleet emits 175 messages carrying 250 measurements (boiler one
 # message with four metrics, each H&T two messages with one metric; the battery
 # metric only fires every tenth tick and is ignored here). The external
-# `mock-service run` must be given the SAME --sites/--rooms, and picks the rate
-# through --interval:
+# `mock-service run` must be given the SAME --prefix/--sites/--rooms, and picks
+# the rate through --interval:
 #   QS-PER-01,   500 measurements/s  ->  --interval=0.5
 #   QS-PER-02, 2.500 measurements/s  ->  --interval=0.1
+#
+# The prefix is `tenanta` and not `mock`, because the tenant id is derived from
+# it. That puts the fleet under measurement into the same tenant as the probe
+# user QS-PER-03 logs in with, so the query load runs THROUGH tenant
+# enforcement rather than past it as a system admin would.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -27,6 +32,7 @@ spec:
           image: europe-west3-docker.pkg.dev/heating-platform-eval/heating-platform/mock-service:latest
           args:
             - seed
+            - --prefix=tenanta
             - --sites=25
             - --rooms=3
             - --dsn=postgresql://postgres:$(DB_PASSWORD)@stammdaten-db:5432/digital_demon
