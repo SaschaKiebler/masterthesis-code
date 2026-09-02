@@ -34,6 +34,29 @@ gcloud container clusters get-credentials "$CLUSTER" --region "$REGION" --projec
 step "Deploy platform"
 kubectl apply -k "$ROOT/infrastructure/kubernetes/overlays/gke"
 
+step "Stores first, stateless services after"
+# Autopilot adds a node per pod it cannot place, and every node brings a 100 GB
+# boot disk that counts against the regional SSD_TOTAL_GB quota. Rolling
+# everything out at once therefore starts a race: if the nodes win it, the
+# quota is gone and the PVCs never provision, which leaves the stores Pending
+# and every service crash-looping against a database that will never come up.
+# Holding the stateless services back keeps the node count low while the disks
+# are created, so the race cannot be lost.
+kubectl -n $NS scale deploy --all --replicas=0
+deadline=$(( $(date +%s) + 600 ))
+until [ "$(kubectl -n $NS get pvc --no-headers 2>/dev/null | grep -c Bound)" = "3" ]; do
+  if [ "$(date +%s)" -gt "$deadline" ]; then
+    echo "volumes did not bind in 10 min. Check the regional SSD_TOTAL_GB quota:"
+    echo "  gcloud compute regions describe $REGION --project $PROJECT --format='value(quotas)' | tr ';' '\n' | grep SSD"
+    kubectl -n $NS get pvc
+    exit 1
+  fi
+  note "waiting for the volumes"
+  sleep 15
+done
+note "volumes bound, bringing the services back"
+kubectl apply -k "$ROOT/infrastructure/kubernetes/overlays/gke"
+
 step "Wait for pods (Autopilot provisions nodes first, this takes minutes)"
 # Ready means READY=1/1. A pod can sit in Running while its process is stuck,
 # which is exactly how the missing DB_PORT hid itself once.

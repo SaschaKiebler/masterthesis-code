@@ -307,6 +307,18 @@ Bericht nicht von einem gültigen Ergebnis unterscheiden lassen.
   Baseline korrekt gesetzt wird. Ebenso legen die Dienste ihre Kafka-Topics nur
   einmal beim Start an. Beides ist über `baseline-version: 0` und
   `spring.kafka.admin.fail-fast` entschärft.
+- **Das Plattenkontingent begrenzt den Cluster, nicht die Rechenleistung.**
+  `SSD_TOTAL_GB` liegt bei 500 GB je Region, und jeder Autopilot-Knoten belegt
+  davon 100 GB für seine Boot-Platte. Da Autopilot je nicht platzierbarem Pod
+  einen Knoten nachlegt, entsteht ein Teufelskreis, sobald die Volumes fehlen.
+  `eval-up.sh` rollt deshalb gestaffelt aus, erst die Speicher und dann die
+  zustandslosen Dienste. Ein zerstörter Cluster nimmt seine Platten außerdem
+  nicht mit, weshalb `eval-down.sh` erst die PVCs löscht und dann den Cluster.
+- **Der Uhrenversatz der messenden Maschine ist bei der Sichtbarkeitslatenz
+  keine Kleinigkeit.** Er lag bei 59 ms und damit in der Größenordnung der
+  Messgröße selbst, erkennbar an physikalisch unmöglichen negativen Werten. Vor
+  und nach einem solchen Lauf `sntp -t 5 time.apple.com` ausführen und den
+  Versatz protokollieren.
 
 ## 9 Abweichungen vom ursprünglichen Messplan
 
