@@ -1,0 +1,39 @@
+watching 30 channels (15 boiler, 15 sensor) for 300s at 0.5s cadence
+
+polls=596 errors=0 observations=7775 (dropped 30 pre-existing values from the priming poll)
+
+Visibility latency (upper bound, quantised to the poll cadence):
+  sensor = entry to availability     n=3290   median=    -56 ms  p95=    172 ms  max=    213 ms
+  boiler = end to end incl. transport n=4485   median=    -45 ms  p95=    185 ms  max=    291 ms
+  all channels                       n=7775   median=    -50 ms  p95=    181 ms  max=    291 ms
+
+raw observations written to /Users/sascha/Documents/MSI/Masterarbeit/masterthesis-code/evaluation/results/qs-per-01-visibility-20260902-145122.csv
+
+################################################################
+NACHTRAG ZUR AUSWERTUNG
+
+Die Rohwerte oben sind negativ, was physikalisch unmoeglich ist.
+Ursache ist ein Uhrenversatz zwischen der messenden Maschine und
+dem Cluster. Unmittelbar nach dem Lauf gemessen mit
+  sntp -t 5 time.apple.com  ->  +0.058952 s (+/- 0.013162 s)
+Die lokale Uhr geht also rund 59 ms nach. Um diesen Betrag
+korrigiert ergibt sich:
+
+  sensor (Eingang bis Bereitstellung)   Median   3 ms   p95 231 ms   max 272 ms
+  boiler (Ende zu Ende inkl. Transport) Median  14 ms   p95 244 ms   max 350 ms
+
+Zielwert p95 unter 1000 ms ist damit eingehalten.
+
+Einschraenkungen, die zur Zahl gehoeren:
+  1. Die Korrektur beruht auf einer einzelnen Messung mit +/- 13 ms
+     Unsicherheit. Eine Drift waehrend der 5 Minuten ist nicht erfasst.
+  2. Jede Beobachtung ist eine Obergrenze, gerundet auf den Polltakt
+     von 0,5 s. Ein Wert kann fruehestens beim naechsten Poll gesehen
+     werden.
+  3. Der Poller lief ueber einen kubectl-port-forward mit einer
+     Tunnel-Latenz von median 51,5 ms und p95 61,8 ms. Dieser Anteil
+     steckt in den Zahlen und gehoert nicht der Plattform.
+  4. Die Annahme im Kopf des Poller-Skripts, der Uhrenversatz sei
+     gegenueber der Messgroesse vernachlaessigbar, trifft nicht zu.
+     Er liegt in derselben Groessenordnung wie der Median.
+################################################################
