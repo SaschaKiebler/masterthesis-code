@@ -60,14 +60,19 @@ step "Wait for the device.configured sweep (<=30 s in device-management)"
 sleep 40
 # The ingestion pods follow the compacted topic live, so this is a check and
 # not a restart: every accepted device must be in the projection before load.
-kubectl -n $NS exec kafka-0 -- /opt/kafka/bin/kafka-topics.sh \
-  --bootstrap-server localhost:9092 --describe --topic device.configured | head -2
+# Captured first, then trimmed. Piping the producer straight into `head`
+# closes the pipe early, and with `set -e` plus `pipefail` the resulting
+# SIGPIPE (exit 141) aborts the whole bring-up.
+topic_info=$(kubectl -n $NS exec kafka-0 -- /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server localhost:9092 --describe --topic device.configured 2>/dev/null || true)
+printf '%s\n' "$topic_info" | sed -n '1,2p'
 
 if [ "$SMOKE" = "--smoke" ]; then
   step "Smoke: 60 s of telemetry, then count what landed"
   before=$(kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d digital_demon_measurements -tAc "select count(*) from measurements;")
-  kubectl -n $NS run mock-smoke --rm -i --restart=Never --image="$REGISTRY/mock-service:latest" -- \
-    run --sites=25 --rooms=3 --interval=2 --duration=60 --broker=mosquitto:1883 --connections=4 | tail -3
+  smoke_log=$(kubectl -n $NS run mock-smoke --rm -i --restart=Never --image="$REGISTRY/mock-service:latest" -- \
+    run --sites=25 --rooms=3 --interval=2 --duration=60 --broker=mosquitto:1883 --connections=4 2>&1 || true)
+  printf '%s\n' "$smoke_log" | tail -3
   after=$(kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d digital_demon_measurements -tAc "select count(*) from measurements;")
   note "new rows: $((after - before))  (expect roughly 60 s x 125 measurements/s at interval 2)"
   kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d digital_demon_measurements -tAc \

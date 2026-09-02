@@ -6,6 +6,8 @@
 # ─────────────────────────────────────────────
 
 *.md
+# Ausnahme: der Messaufbau der Evaluation gehoert zur Abgabe.
+!evaluation/README.md
 
 # ── OS & IDE ──
 .DS_Store
