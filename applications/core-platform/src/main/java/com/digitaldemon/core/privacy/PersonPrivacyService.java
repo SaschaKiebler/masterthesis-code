@@ -33,8 +33,8 @@ import java.util.UUID;
  * <p>What makes consumption data personal is the graph chain
  * {@code PERSON -RESIDES_IN-> space -CONTAINS*-> room <-INSTALLED_IN- asset
  * -REALIZED_BY-> physical device -> measurements.device_id}. Export walks that
- * chain and hands over a copy (Art. 15(3)). Erasure deletes the person object,
- * whose links cascade away in the database — the measurement series stays
+ * chain and hands over a copy (Art. 15(3)). Erasure removes the person object
+ * and its links from the master-data store — the measurement series stays
  * untouched and thereby loses its subject reference. Retention is justified by
  * the billing-data retention duty (Art. 17(3)(b)) and by the raw-data
  * integrity attribute QS-INT; the residual re-identification risk of a
@@ -137,16 +137,21 @@ public class PersonPrivacyService {
                     measurementReadStore.countForDevice(device.deviceId()));
         }
 
-        int links = linkRepository.findOutboundByObjectId(personId).size()
-                + linkRepository.findInboundByObjectId(personId).size();
+        List<Link> links = new ArrayList<>(linkRepository.findOutboundByObjectId(personId));
+        links.addAll(linkRepository.findInboundByObjectId(personId));
 
-        // links cascade via ON DELETE CASCADE on the objects FK.
+        // The links are removed explicitly and before the object. The schema
+        // would cascade them anyway, but the walk above has loaded them into
+        // the persistence context, and Hibernate refuses to flush a managed
+        // Link whose source or target has just been removed
+        // (TransientPropertyValueException). Found by the first QS-SEC-02 run.
+        linkRepository.deleteAll(links);
         objectRepository.delete(person);
 
-        log.info("Erased person {} ({} links cascaded, {} device series retained)",
-                personId, links, retained.size());
+        log.info("Erased person {} ({} links removed, {} device series retained)",
+                personId, links.size(), retained.size());
 
-        return new ErasureReport(personId, links, retained,
+        return new ErasureReport(personId, links.size(), retained,
                 "Measurement series are retained unchanged: severing the person link "
                         + "removes the subject reference (Art. 17(3)(b) retention of "
                         + "billing-relevant readings; raw-data integrity per QS-INT).");

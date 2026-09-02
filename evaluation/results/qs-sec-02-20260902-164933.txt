@@ -1,0 +1,73 @@
+scenario  : qs-sec-02
+started   : 2026-09-02 14:49:33+00
+subject   : 62e42067-2a8f-556a-b5e6-3a170e8ffc34  (Gdpr Person 001-01)
+core      : http://localhost:8080
+
+######## 1 reference inventory (master-data store + measurement store) ########
+display_name        : Gdpr Person 001-01
+tenant_id           : 8f5c3836-f77c-58b8-acb6-ff663eea423f
+properties          : {"email": "person-001-01@gdpr.example.org", "phone": "+49 000 00101", "role": "resident"}
+residences          : 1
+links touching it   : 1
+derived_properties  : 0
+devices via graph   : 1
+  gdpr-ht-001-01                    126 measurement rows
+
+######## 2 export (Art. 15) ########
+HTTP 200 in 0.11 s
+saved verbatim to qs-sec-02-20260902-164933-export.json
+
+[ok] displayName
+       expected  Gdpr Person 001-01
+       exported  Gdpr Person 001-01
+[ok] properties (every stored key with its value)
+       expected  {"email": "person-001-01@gdpr.example.org", "phone": "+49 000 00101", "role": "resident"}
+       exported  {"email": "person-001-01@gdpr.example.org", "phone": "+49 000 00101", "role": "resident"}
+[ok] residences (RESIDES_IN targets)
+       expected  1 space(s)
+       exported  1 space(s), matching 1
+[ok] devices (graph walk)
+       expected  gdpr-ht-001-01
+       exported  gdpr-ht-001-01
+[ok] series gdpr-ht-001-01
+       expected  126 rows
+       exported  count=126, values=126
+
+coverage: 100.0 %  (5/5 items)   target 100 %
+
+######## 3 erasure (Art. 17) ########
+HTTP 200 in 0.07 s
+deletedLinks              : 1   (inventory said 1)
+retainedMeasurementsByDevice: {"gdpr-ht-001-01": 126}
+retentionNote             : Measurement series are retained unchanged: severing the person link removes the subject reference (Art. 17(3)(b) retention of billing-relevant readings; raw-data integrity per QS-INT).
+
+######## 4 residual check (evaluation/sql/privacy-residual-check.sql, verbatim) ########
+── 1. PERSON object itself ─────────────────────────────────────────────
+── 2. Clear-text name anywhere in objects ──────────────────────────────
+── 3. Contact data in object properties ────────────────────────────────
+── 4. Links from or to the person (should have cascaded) ───────────────
+── 5. Platform-user traces (only relevant for user erasure runs) ───────
+── 6. Derived properties written onto the person object ────────────────
+── E1. access_audit entries (EXPECTED to remain for user subjects) ─────
+0
+
+residual hits in finding sections 1-6 : 0   target 0
+section E1 (expected, audit trail)     : 0
+
+######## 5 re-query after erasure ########
+GET privacy export   : HTTP 404   target 404
+GET object links     : HTTP 200, links left 0   target 0 (or 404)
+measurement rows unchanged after erasure: yes
+  gdpr-ht-001-01               before      126   after      126
+These rows persist WITHOUT a subject reference. That is the deliberate deviation from the ch. 4 design (series severed, not deleted) and the QA-SEC vs QA-INT trade-off for ch. 6.
+
+######## verdict ########
+export coverage         : 100.0 %              target 100 %      ok
+residual hits           : 0                    target 0          ok
+re-query                : export 404, links left 0   target 404 / 0   ok
+erasure call            : 0.07 s
+whole run               : 0.8 s              target < 900 s    ok
+measurements retained   : 126 rows in 1 series, unchanged=yes
+
+RESULT: all response measures met
+Re-seeding recreates the subject for another run.

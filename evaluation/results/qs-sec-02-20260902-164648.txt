@@ -1,0 +1,50 @@
+scenario  : qs-sec-02
+started   : 2026-09-02 14:46:48+00
+subject   : 62e42067-2a8f-556a-b5e6-3a170e8ffc34  (Gdpr Person 001-01)
+core      : http://localhost:8080
+
+######## 1 reference inventory (master-data store + measurement store) ########
+display_name        : Gdpr Person 001-01
+tenant_id           : 8f5c3836-f77c-58b8-acb6-ff663eea423f
+properties          : {"email": "person-001-01@gdpr.example.org", "phone": "+49 000 00101", "role": "resident"}
+residences          : 1
+links touching it   : 1
+derived_properties  : 0
+devices via graph   : 1
+  gdpr-ht-001-01                    126 measurement rows
+
+######## 2 export (Art. 15) ########
+HTTP 200 in 0.11 s
+saved verbatim to qs-sec-02-20260902-164648-export.json
+
+[ok] displayName
+       expected  Gdpr Person 001-01
+       exported  Gdpr Person 001-01
+[ok] properties (every stored key with its value)
+       expected  {"email": "person-001-01@gdpr.example.org", "phone": "+49 000 00101", "role": "resident"}
+       exported  {"email": "person-001-01@gdpr.example.org", "phone": "+49 000 00101", "role": "resident"}
+[ok] residences (RESIDES_IN targets)
+       expected  1 space(s)
+       exported  1 space(s), matching 1
+[ok] devices (graph walk)
+       expected  gdpr-ht-001-01
+       exported  gdpr-ht-001-01
+[ok] series gdpr-ht-001-01
+       expected  126 rows
+       exported  count=126, values=126
+
+coverage: 100.0 %  (5/5 items)   target 100 %
+
+######## 3 erasure (Art. 17) ########
+HTTP 500 in 0.05 s
+{"error":"Internal server error"}
+
+######## note (added after the run) ########
+First run, kept as the finding. The export side was already complete
+(coverage 100 %), the erasure failed with HTTP 500 before touching any row:
+Hibernate refused to flush managed Link entities whose source, the person,
+had just been removed (TransientPropertyValueException). The schema's
+ON DELETE CASCADE never got a chance because the ORM rejected the unit of
+work first. The transaction rolled back, the subject stayed intact, no
+partial erasure occurred. Fix in PersonPrivacyService.erase: remove the
+links explicitly before the object. Re-measured in the next report file.

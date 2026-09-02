@@ -338,3 +338,102 @@ Bericht nicht von einem gültigen Ergebnis unterscheiden lassen.
   misst folglich die Strecke innerhalb der Region und nicht die zum Arbeitsplatz,
   was die client-seitig gemessenen Antwortzeiten näher an die reine
   Verarbeitungszeit der Plattform rückt.
+
+## 10 QS-SEC-02, Auskunft und Löschung
+
+Das einzige Szenario, das nicht im Cluster, sondern auf dem lokalen Dev-Stack
+gemessen wird. Es braucht keine Last, und der Löschlauf ist auf einer
+synthetischen Person destruktiv, was lokal nichts kostet.
+
+| Szenario | Umgebung | Zielwerte |
+|---|---|---|
+| QS-SEC-02 | Referenzinventar bekannten Umfangs, eine `PERSON` mit `RESIDES_IN` auf einen Raum | Export deckt 100 % des Inventars ab, 0 Treffer nach dem Löschlauf, Laufzeit unter 15 Minuten |
+
+Der Lauf ist in [`evaluation/scripts/qs_sec_02_privacy_run.py`](scripts/qs_sec_02_privacy_run.py)
+vollständig automatisiert. Das Skript erhebt zuerst das Referenzinventar aus
+den beiden Speichern, holt dann den Export, vergleicht beides Posten für
+Posten, löscht mit Zeitmessung, fährt den Residual-Check und fragt danach die
+API und den Messwertspeicher noch einmal ab.
+
+```bash
+# 1  Dev-Stack starten
+scripts/dev.sh up
+
+# 2  Flotte MIT Personen seeden. Eigenes Präfix, damit die tenanta-Flotte der
+#    Lastszenarien unberührt bleibt.
+applications/mock-service/.venv/bin/mock-service seed --prefix gdpr --sites 1 --rooms 2 --persons 2
+
+# 3  Zwei Minuten Telemetrie, damit die Messreihen der Person nicht leer sind.
+#    device-management braucht bis zu 30 s, bis device.configured den Weg für
+#    die neuen Geräte öffnet, deshalb zuerst kurz warten. Der Generator MUSS
+#    beendet sein, bevor Schritt 4 läuft, sonst driften die Zeilenzahlen
+#    zwischen Inventar und Export.
+sleep 40
+applications/mock-service/.venv/bin/mock-service run --prefix gdpr --sites 1 --rooms 2 --interval 2 --duration 120
+
+# 4  Der Lauf. Person 1 an Standort 1 ist das Subjekt, ihre ID ist
+#    deterministisch und braucht kein Nachschlagen.
+evaluation/scripts/.venv/bin/python evaluation/scripts/qs_sec_02_privacy_run.py --prefix gdpr
+
+# nur Export und Abdeckung, ohne Löschung
+evaluation/scripts/.venv/bin/python evaluation/scripts/qs_sec_02_privacy_run.py --prefix gdpr --skip-erase
+```
+
+Ein erneutes `seed` legt die gelöschte Person wieder an, der Lauf lässt sich
+also wiederholen. Mit `--subject-id` lässt sich auch eine beliebige andere
+`PERSON` messen.
+
+### Was das Skript als Beleg schreibt
+
+Zwei Dateien in [evaluation/results](results).
+
+| Datei | Inhalt |
+|---|---|
+| `qs-sec-02-<zeitstempel>.txt` | Inventar, Abgleich je Posten mit Abdeckung in Prozent, Löschbericht mit Dauer, Residual-Check wörtlich, Nachabfrage, Urteil |
+| `qs-sec-02-<zeitstempel>-export.json` | der Export unverändert, das ist die Kopie nach Art. 15 Abs. 3 |
+
+Das Referenzinventar wird aus den Daten und nicht aus dem Export gebildet.
+[`evaluation/sql/privacy-inventory.sql`](sql/privacy-inventory.sql) enthält
+denselben Graph-Walk als eigenständiges psql-Skript, damit sich das Inventar
+auch von Hand nachziehen lässt. Der Residual-Check ist
+[`evaluation/sql/privacy-residual-check.sql`](sql/privacy-residual-check.sql),
+das Skript führt ihn unverändert über `psql` im Container aus und zählt die
+Treffer je Abschnitt.
+
+### Wie das Ergebnis zu lesen ist
+
+Die Abdeckung zählt Posten, nicht Bytes. Ein Posten ist der Anzeigename, der
+Satz der gespeicherten Eigenschaften, die Menge der Wohnorte, die Menge der
+über den Graph erreichbaren Geräte sowie je Gerät die Messreihe, bei der
+sowohl die gemeldete Zahl als auch die Zahl der tatsächlich mitgelieferten
+Werte mit dem Messwertspeicher übereinstimmen muss.
+
+Der Residual-Check hat sechs Abschnitte, deren Treffer Befunde sind, und einen
+Abschnitt E1 mit erwarteten Treffern, weil das Zugriffsprotokoll aus Gründen
+der Nachvollziehbarkeit bewusst nicht gelöscht wird.
+
+Die Messreihen bleiben nach der Löschung unverändert stehen, und das Skript
+weist die Zeilenzahl vor und nach dem Löschlauf aus. Das ist kein Fehler,
+sondern die beabsichtigte Abweichung vom Entwurf in Kapitel 4, der eine
+Löschung auch im Messwertspeicher vorsieht. Die Umsetzung kappt stattdessen
+die Kante `RESIDES_IN`, wodurch die Reihe ihren Personenbezug verliert, und
+behält die Werte wegen der Aufbewahrungspflicht für abrechnungsrelevante Daten
+und wegen QA-INT. Diese Zahl ist der Beleg für den Trade-off zwischen QA-SEC
+und QA-INT in Kapitel 6 und gehört deshalb ins Protokoll.
+
+### Ergebnis vom 02.09.2026
+
+Zwei Protokolle liegen in [evaluation/results](results), und beide gehören
+zum Ergebnis. Der erste Lauf (`qs-sec-02-20260902-164648.txt`) bestand den
+Export mit 100 % und scheiterte am Löschaufruf mit HTTP 500. Hibernate
+verweigerte den Flush der für den Graph-Walk geladenen Links, deren Quelle
+gerade entfernt worden war, obwohl das Schema sie per Kaskade gelöscht hätte.
+Die Transaktion rollte zurück, es blieb kein Teilzustand. Die Korrektur in
+`PersonPrivacyService.erase` entfernt die Links ausdrücklich vor dem Objekt,
+der Unit-Test schreibt die Reihenfolge fest. Der zweite Lauf
+(`qs-sec-02-20260902-164933.txt`) erfüllt alle vier Zielwerte, Abdeckung
+100 %, 0 Treffer, Nachabfrage 404, Gesamtlaufzeit 0,8 s bei 126 unverändert
+erhaltenen Messwerten.
+
+Was der Lauf nicht prüft, ist das Event-Backbone. Retention und Tombstones
+sind Topic-Konfiguration und werden hier nicht gemessen.

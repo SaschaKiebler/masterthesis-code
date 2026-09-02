@@ -16,6 +16,7 @@ import com.digitaldemon.core.tenant.Tenant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -29,7 +30,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -197,7 +200,12 @@ class PersonPrivacyServiceTest {
 
         PersonPrivacyService.ErasureReport report = service.erase(personId);
 
-        verify(objectRepository).delete(person);
+        // Links first, then the object. The first QS-SEC-02 run failed with a
+        // TransientPropertyValueException because the object was removed while
+        // its loaded links were still managed. Order is part of the contract.
+        InOrder order = inOrder(linkRepository, objectRepository);
+        order.verify(linkRepository).deleteAll(anyList());
+        order.verify(objectRepository).delete(person);
         assertThat(report.deletedLinks()).isEqualTo(1);
         assertThat(report.retainedMeasurementsByDevice())
                 .containsEntry("mock-ht-001-01", 2L);
