@@ -71,3 +71,11 @@ measurements retained   : 126 rows in 1 series, unchanged=yes
 
 RESULT: all response measures met
 Re-seeding recreates the subject for another run.
+
+######## note (added after the run) ########
+code      : 87ffdf7
+host      : developer laptop, local dev stack (scripts/dev.sh up), not the GKE measurement environment
+subject   : Gdpr Person 001-01, deterministic id from prefix gdpr, site 1, person 1
+reproduce : scripts/dev.sh up; mock-service seed --prefix gdpr --sites 1 --rooms 2 --persons 2;
+            wait 40 s; mock-service run --prefix gdpr --sites 1 --rooms 2 --interval 2 --duration 120;
+            evaluation/scripts/qs_sec_02_privacy_run.py --prefix gdpr

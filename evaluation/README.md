@@ -372,7 +372,11 @@ sleep 40
 applications/mock-service/.venv/bin/mock-service run --prefix gdpr --sites 1 --rooms 2 --interval 2 --duration 120
 
 # 4  Der Lauf. Person 1 an Standort 1 ist das Subjekt, ihre ID ist
-#    deterministisch und braucht kein Nachschlagen.
+#    deterministisch und braucht kein Nachschlagen. Das venv braucht neben
+#    requests auch psycopg, weil das Inventar direkt aus beiden Speichern
+#    gelesen wird (einmalig anlegen):
+#      python3 -m venv evaluation/scripts/.venv
+#      evaluation/scripts/.venv/bin/pip install 'requests>=2.31' 'psycopg[binary]>=3.1'
 evaluation/scripts/.venv/bin/python evaluation/scripts/qs_sec_02_privacy_run.py --prefix gdpr
 
 # nur Export und Abdeckung, ohne Löschung
@@ -391,6 +395,9 @@ Zwei Dateien in [evaluation/results](results).
 |---|---|
 | `qs-sec-02-<zeitstempel>.txt` | Inventar, Abgleich je Posten mit Abdeckung in Prozent, Löschbericht mit Dauer, Residual-Check wörtlich, Nachabfrage, Urteil |
 | `qs-sec-02-<zeitstempel>-export.json` | der Export unverändert, das ist die Kopie nach Art. 15 Abs. 3 |
+
+Der Kopf des Protokolls hält den Codestand, den Rechner und die drei Befehle
+fest, mit denen der Lauf entstanden ist.
 
 Das Referenzinventar wird aus den Daten und nicht aus dem Export gebildet.
 [`evaluation/sql/privacy-inventory.sql`](sql/privacy-inventory.sql) enthält
@@ -423,17 +430,18 @@ und QA-INT in Kapitel 6 und gehört deshalb ins Protokoll.
 
 ### Ergebnis vom 02.09.2026
 
-Zwei Protokolle liegen in [evaluation/results](results), und beide gehören
-zum Ergebnis. Der erste Lauf (`qs-sec-02-20260902-164648.txt`) bestand den
-Export mit 100 % und scheiterte am Löschaufruf mit HTTP 500. Hibernate
-verweigerte den Flush der für den Graph-Walk geladenen Links, deren Quelle
-gerade entfernt worden war, obwohl das Schema sie per Kaskade gelöscht hätte.
-Die Transaktion rollte zurück, es blieb kein Teilzustand. Die Korrektur in
-`PersonPrivacyService.erase` entfernt die Links ausdrücklich vor dem Objekt,
-der Unit-Test schreibt die Reihenfolge fest. Der zweite Lauf
-(`qs-sec-02-20260902-164933.txt`) erfüllt alle vier Zielwerte, Abdeckung
-100 %, 0 Treffer, Nachabfrage 404, Gesamtlaufzeit 0,8 s bei 126 unverändert
-erhaltenen Messwerten.
+Protokoll `qs-sec-02-20260902-164933.txt` mit Export
+`qs-sec-02-20260902-164933-export.json` in [evaluation/results](results).
+Subjekt war eine Person mit einem Raum, einem darüber erreichbaren Sensor und
+126 Messwerten aus zwei Minuten Telemetrie.
+
+| Zielwert | Gemessen |
+|---|---|
+| Abdeckung 100 % | 100 %, 5 von 5 Posten |
+| 0 Treffer nach Löschlauf | 0 in allen sechs Abschnitten |
+| Nachabfrage | 404, keine Links mehr am Objekt |
+| Laufzeit unter 15 min | 0,8 s gesamt, Löschaufruf 0,07 s, Export 0,11 s |
+| Messwerte nach Löschung | 126, unverändert, ohne Personenbezug |
 
 Was der Lauf nicht prüft, ist das Event-Backbone. Retention und Tombstones
 sind Topic-Konfiguration und werden hier nicht gemessen.

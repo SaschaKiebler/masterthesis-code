@@ -52,6 +52,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import platform
 import re
 import subprocess
 import sys
@@ -115,6 +116,16 @@ devices AS (
 )
 SELECT DISTINCT device_id FROM devices ORDER BY device_id
 """
+
+
+def git_revision() -> str:
+    """Commit of the code under test, so a report can be tied to a code state."""
+    proc = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO_ROOT,
+                          capture_output=True, text=True, check=False)
+    rev = proc.stdout.strip() if proc.returncode == 0 else "unknown"
+    dirty = subprocess.run(["git", "status", "--porcelain", "--", "applications"], cwd=REPO_ROOT,
+                           capture_output=True, text=True, check=False).stdout.strip()
+    return f"{rev}{' (uncommitted changes under applications/)' if dirty else ''}"
 
 
 # ── Subject ──────────────────────────────────────────────────────────────────
@@ -366,6 +377,11 @@ def main() -> int:
     rep.p(f"started   : {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S+00')}")
     rep.p(f"subject   : {subject_id}  ({name or 'name not given'})")
     rep.p(f"core      : {args.core_host}")
+    rep.p(f"code      : {git_revision()}")
+    rep.p(f"host      : {platform.node()} ({platform.system()} {platform.machine()})")
+    rep.p(f"reproduce : mock-service seed --prefix {args.prefix} --sites 1 --rooms 2 --persons 2, "
+          f"then mock-service run --prefix {args.prefix} --sites 1 --rooms 2 --interval 2 --duration 120, "
+          f"then this script with --prefix {args.prefix}")
     t_start = time.perf_counter()
 
     # 1. inventory ──────────────────────────────────────────────────────────
