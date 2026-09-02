@@ -169,24 +169,35 @@ async def _tenants_of_channels(channels: list[dict]) -> dict[str, str | None]:
     return {f"{d}:{m}": found.get(f"{d}:{m}") for d, m in pairs}
 
 
-def _collect_ids(body: dict) -> tuple[list[str], list[dict], bool]:
+# Routes that fall back to an aggregate over the WHOLE measurement store when
+# the id list is empty. For them "no ids" is not "nothing addressed" but
+# "everything addressed", and must be judged as such.
+_WHOLE_STORE_FALLBACK_PATHS = ("/stats/ingest-rate",)
+
+
+def _collect_ids(body: dict, path: str = "") -> tuple[list[str], list[dict], bool]:
     """Pull the addressed ids out of any of the 13 request shapes.
 
     Returns (metric point ids, channels, whether the body asked for an
     unscoped aggregate over the whole store).
+
+    The third flag mirrors the router's own test, which is truthiness and not
+    key presence: ingest-rate treats an omitted key, null and [] alike as
+    "the entire store". An earlier version flagged only the explicit null,
+    so {} and {"metric_point_ids": []} slipped through unscoped. Found by the
+    QS-SEC-01 review of 2026-09-02.
     """
     metric_point_ids: list[str] = []
     channels: list[dict] = []
     unscoped_aggregate = False
 
     for field in _ID_LIST_FIELDS:
-        if field in body:
-            value = body.get(field)
-            if value is None:
-                # ingest-rate accepts null to mean "the entire store".
-                unscoped_aggregate = True
-            elif isinstance(value, list):
-                metric_point_ids.extend(str(v) for v in value)
+        value = body.get(field)
+        if isinstance(value, list):
+            metric_point_ids.extend(str(v) for v in value)
+
+    if path.endswith(_WHOLE_STORE_FALLBACK_PATHS) and not body.get("metric_point_ids"):
+        unscoped_aggregate = True
 
     for field in _ID_SINGLE_FIELDS:
         value = body.get(field)
@@ -228,7 +239,7 @@ async def require_tenant_scope(request: Request, _: None = Depends(require_token
     if not isinstance(body, dict):
         return
 
-    metric_point_ids, channels, unscoped_aggregate = _collect_ids(body)
+    metric_point_ids, channels, unscoped_aggregate = _collect_ids(body, request.url.path)
     membership = await _membership(subject)
 
     if unscoped_aggregate and not membership.unlimited:
@@ -236,21 +247,26 @@ async def require_tenant_scope(request: Request, _: None = Depends(require_token
                              "aggregate over the whole measurement store requires metric_point_ids")
 
     foreign: list[str] = []
+    foreign_tenant: str | None = None
     if metric_point_ids:
         for mp_id, tenant in (await _tenants_of_metric_points(metric_point_ids)).items():
             if not membership.covers(tenant):
                 foreign.append(mp_id)
+                foreign_tenant = foreign_tenant or (str(tenant) if tenant else None)
     if channels:
         for key, tenant in (await _tenants_of_channels(channels)).items():
             if not membership.covers(tenant):
                 foreign.append(key)
+                foreign_tenant = foreign_tenant or (str(tenant) if tenant else None)
 
     if foreign:
         return await _refuse(request, subject, membership,
-                             f"{len(foreign)} of the addressed channels belong to another tenant")
+                             f"{len(foreign)} of the addressed channels belong to another tenant",
+                             requested_tenant=foreign_tenant)
 
 
-async def _refuse(request: Request, subject: str, membership: Membership, detail: str) -> None:
+async def _refuse(request: Request, subject: str, membership: Membership, detail: str,
+                  requested_tenant: str | None = None) -> None:
     """Deny, or in observe mode only log — mirrors the core's OFF/OBSERVE/ENFORCE."""
     observing = settings.tenant_enforcement == "observe"
     log.info("%sDenied cross-tenant access: %s %s for subject %s (%s)",
@@ -259,14 +275,15 @@ async def _refuse(request: Request, subject: str, membership: Membership, detail
 
     await _write_audit(request, subject, membership,
                        status=200 if observing else 403,
-                       outcome="FILTERED" if observing else "DENIED")
+                       outcome="FILTERED" if observing else "DENIED",
+                       requested_tenant=requested_tenant)
 
     if not observing:
         raise HTTPException(status_code=403, detail="Access denied to another tenant's data")
 
 
 async def _write_audit(request: Request, subject: str, membership: Membership,
-                       status: int, outcome: str) -> None:
+                       status: int, outcome: str, requested_tenant: str | None = None) -> None:
     """Record the attempt in the platform's access_audit table.
 
     QS-SEC-01 asks for one audit entry per attempt, and roughly a fifth of the
@@ -287,9 +304,10 @@ async def _write_audit(request: Request, subject: str, membership: Membership,
             """
             INSERT INTO access_audit
                 (subject, user_id, requested_tenant, method, path, http_status, outcome)
-            VALUES ($1, $2::uuid, NULL, $3, $4, $5, $6)
+            VALUES ($1, $2::uuid, $3::uuid, $4, $5, $6, $7)
             """,
-            subject, membership.user_id, request.method, request.url.path, status, outcome,
+            subject, membership.user_id, requested_tenant,
+            request.method, request.url.path, status, outcome,
         )
     except Exception as e:  # noqa: BLE001 — auditing must not fail the request
         log.warning("Could not write access audit entry for %s %s: %s",

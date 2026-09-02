@@ -1,5 +1,8 @@
 package com.digitaldemon.core.metricpoint;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
+import com.digitaldemon.core.tenancy.ResourceKind;
+import com.digitaldemon.core.ontology.ObjectEntity;
 import com.digitaldemon.core.metricpoint.MetricPoint;
 import com.digitaldemon.core.physicalquantity.PhysicalQuantity;
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
@@ -40,6 +43,7 @@ public class MetricPointController {
     private final PhysicalQuantityService physicalQuantityService;
     private final OntologyService ontologyService;
     private final AuthService authService;
+    private final TenantBodyGuard tenantBodyGuard;
 
     @GetMapping("/api/v1/objects/{objectId}/metrics")
     public ResponseEntity<?> listMetricPoints(@PathVariable String objectId) {
@@ -80,6 +84,19 @@ public class MetricPointController {
         if (unit == null || unit.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("message", "unit is required"));
         }
+
+        // The tenant is the anchor object's; a body tenantId may only confirm it.
+        // And the device id, a plain string, must not already be another
+        // tenant's device, or the new metric point would read its live values.
+        tenantBodyGuard.requireTenant(tenantId);
+        tenantBodyGuard.requireDeviceNotForeign(deviceId);
+        ObjectEntity anchor = ontologyService.getObject(assetId);
+        UUID anchorTenant = anchor.getTenant() == null ? null : anchor.getTenant().getId();
+        if (tenantId != null && !tenantId.equals(anchorTenant)) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("message", "tenantId does not match the object's tenant"));
+        }
+        tenantId = anchorTenant;
 
         MetricPoint created = metricPointService.createMetricPoint(
             assetId, deviceId, metricIdInt.shortValue(), quantityName, unit,

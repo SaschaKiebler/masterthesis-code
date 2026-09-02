@@ -1,6 +1,7 @@
 package com.digitaldemon.core.common;
 
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
+import com.digitaldemon.core.tenancy.CrossTenantAccessException;
 import com.digitaldemon.core.common.exception.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,17 @@ public class GlobalExceptionHandler {
         log.warn("Security error: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(Map.of("error", ex.getMessage()));
+    }
+
+    /**
+     * A body-carried id of another tenant. 403 with the same message the
+     * TenantScopeInterceptor writes for a URL-carried one, so the client and
+     * the audit trail cannot tell the two paths apart.
+     */
+    @ExceptionHandler(CrossTenantAccessException.class)
+    public ResponseEntity<Map<String, Object>> handleCrossTenant(CrossTenantAccessException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+            .body(Map.of("message", ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

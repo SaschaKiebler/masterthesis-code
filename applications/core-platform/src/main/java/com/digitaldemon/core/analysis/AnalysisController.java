@@ -1,5 +1,7 @@
 package com.digitaldemon.core.analysis;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
+import com.digitaldemon.core.tenancy.ResourceKind;
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
 import com.digitaldemon.core.common.exception.ValidationException;
 import com.digitaldemon.core.analysis.AnalysisViewService.AnalysisViewDTO;
@@ -42,6 +44,7 @@ public class AnalysisController {
 
     private final AnalysisViewService analysisViewService;
     private final AnalysisTemplateService analysisTemplateService;
+    private final TenantBodyGuard tenantBodyGuard;
 
     // ─── Analysis Views ──────────────────────────────────────────────────────
 
@@ -151,6 +154,9 @@ public class AnalysisController {
         if (tenantIdStr != null && !tenantIdStr.isBlank()) {
             tenantId = parseUUID(tenantIdStr, "tenant ID");
         }
+        // A tenant template needs membership, a system template (no tenant)
+        // needs a system admin.
+        tenantBodyGuard.requireTenantOrSystem(tenantId);
 
         try {
             AnalysisTemplateDTO created = analysisTemplateService.createTemplate(tenantId,

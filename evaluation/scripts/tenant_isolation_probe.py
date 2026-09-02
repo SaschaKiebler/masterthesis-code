@@ -34,6 +34,23 @@ object ids) harvested as admin during bootstrap. That over-approximates
 rather than under-approximates — a false LEAK is investigated by hand, a
 missed leak would be the dangerous direction.
 
+Two families of attempts, because the core enforces them in two places:
+
+  URL-carried ids   /projects/{B}, /objects/{B}/metrics, ?tenantId=B ...
+                    resolved by the TenantScopeInterceptor.
+  body-carried ids  {"siteId": B}, {"sourceId": A, "targetId": B},
+                    {"bindings": [{"metricPointId": B}]}, ?metricPointIds=B ...
+                    resolved by the TenantBodyGuard, which the review of
+                    2026-09-02 added after twelve such fields were found
+                    unchecked. These are WRITE attempts with an owned anchor
+                    and a foreign id inside the payload. Under enforcement all
+                    of them must be refused; if one is accepted the probe
+                    reports it as LEAK regardless of the response body,
+                    because a cross-tenant write that succeeded is the finding,
+                    whether or not the foreign id is echoed back.
+                    Skipped in --self-check (they would create real rows) and
+                    with --no-writes.
+
 Destructive endpoints (privacy erasure) are skipped unless
 --include-destructive is passed: if isolation is broken there, the probe would
 delete the other tenant's data instead of just reporting the hole.
@@ -112,6 +129,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--prefix-a", default="tenanta")
     p.add_argument("--prefix-b", default="tenantb")
     p.add_argument("--probe-password", default="probe-pw-2026")
+    p.add_argument("--no-writes", action="store_true",
+                   help="skip the body-carried write attempts (POST/PATCH with a foreign id "
+                        "inside the payload)")
     p.add_argument("--include-destructive", action="store_true",
                    help="also attempt privacy erasure across tenants (may DELETE on a leak)")
     p.add_argument("--setup-only", action="store_true",
@@ -215,7 +235,8 @@ def harvest(core_host: str, admin_token: str, prefix: str,
 
 # ── Attempts ─────────────────────────────────────────────────────────────────
 
-def classify(resp: requests.Response, foreign_ids: list[str]) -> tuple[str, list[str]]:
+def classify(resp: requests.Response, foreign_ids: list[str],
+             write: bool = False) -> tuple[str, list[str]]:
     """Only 401/403 proves enforcement — see the module docstring."""
     if resp.status_code in (401, 403):
         return "DENIED", []
@@ -227,18 +248,24 @@ def classify(resp: requests.Response, foreign_ids: list[str]) -> tuple[str, list
         return "ERROR", [f"unexpected HTTP {resp.status_code}"]
     body = resp.text
     hits = [i for i in foreign_ids if i and i in body]
+    if write:
+        # An accepted cross-tenant write is the finding itself; the body of a
+        # 201 rarely echoes the foreign id ("Site added to project").
+        return "LEAK", hits or ["write accepted"]
     return ("LEAK", hits) if hits else ("FILTERED", [])
 
 
 def attempt(session: requests.Session, actor: TenantFixture, target: TenantFixture,
             service: str, host: str, method: str, path: str,
-            payload: dict | None = None) -> Attempt:
+            payload: dict | None = None, write: bool = False) -> Attempt:
     url = f"{host}{path}"
     try:
         if method == "GET":
             resp = session.get(url, timeout=15)
         elif method == "POST":
             resp = session.post(url, json=payload, timeout=15)
+        elif method == "PATCH":
+            resp = session.patch(url, json=payload, timeout=15)
         elif method == "DELETE":
             resp = session.delete(url, timeout=15)
         else:
@@ -247,7 +274,7 @@ def attempt(session: requests.Session, actor: TenantFixture, target: TenantFixtu
         return Attempt(actor.prefix, target.prefix, service, method, path, 0, "ERROR",
                        [str(e)[:80]])
 
-    outcome, hits = classify(resp, target.identifiers())
+    outcome, hits = classify(resp, target.identifiers(), write)
     return Attempt(actor.prefix, target.prefix, service, method, path,
                    resp.status_code, outcome, hits)
 
@@ -302,6 +329,88 @@ def core_paths(target: TenantFixture) -> list[tuple[str, str, dict | None]]:
     return paths
 
 
+def core_write_paths(actor: TenantFixture,
+                     target: TenantFixture) -> list[tuple[str, str, dict | None]]:
+    """Writes anchored on the ACTOR's own resources that smuggle one of the
+    TARGET's ids in the body or in a query parameter the interceptor does not
+    parse. Every entry corresponds to a gap the review of 2026-09-02 closed.
+
+    Payloads are shaped so that the tenant guard is the FIRST thing that can
+    refuse them: valid types, valid detector key, existing anchors. A 400 here
+    would mean the probe measured its own malformed call.
+    """
+    paths: list[tuple[str, str, dict | None]] = []
+    t = target
+    foreign_obj = t.object_ids[0] if t.object_ids else None
+    foreign_mp = t.metric_point_ids[0] if t.metric_point_ids else None
+    foreign_dev = t.device_ids[0] if t.device_ids else None
+
+    # G1  project inside the other tenant
+    paths.append(("POST", "/api/v1/projects",
+                  {"name": "probe", "tenantId": t.tenant_id}))
+    # G2  foreign site pulled into an owned project (bulk read afterwards)
+    if actor.project_id and t.site_id:
+        paths.append(("POST", f"/api/v1/projects/{actor.project_id}/sites",
+                      {"siteId": t.site_id}))
+    # G3  link from an owned object to a foreign one
+    if actor.site_id and foreign_obj:
+        paths.append(("POST", "/api/v1/links",
+                      {"sourceId": actor.site_id, "targetId": foreign_obj,
+                       "linkTypeName": "CONTAINS"}))
+    # G4  object created in the other tenant / registered in its project
+    paths.append(("POST", "/api/v1/objects",
+                  {"objectTypeName": "ROOM", "displayName": "probe", "tenantId": t.tenant_id}))
+    if t.project_id:
+        paths.append(("POST", "/api/v1/objects",
+                      {"objectTypeName": "ROOM", "displayName": "probe",
+                       "tenantId": actor.tenant_id, "projectId": t.project_id}))
+    # G5  KPI formula bound to a foreign metric point
+    if actor.asset_id and foreign_mp:
+        paths.append(("POST", f"/api/v1/objects/{actor.asset_id}/kpi-formulas",
+                      {"name": "probe_kpi", "formula": "x",
+                       "variables": {"x": {"source": "DIRECT", "metricPointId": foreign_mp}}}))
+    # G6  anomaly rule bound to a foreign metric point
+    if foreign_mp:
+        paths.append(("POST", "/api/v1/anomaly-rules",
+                      {"name": "probe_rule", "detector": "short_cycle",
+                       "bindings": [{"role": "switch", "metricPointId": foreign_mp}]}))
+    # G7  foreign metric points named in the query string of an owned project
+    if actor.project_id and foreign_mp:
+        paths.append(("GET", f"/api/v1/projects/{actor.project_id}/channels"
+                             f"?metricPointIds={foreign_mp}", None))
+    # G8  derived property written onto a foreign object
+    if foreign_obj:
+        paths.append(("POST", "/api/v1/derived-properties",
+                      {"objectId": foreign_obj, "propertyName": "probe", "valueText": "x"}))
+    # G9  owned asset relocated into a foreign site
+    if actor.asset_id and t.site_id:
+        paths.append(("POST", f"/api/v1/assets/{actor.asset_id}/relocate",
+                      {"targetSiteId": t.site_id}))
+    # G10 analysis template inside the other tenant
+    paths.append(("POST", "/api/v1/analysis-templates",
+                  {"name": "probe", "definition": {}, "tenantId": t.tenant_id}))
+    # G11 KPI generation with the other tenant's project as context
+    if actor.asset_id and t.project_id:
+        paths.append(("POST", f"/api/v1/objects/{actor.asset_id}/kpi-formulas/generate",
+                      {"prompt": "probe", "projectId": t.project_id}))
+    # G12 metric point on the other tenant's device id / under its tenant
+    if actor.asset_id and foreign_dev:
+        paths.append(("POST", f"/api/v1/objects/{actor.asset_id}/metrics",
+                      {"deviceId": foreign_dev, "metricId": 99, "unit": "x"}))
+    if actor.asset_id:
+        paths.append(("POST", f"/api/v1/objects/{actor.asset_id}/metrics",
+                      {"deviceId": "probe-device", "metricId": 99, "unit": "x",
+                       "tenantId": t.tenant_id}))
+    return paths
+
+
+def analytics_unscoped_paths() -> list[tuple[str, str, dict | None]]:
+    """Requests that name NO id and therefore addressed, before the fix of
+    2026-09-02, the whole measurement store. Must be refused for a tenant user."""
+    return [("POST", "/stats/ingest-rate", {"window_minutes": 60}),
+            ("POST", "/stats/ingest-rate", {"metric_point_ids": [], "window_minutes": 60})]
+
+
 def analytics_paths(target: TenantFixture) -> list[tuple[str, str, dict | None]]:
     """Analytics is queried with the OTHER tenant's metric point ids."""
     if not target.metric_point_ids:
@@ -345,6 +454,16 @@ def run_direction(args, actor: TenantFixture, target: TenantFixture) -> list[Att
                 for m, p, b in core_paths(target)]
     attempts += [attempt(analytics, actor, target, "analytics", args.analytics_host, m, p, b)
                  for m, p, b in analytics_paths(target)]
+
+    # Body-carried ids. Only meaningful against the OTHER tenant: against the
+    # actor's own resources these would create real rows.
+    if not args.no_writes and actor is not target:
+        attempts += [attempt(core, actor, target, "core", args.core_host, m, p, b,
+                             write=(m != "GET"))
+                     for m, p, b in core_write_paths(actor, target)]
+        attempts += [attempt(analytics, actor, target, "analytics", args.analytics_host,
+                             m, p, b, write=True)
+                     for m, p, b in analytics_unscoped_paths()]
 
     if args.include_destructive and target.person_id:
         attempts.append(attempt(core, actor, target, "core", args.core_host,
@@ -393,7 +512,8 @@ def self_check(args, fixtures: list[TenantFixture]) -> int:
     counts = Counter(x.outcome for x in attempts)
     over_blocked = [x for x in attempts if x.outcome in ("DENIED", "ERROR")]
 
-    print(f"\nSELF-CHECK: {len(attempts)} requests against the caller's own resources")
+    print(f"\nSELF-CHECK: {len(attempts)} requests against the caller's own resources "
+          f"(body-carried write attempts are not repeated here, they would create rows)")
     for outcome in ("FILTERED", "LEAK", "DENIED", "NOT_FOUND", "BAD_REQUEST", "ERROR"):
         print(f"  {outcome:<12} {counts.get(outcome, 0)}")
     print("  (LEAK here means 'own data returned', which is the expected outcome)")

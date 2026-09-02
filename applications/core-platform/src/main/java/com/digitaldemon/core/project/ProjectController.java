@@ -1,5 +1,7 @@
 package com.digitaldemon.core.project;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
+import com.digitaldemon.core.tenancy.ResourceKind;
 import com.digitaldemon.core.project.ProjectHealthDTO;
 import com.digitaldemon.core.derivedproperty.DerivedProperty;
 import com.digitaldemon.core.event.Event;
@@ -68,6 +70,7 @@ public class ProjectController {
     private final DerivedPropertyRepository derivedPropertyRepository;
     private final ObjectRepository objectRepository;
     private final OntologyService ontologyService;
+    private final TenantBodyGuard tenantBodyGuard;
 
     // ─── List projects ────────────────────────────────────────────────────────
 
@@ -114,6 +117,7 @@ public class ProjectController {
         }
 
         UUID tenantId = parseUUID(tenantIdStr, "tenantId");
+        tenantBodyGuard.requireTenant(tenantId);
 
         try {
             ProjectDTO created = projectService.createProject(
@@ -180,6 +184,10 @@ public class ProjectController {
             return ResponseEntity.badRequest().body(Map.of("message", "siteId is required"));
         }
         UUID siteId = parseUUID(siteIdStr, "siteId");
+        // The site arrives in the body, so the interceptor never saw it. Without
+        // this, a foreign site added to an owned project turns every
+        // project-scoped read into a read of the other tenant.
+        tenantBodyGuard.requireAccess(ResourceKind.OBJECT, siteId);
 
         try {
             projectService.addSiteToProject(projectId, siteId);
@@ -327,6 +335,9 @@ public class ProjectController {
                     .filter(str -> !str.isEmpty())
                     .map(str -> parseUUID(str, "metricPointId"))
                     .toList();
+                // Query-string ids, not path ids: the interceptor only parses
+                // tenantId from the query string.
+                tenantBodyGuard.requireReferenceToAll(ResourceKind.OBJECT, mpIds);
             } else {
                 List<Object[]> rows = metricPointRepository.findEnrichedByObjectIds(objectIds);
                 mpIds = rows.stream()

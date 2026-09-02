@@ -10,7 +10,7 @@ PREFIX=/tmp/qs-per-03
 # Deliberately not `set -e`: locust exits non-zero when its failure threshold
 # trips, and exactly that run is the one whose numbers we need to see.
 status=0
-locust -f /app/locustfile.py --headless --csv "$PREFIX" "$@" || status=$?
+locust -f "/app/${LOCUST_FILE:-locustfile.py}" --headless --csv "$PREFIX" "$@" || status=$?
 
 for part in stats failures stats_history; do
   file="${PREFIX}_${part}.csv"

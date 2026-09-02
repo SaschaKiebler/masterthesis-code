@@ -32,7 +32,7 @@ export async function GET(
   try {
     const channelsResponse = await coreGet(
       req,
-      `/assets/${id}/channels${metrics ? `?metrics=${encodeURIComponent(metrics)}` : ""}`
+      `/assets/${encodeURIComponent(id)}/channels${metrics ? `?metrics=${encodeURIComponent(metrics)}` : ""}`
     );
     if (!channelsResponse.ok) {
       return new NextResponse(channelsResponse.body, { status: channelsResponse.status });

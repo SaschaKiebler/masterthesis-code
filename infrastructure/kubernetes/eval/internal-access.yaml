@@ -72,3 +72,25 @@ spec:
     - name: http
       port: 8100
       targetPort: 8100
+---
+# Frontend proxy, VPC-internal. QS-SEC-01 attacks the platform through its only
+# external surface, the frontend proxy, so the security load generator needs a
+# private address for it just like the ingest and query generators have for
+# mosquitto, core and analytics. Not part of a normal ingest/query session.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-internal
+  namespace: heating-platform
+  labels:
+    eval: internal
+  annotations:
+    networking.gke.io/load-balancer-type: "Internal"
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000

@@ -1,5 +1,6 @@
 package com.digitaldemon.core.gateway;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
 import com.digitaldemon.core.common.RestGateway;
 
 import com.digitaldemon.core.site.SiteDTO;
@@ -43,6 +44,9 @@ class RestGatewaySiteScopingTest {
     @Mock
     private ObjectRepository objectRepository;
 
+    @Mock
+    private TenantBodyGuard tenantBodyGuard;
+
     private RestGateway restGateway;
 
     private SiteDTO site1;
@@ -51,7 +55,7 @@ class RestGatewaySiteScopingTest {
 
     @BeforeEach
     void setUp() {
-        restGateway = new RestGateway(assetServiceStub, authService, siteService, assetService, objectRepository);
+        restGateway = new RestGateway(assetServiceStub, authService, siteService, assetService, objectRepository, tenantBodyGuard);
 
         site1 = new SiteDTO(UUID.randomUUID(), "Site Alpha", "{}", 5);
         site2 = new SiteDTO(UUID.randomUUID(), "Site Beta", "{}", 3);

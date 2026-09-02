@@ -31,7 +31,7 @@ export async function GET(
   try {
     const channelsResponse = await coreGet(
       req,
-      `/projects/${id}/channels${
+      `/projects/${encodeURIComponent(id)}/channels${
         metricPointIds ? `?metricPointIds=${encodeURIComponent(metricPointIds)}` : ""
       }`
     );

@@ -1,5 +1,7 @@
 package com.digitaldemon.core.ontology;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
+import com.digitaldemon.core.tenancy.ResourceKind;
 import com.digitaldemon.core.ontology.Link;
 import com.digitaldemon.core.ontology.LinkType;
 import com.digitaldemon.core.ontology.ObjectEntity;
@@ -48,6 +50,7 @@ public class GraphController {
     private final ProjectObjectRepository projectObjectRepository;
     private final PhysicalDeviceRepository physicalDeviceRepository;
     private final AuthService authService;
+    private final TenantBodyGuard tenantBodyGuard;
 
     // =========================================================================
     // GET /api/v1/link-types
@@ -197,6 +200,10 @@ public class GraphController {
         }
 
         UUID tenantId = parseUUID(tenantIdStr, "tenantId");
+        tenantBodyGuard.requireTenant(tenantId);
+        if (projectIdStr != null && !projectIdStr.isBlank()) {
+            tenantBodyGuard.requireAccess(ResourceKind.PROJECT, parseUUID(projectIdStr, "projectId"));
+        }
 
         try {
             ObjectEntity created = ontologyService.createObject(
@@ -466,6 +473,11 @@ public class GraphController {
 
         UUID sourceId = parseUUID(sourceIdStr, "sourceId");
         UUID targetId = parseUUID(targetIdStr, "targetId");
+        // Both ends come from the body. The source is written to (the link is
+        // its outbound edge), the target is only pointed at, so it may be a
+        // global object such as a physical quantity.
+        tenantBodyGuard.requireAccess(ResourceKind.OBJECT, sourceId);
+        tenantBodyGuard.requireReference(ResourceKind.OBJECT, targetId);
 
         try {
             Link link = ontologyService.createLink(sourceId, targetId, linkTypeName.toUpperCase());

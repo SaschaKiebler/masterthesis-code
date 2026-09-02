@@ -28,7 +28,7 @@ export async function GET(
     : null;
 
   try {
-    const channelsResponse = await coreGet(req, `/sites/${siteId}/channels`);
+    const channelsResponse = await coreGet(req, `/sites/${encodeURIComponent(siteId)}/channels`);
     if (!channelsResponse.ok) {
       return new NextResponse(channelsResponse.body, { status: channelsResponse.status });
     }

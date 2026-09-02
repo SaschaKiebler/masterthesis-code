@@ -1,5 +1,7 @@
 package com.digitaldemon.core.derivedproperty;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
+import com.digitaldemon.core.tenancy.ResourceKind;
 import com.digitaldemon.core.derivedproperty.DerivedProperty;
 import com.digitaldemon.core.user.AuthService;
 import com.digitaldemon.core.derivedproperty.DerivedPropertyService;
@@ -30,6 +32,7 @@ public class DerivedPropertyController {
 
     private final DerivedPropertyService derivedPropertyService;
     private final AuthService authService;
+    private final TenantBodyGuard tenantBodyGuard;
 
     @GetMapping("/api/v1/objects/{objectId}/derived-properties")
     public ResponseEntity<?> getObjectDerivedProperties(@PathVariable String objectId) {
@@ -87,6 +90,9 @@ public class DerivedPropertyController {
         }
 
         UUID objectId = parseUUID(objectIdStr, "objectId");
+        // Writing expires the object's current value of this property, so a
+        // foreign object id would let the caller overwrite another tenant's data.
+        tenantBodyGuard.requireAccess(ResourceKind.OBJECT, objectId);
 
         DerivedProperty saved = derivedPropertyService.writeProperty(
             objectId, propertyName, displayName, valueNumeric, valueText,

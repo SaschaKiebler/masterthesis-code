@@ -1,5 +1,6 @@
 package com.digitaldemon.core.device;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
 import com.digitaldemon.core.user.AuthService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,19 +27,24 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/device-discovery")
 @TenantUnscoped(reason = "A discovery session id is a handle to transient state inside "
-        + "device-management, not a row in this service's database, so there is nothing to "
-        + "resolve a tenant from. Access is guarded by the consultant/admin role check on "
-        + "every handler instead. Residual gap: two consultants of different tenants could "
-        + "read each other's session ids if one were guessed. Closing it properly means "
-        + "device-management returning the session's tenant, which is out of scope here.")
+        + "device-management, not a row in this service's database, so the interceptor cannot "
+        + "resolve a tenant from it. The handlers do it themselves: the session's tenant is "
+        + "read back from device-management and checked with canAccessTenant before a session "
+        + "is polled, stopped or analysed, a tenantId in the body must be one the caller "
+        + "belongs to, and a device id already owned by another tenant cannot be tapped.")
 public class DeviceDiscoveryController {
 
+    private static final String FOREIGN = "Access denied to another tenant's resource";
+
     private final AuthService authService;
+    private final TenantBodyGuard tenantBodyGuard;
     private final RestClient deviceManagement;
 
     public DeviceDiscoveryController(AuthService authService,
+                                     TenantBodyGuard tenantBodyGuard,
                                      @Value("${device-management.url}") String deviceManagementUrl) {
         this.authService = authService;
+        this.tenantBodyGuard = tenantBodyGuard;
         this.deviceManagement = RestClient.builder().baseUrl(deviceManagementUrl).build();
     }
 
@@ -64,6 +70,11 @@ public class DeviceDiscoveryController {
         String tenantIdStr = (String) body.get("tenantId");
         if (tenantIdStr != null && !tenantIdStr.isBlank()) {
             tenantId = UUID.fromString(tenantIdStr);
+            // The tenant keys the per-tenant session quota, so a foreign one
+            // would let a caller exhaust another tenant's discovery slots.
+            if (!authService.canAccessTenant(tenantId)) {
+                return ResponseEntity.status(403).body(Map.of("message", FOREIGN));
+            }
         } else {
             List<UUID> tenantIds = authService.getAccessibleTenantIds();
             if (!tenantIds.isEmpty()) {
@@ -75,6 +86,10 @@ public class DeviceDiscoveryController {
                 return ResponseEntity.badRequest().body(Map.of("message", "No tenant context available"));
             }
         }
+
+        // A tap on a device that already belongs to another tenant would hand
+        // over its raw telemetry.
+        tenantBodyGuard.requireDeviceNotForeign(deviceId);
 
         return forward(() -> deviceManagement.post()
                 .uri("/api/v1/device-discovery")
@@ -94,6 +109,11 @@ public class DeviceDiscoveryController {
             return ResponseEntity.status(403).body(Map.of("message", "Consultant or admin role required"));
         }
 
+        ResponseEntity<Map<String, Object>> denied = denyForeignSession(id);
+        if (denied != null) {
+            return denied;
+        }
+
         String uri = since != null
                 ? "/api/v1/device-discovery/" + id + "?since=" + since
                 : "/api/v1/device-discovery/" + id;
@@ -111,6 +131,11 @@ public class DeviceDiscoveryController {
             return ResponseEntity.status(403).body(Map.of("message", "Consultant or admin role required"));
         }
 
+        ResponseEntity<Map<String, Object>> denied = denyForeignSession(id);
+        if (denied != null) {
+            return denied;
+        }
+
         return forward(() -> deviceManagement.delete().uri("/api/v1/device-discovery/" + id));
     }
 
@@ -125,7 +150,44 @@ public class DeviceDiscoveryController {
             return ResponseEntity.status(403).body(Map.of("message", "Consultant or admin role required"));
         }
 
+        ResponseEntity<Map<String, Object>> denied = denyForeignSession(id);
+        if (denied != null) {
+            return denied;
+        }
+
         return forward(() -> deviceManagement.post().uri("/api/v1/device-discovery/" + id + "/analyze"));
+    }
+
+    // ── Session ownership ─────────────────────────────────────────────────────
+
+    /**
+     * 403 when the session belongs to a tenant the caller cannot access, null
+     * otherwise. The session's tenant is read back from device-management,
+     * which is one extra round trip per call and the price of not keeping
+     * session state in this service. An unknown session is left to the
+     * forwarded call, which answers 404.
+     */
+    private ResponseEntity<Map<String, Object>> denyForeignSession(String id) {
+        ResponseEntity<Map<String, Object>> session =
+                forward(() -> deviceManagement.get().uri("/api/v1/device-discovery/" + id));
+        if (!session.getStatusCode().is2xxSuccessful() || session.getBody() == null) {
+            return null;
+        }
+        Object tenant = session.getBody().get("tenantId");
+        if (tenant == null) {
+            return null;
+        }
+        UUID tenantId;
+        try {
+            tenantId = UUID.fromString(tenant.toString());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        if (authService.canAccessTenant(tenantId)) {
+            return null;
+        }
+        log.info("Denied cross-tenant access to discovery session {} of tenant {}", id, tenantId);
+        return ResponseEntity.status(403).body(Map.of("message", FOREIGN));
     }
 
     // ── Forwarding ────────────────────────────────────────────────────────────

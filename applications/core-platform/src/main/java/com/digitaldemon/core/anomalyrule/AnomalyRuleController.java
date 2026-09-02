@@ -1,5 +1,7 @@
 package com.digitaldemon.core.anomalyrule;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
+import com.digitaldemon.core.tenancy.ResourceKind;
 import com.digitaldemon.core.anomalyrule.AnomalyRuleService.Binding;
 import com.digitaldemon.core.common.exception.ResourceNotFoundException;
 import com.digitaldemon.core.common.exception.ValidationException;
@@ -42,6 +44,7 @@ public class AnomalyRuleController {
     private final MetricPointService metricPointService;
     private final AuthService authService;
     private final NamedParameterJdbcTemplate jdbc;
+    private final TenantBodyGuard tenantBodyGuard;
 
     // ── Templates ─────────────────────────────────────────────────────────
 
@@ -151,6 +154,10 @@ public class AnomalyRuleController {
         String detector = requireString(body, "detector");
         Map<String, Object> params = paramsOf(body);
         List<Binding> bindings = bindingsOf(body);
+        // The rule's tenant is derived from its first binding, so an unchecked
+        // foreign binding would plant a rule inside the other tenant.
+        tenantBodyGuard.requireReferenceToAll(ResourceKind.OBJECT,
+                bindings.stream().map(Binding::metricPointId).toList());
         String severity = (String) body.getOrDefault("severity", "WARNING");
         int cooldownSeconds = body.get("cooldownSeconds") instanceof Number n ? n.intValue() : 1800;
 
@@ -176,6 +183,10 @@ public class AnomalyRuleController {
         String name = body.containsKey("name") ? requireString(body, "name") : null;
         Map<String, Object> params = body.containsKey("params") ? paramsOf(body) : null;
         List<Binding> bindings = body.containsKey("bindings") ? bindingsOf(body) : null;
+        if (bindings != null) {
+            tenantBodyGuard.requireReferenceToAll(ResourceKind.OBJECT,
+                    bindings.stream().map(Binding::metricPointId).toList());
+        }
         String severity = body.containsKey("severity") ? (String) body.get("severity") : null;
         Integer cooldownSeconds = body.get("cooldownSeconds") instanceof Number n ? n.intValue() : null;
         Boolean enabled = body.containsKey("enabled") ? (Boolean) body.get("enabled") : null;

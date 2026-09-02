@@ -1,5 +1,6 @@
 package com.digitaldemon.core.gateway;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
 import com.digitaldemon.core.ontology.GraphController;
 
 import com.digitaldemon.core.ontology.ObjectEntity;
@@ -60,6 +61,7 @@ class GraphControllerDeviceConfigTest {
     @Mock private ProjectObjectRepository projectObjectRepository;
     @Mock private PhysicalDeviceRepository physicalDeviceRepository;
     @Mock private AuthService authService;
+    @Mock private TenantBodyGuard tenantBodyGuard;
 
     @InjectMocks
     private GraphController graphController;

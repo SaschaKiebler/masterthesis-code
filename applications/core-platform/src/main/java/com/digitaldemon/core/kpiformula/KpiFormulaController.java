@@ -1,5 +1,8 @@
 package com.digitaldemon.core.kpiformula;
 
+import java.util.ArrayList;
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
+import com.digitaldemon.core.tenancy.ResourceKind;
 import com.digitaldemon.core.derivedproperty.DerivedProperty;
 import com.digitaldemon.core.kpiformula.KpiFormula;
 import com.digitaldemon.core.ontology.ObjectEntity;
@@ -48,6 +51,7 @@ public class KpiFormulaController {
     private final DerivedPropertyService derivedPropertyService;
     private final OntologyService ontologyService;
     private final KpiFormulaGenerationService kpiFormulaGenerationService;
+    private final TenantBodyGuard tenantBodyGuard;
 
     // ── List ──────────────────────────────────────────────────────────────────
 
@@ -98,6 +102,9 @@ public class KpiFormulaController {
         String formula     = requireString(body, "formula");
         String variables   = extractVariablesJson(body);
         String unit        = (String) body.get("unit");
+        // Variables bind metric points by id from the body; a foreign one would
+        // read the other tenant's live value into the caller's formula.
+        tenantBodyGuard.requireReferenceToAll(ResourceKind.OBJECT, metricPointIdsOf(variables));
 
         // Derive tenantId from the anchor object — more reliable than the auth security context
         // and ensures the formula's tenant always matches the object it belongs to.
@@ -154,6 +161,9 @@ public class KpiFormulaController {
         String variables   = body.containsKey("variables") ? extractVariablesJson(body) : null;
         String unit        = (String) body.get("unit");
         Boolean enabled    = body.get("enabled") instanceof Boolean b ? b : null;
+        if (variables != null) {
+            tenantBodyGuard.requireReferenceToAll(ResourceKind.OBJECT, metricPointIdsOf(variables));
+        }
 
         try {
             KpiFormula updated = kpiFormulaService.updateFormula(
@@ -212,6 +222,7 @@ public class KpiFormulaController {
 
         String projectIdStr = body.get("projectId") instanceof String s ? s : null;
         UUID projectId = projectIdStr != null ? parseUUID(projectIdStr, "project ID") : null;
+        tenantBodyGuard.requireReference(ResourceKind.PROJECT, projectId);
 
         try {
             KpiFormulaGenerationService.KpiFormulaGenerationResult result =
@@ -344,6 +355,26 @@ public class KpiFormulaController {
      * Extract the "variables" field from the request body and convert it to a JSON string.
      * Accepts both a Map (from JSON object in the request) and a pre-serialised string.
      */
+    /** The metric points a variables document binds directly, for the tenant guard. */
+    @SuppressWarnings("unchecked")
+    private List<UUID> metricPointIdsOf(String variablesJson) {
+        Object raw = parseVariablesRaw(variablesJson);
+        if (!(raw instanceof Map<?, ?> vars)) {
+            return List.of();
+        }
+        List<UUID> ids = new ArrayList<>();
+        for (Object binding : vars.values()) {
+            if (binding instanceof Map<?, ?> b && b.get("metricPointId") instanceof String id) {
+                try {
+                    ids.add(UUID.fromString(id));
+                } catch (IllegalArgumentException ignored) {
+                    // The service reports malformed ids as a validation error.
+                }
+            }
+        }
+        return ids;
+    }
+
     private String extractVariablesJson(Map<String, Object> body) {
         Object raw = body.get("variables");
         if (raw == null) return "{}";

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE } from "@/lib/auth/session";
+import { joinProxyPath } from "@/lib/api/proxy-path";
 
 const ANALYTICS_URL = process.env.ANALYTICS_URL || "http://localhost:8100";
 
@@ -10,7 +11,10 @@ const ANALYTICS_URL = process.env.ANALYTICS_URL || "http://localhost:8100";
  */
 async function proxyRequest(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const { path } = await params;
-  const pathStr = path.join("/");
+  const pathStr = joinProxyPath(path);
+  if (pathStr === null) {
+    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+  }
   const url = new URL(req.url);
   const target = `${ANALYTICS_URL}/${pathStr}${url.search}`;
 

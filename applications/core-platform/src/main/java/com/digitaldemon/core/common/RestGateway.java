@@ -1,5 +1,8 @@
 package com.digitaldemon.core.common;
 
+import com.digitaldemon.core.tenancy.TenantBodyGuard;
+import com.digitaldemon.core.tenancy.ResourceKind;
+import com.digitaldemon.core.tenancy.CrossTenantAccessException;
 import com.digitaldemon.core.site.SiteDTO;
 import com.digitaldemon.core.ontology.ObjectEntity;
 import com.digitaldemon.core.proto.v1.*;
@@ -34,6 +37,7 @@ public class RestGateway {
     private final SiteService siteService;
     private final AssetService assetServiceBean;
     private final ObjectRepository objectRepository;
+    private final TenantBodyGuard tenantBodyGuard;
 
     // Site Endpoints
 
@@ -262,6 +266,11 @@ public class RestGateway {
             java.util.UUID targetSpaceId = (targetSpaceIdStr != null && !targetSpaceIdStr.isBlank())
                 ? java.util.UUID.fromString(targetSpaceIdStr) : null;
 
+            // The destination comes from the body: without this an asset could
+            // be moved into another tenant's site.
+            tenantBodyGuard.requireAccess(ResourceKind.OBJECT, targetSiteId);
+            tenantBodyGuard.requireAccess(ResourceKind.OBJECT, targetSpaceId);
+
             AssetDTO relocated = assetServiceBean.relocateAsset(assetId, targetSiteId, targetSpaceId);
 
             Map<String, Object> assetMap = new HashMap<>();
@@ -278,6 +287,8 @@ public class RestGateway {
             return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", "Invalid UUID format"));
+        } catch (CrossTenantAccessException e) {
+            throw e; // 403 via the global handler, not a 500 from the catch-all below
         } catch (Exception e) {
             log.error("Error relocating asset {}: {}", id, e.getMessage(), e);
             return ResponseEntity.internalServerError().body(Map.of("message", "Failed to relocate asset"));

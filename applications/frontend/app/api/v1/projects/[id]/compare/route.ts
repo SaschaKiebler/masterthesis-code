@@ -37,7 +37,7 @@ export async function GET(
   try {
     const channelsResponse = await coreGet(
       req,
-      `/projects/${id}/quantity-channels?quantityName=${encodeURIComponent(quantityName)}`
+      `/projects/${encodeURIComponent(id)}/quantity-channels?quantityName=${encodeURIComponent(quantityName)}`
     );
     if (!channelsResponse.ok) {
       return new NextResponse(channelsResponse.body, { status: channelsResponse.status });

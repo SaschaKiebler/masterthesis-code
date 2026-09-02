@@ -445,3 +445,204 @@ Subjekt war eine Person mit einem Raum, einem darüber erreichbaren Sensor und
 
 Was der Lauf nicht prüft, ist das Event-Backbone. Retention und Tombstones
 sind Topic-Konfiguration und werden hier nicht gemessen.
+
+## 11 QS-SEC-01, mandantenübergreifender Zugriffsversuch
+
+Der Angriffslauf unterscheidet sich in zwei Punkten von jedem anderen Szenario,
+und beide sind der Grund, warum ein früherer lokaler Probelauf die Messung
+nicht ersetzt.
+
+Erstens meldet sich der Angreifer als **mandantengebundener Nutzer** an, nie
+als Systemadministrator. Ein Administrator beendet die Mandantenprüfung in
+ihrer ersten Zeile, ein Lauf unter seinem Konto würde die Durchsetzung als
+kostenlos ausweisen. Das Lastskript verweigert deshalb den Start unter
+`admin@local`.
+
+Zweitens läuft der Angriff ausschließlich über den **Proxy der Weboberfläche**,
+die einzige nach außen erreichbare Fläche der Plattform. Kein Backend-Dienst
+wird direkt adressiert. Der Proxy hängt das Sitzungs-Cookie als Bearer-Token an
+und leitet an Core und Analytics weiter, wo die Mandantenprüfung tatsächlich
+greift.
+
+| Szenario | Angreifer | Ziel | Zielwerte |
+|---|---|---|---|
+| QS-SEC-01 | `probe-tenanta@example.org`, Rolle viewer | Mandant `tenantb` | 0 mandantenfremde Datensätze, je Versuch 1 Audit-Eintrag |
+
+### Woher der Angreifer die fremden Kennungen kennt
+
+Er liest sie nicht, denn genau das soll ja verhindert werden. Er **leitet sie
+her**. Der mock-service bildet jede Kennung als uuid5 über
+`<präfix>:<art>:...`, also folgt die gesamte Angriffsfläche von `tenantb` aus
+seinem Präfix und seiner Flottenform. Das ist der realistische Fall, ein
+Angreifer, der eine Kennung kennt oder errät und sie ausprobiert. Bei zwei
+Standorten mit je zwei Räumen ergibt das 6 Geräte, 20 Messpunkte und
+zusammen 42 Kennungen, deren Auftauchen in einer Antwort ein Leck ist.
+
+### Der Katalog, nach OWASP API Security Top 10 (2023)
+
+| Kategorie | Versuche | Erwartung |
+|---|---|---|
+| API1 Broken Object Level Authorization | Projekt, Messpunkte, Latest-Values, Graph, Health, Channels, Dashboards, Events, Objekte, Liegenschaften, Mandant, dazu fünf Analytics-Routen mit fremden Messpunkt-IDs | 401 oder 403 |
+| API2 Broken Authentication | ohne Token, mit kaputtem Token, mit gültig geformtem Token unter falscher Signatur | 401 |
+| API3 Broken Object Property Level Authorization | Sammel-Endpunkte, die filtern statt abzulehnen | 2xx ohne fremde Kennung |
+| API5 Broken Function Level Authorization | Schreibversuche als viewer auf fremde Objekte, Projekte, Links und Personen | 401, 403 oder 404 |
+
+Die Bewertung je Versuch:
+
+| Ergebnis | Bedeutung | Wertung |
+|---|---|---|
+| DENIED, 401 oder 403 | der Endpunkt hat abgelehnt | bestanden |
+| NOT_FOUND, 404 | nichts herausgegeben | bestanden |
+| FILTERED, 2xx ohne fremde Kennung | die Abfrage wurde eingeengt | bestanden |
+| LEAK, 2xx **mit** fremder Kennung | der Response Measure ist verletzt | **Fehlschlag** |
+| BAD_INPUT, 400 oder 422 | das Skript selbst hat falsch angefragt | Fehler des Skripts, muss null sein |
+| ERROR, 5xx oder Transport | gesondert gezählt | Fehlschlag |
+
+Ein Schreibversuch gilt bereits bei jedem 2xx als Leck, unabhängig vom Körper,
+denn er hat dann auf fremden Daten gewirkt.
+
+Damit ist die Fehlerzahl von locust genau die Leckzahl von QS-SEC-01, und die
+Tabelle je Namen ist die Abdeckungskarte mit einer Zeile je OWASP-Muster.
+
+### Die Grundlast entsteht aus dem Angriff selbst
+
+Das Szenario verlangt eine parallele Grundlast von 50 Requests/s. Bei 25
+Nutzern mit je zwei Anfragen pro Sekunde erzeugen die Angriffe genau diese
+Rate, ein zweiter Generator ist deshalb nicht nötig. Über zehn Minuten laufen
+so mehrere zehntausend Versuche statt der geforderten 100, und jedes Muster
+wird tausendfach unter Nebenläufigkeit geprüft.
+
+### Einen Lauf durchführen
+
+```bash
+# Vorbedingung: eval-up.sh hat beide Mandanten und die Probe-Nutzer angelegt
+# und die internen Endpunkte inklusive frontend-internal ausgerollt.
+infrastructure/scripts/eval-up.sh
+
+# Der Lauf, zehn Minuten
+evaluation/scripts/security-scenario.sh
+
+# kürzer, oder mit den destruktiven Schreibversuchen
+evaluation/scripts/security-scenario.sh 3m
+INCLUDE_WRITES=true evaluation/scripts/security-scenario.sh
+```
+
+Die Schreibversuche sind auf den synthetischen Fixtures von `tenantb`
+destruktiv und deshalb voreingestellt aus. Nach einem Lauf mit
+`INCLUDE_WRITES=true` den zweiten Mandanten neu seeden.
+
+Vor der Cluster-Sitzung lohnt ein Trockenlauf auf dem Entwicklungsstack, er
+kostet nichts und findet Tippfehler in Pfaden.
+
+```bash
+scripts/dev.sh up
+applications/mock-service/.venv/bin/mock-service seed --prefix tenanta --sites 1 --rooms 2
+applications/mock-service/.venv/bin/mock-service seed --prefix tenantb --sites 2 --rooms 2
+evaluation/scripts/.venv/bin/python evaluation/scripts/tenant_isolation_probe.py --setup-only
+cd evaluation/load && FRONTEND_HOST=http://localhost:3000 \
+  .venv/bin/locust -f security_locustfile.py --headless -u 5 -r 5 --run-time 60s
+```
+
+### Ergebnisse
+
+| Datei | Inhalt |
+|---|---|
+| `qs-sec-01-<zeitstempel>.txt` | Bericht mit Fenster, Angreifer, Ziel, Ergebniszusammenfassung, Abdeckungskarte je OWASP-Muster, Fehlschlägen und Audit-Abdeckung |
+| `qs-sec-01-<zeitstempel>-stats.csv` | Kennzahlen je Angriffsmuster, Spalte Failures ist die Leckzahl |
+| `qs-sec-01-<zeitstempel>-failures.csv` | jede Zeile ein Leck oder eine fehlerhafte Anfrage des Skripts |
+| `qs-sec-01-<zeitstempel>-stats_history.csv` | sekundenweiser Verlauf |
+
+Der zweite Response Measure, je Versuch ein Audit-Eintrag, kommt aus
+[`evaluation/sql/audit-coverage.sql`](sql/audit-coverage.sql), das der Runner
+gegen den Stammdatenspeicher fährt. Beim Lesen ist eines zu beachten, und es
+gehört in den Kapiteltext statt in eine Fußnote. Nicht jeder Versuch kann eine
+Zeile erzeugen. Der Filter protokolliert, wenn er den adressierten Mandanten
+benennen kann. Ein Sammel-Endpunkt wie `/api/v1/projects` nennt gar keinen
+Mandanten, er engt seine Abfrage nur ein, und hinterlässt deshalb keine Zeile.
+Das SQL trennt diese beiden Mengen in Abschnitt 5, statt eine Quote über alles
+zu berichten.
+
+Abschnitt 4 desselben SQL trennt außerdem, welcher Dienst die Zeile geschrieben
+hat. Analytics schreibt für den Audit selbst in den Stammdatenspeicher, was die
+dokumentierte Abweichung der geteilten Datenbank vertieft und in Kapitel 6 als
+Sensitivity Point gehört.
+
+## 11 QS-SEC-01, mandantenübergreifender Zugriffsversuch
+
+| Szenario | Umgebung | Zielwerte |
+|---|---|---|
+| QS-SEC-01 | zwei Mandanten mit je einer Flotte, je ein Nutzer mit Rolle `viewer`, Grundlast 50 Requests/s aus QS-PER-03 | 0 mandantenfremde Datensätze in den Antworten, je Versuch genau 1 Audit-Eintrag, mindestens 100 Versuche |
+
+Die Sonde ist [`evaluation/scripts/tenant_isolation_probe.py`](scripts/tenant_isolation_probe.py).
+Sie legt über den Einladungsfluss je Mandant einen Nutzer an, sammelt als
+Administrator die Kennungen beider Flotten und fährt dann jeden Versuch in
+beide Richtungen, Nutzer A gegen Daten von B und umgekehrt. Jede Antwort wird
+nach der Art der Abwehr eingeordnet, nicht nur nach bestanden oder nicht.
+
+| Einordnung | Bedeutung |
+|---|---|
+| `DENIED` | 401 oder 403, der einzige Ausgang, der Durchsetzung beweist |
+| `FILTERED` | 2xx ohne fremde Kennung im Body, der Endpunkt hat die Abfrage eingeengt statt abzulehnen |
+| `LEAK` | 2xx mit fremder Kennung im Body, oder ein angenommener mandantenübergreifender Schreibversuch |
+| `NOT_FOUND` | 404, sagt nichts über Durchsetzung aus |
+| `BAD_REQUEST` | 400, ein Fehler der Sonde selbst, muss null sein |
+
+Zwei Familien von Versuchen, weil der Core sie an zwei Stellen abwehrt.
+
+- **Kennungen in der URL** (`/projects/{B}`, `/objects/{B}/metrics`,
+  `?tenantId=B`) löst der `TenantScopeInterceptor` auf, der jede Pfadvariable
+  ihrem Mandanten zuordnet und Fremde mit 403 abweist.
+- **Kennungen im Request-Body** (`{"siteId": B}`, `{"sourceId": A, "targetId": B}`,
+  `{"bindings": [{"metricPointId": B}]}`, `?metricPointIds=B`) sieht der
+  Interceptor nicht. Sie prüft der `TenantBodyGuard` in den betroffenen
+  Handlern mit derselben Entscheidungstabelle. Diese Familie sind
+  Schreibversuche mit eigenem Anker und fremder Kennung im Payload. Ein
+  angenommener Schreibversuch zählt als `LEAK`, auch wenn die Antwort die
+  fremde Kennung nicht zurückgibt. Im Selbsttest werden sie ausgelassen, weil
+  sie echte Zeilen anlegen würden.
+
+Der Analytics-Dienst prüft die Kennungen im Body selbst (`require_tenant_scope`)
+und wird direkt angesprochen. Dazu gehören zwei Aufrufe ohne jede Kennung an
+`/stats/ingest-rate`, die vor der Korrektur ein Aggregat über den gesamten
+Messwertspeicher lieferten.
+
+```bash
+# lokal: das Dev-Profil schaltet die Durchsetzung AUS, deshalb den Core mit
+# TENANT_ENFORCEMENT_MODE=ENFORCE starten, sonst misst die Sonde das Dev-Profil
+applications/mock-service/.venv/bin/mock-service seed --prefix tenanta --sites 1 --rooms 2 --persons 1
+applications/mock-service/.venv/bin/mock-service seed --prefix tenantb --sites 1 --rooms 2 --persons 1
+evaluation/scripts/.venv/bin/python evaluation/scripts/tenant_isolation_probe.py \
+  --csv evaluation/results/qs-sec-01-<datum>.csv \
+  --dsn postgresql://postgres:password@localhost:5432/digital_demon
+
+# Gegenprobe: dieselben Aufrufe gegen die eigenen Ressourcen, muss 2xx liefern.
+# Ohne sie wäre "0 Lecks" auch das Ergebnis eines Mechanismus, der alles ablehnt.
+evaluation/scripts/.venv/bin/python evaluation/scripts/tenant_isolation_probe.py --self-check
+
+# im Cluster: CORE_HOST und ANALYTICS_HOST auf die internen Endpunkte setzen,
+# die Audit-Zählung danach per kubectl exec gegen stammdaten-db
+```
+
+### Vorbereitung vom 02.09.2026, lokal
+
+Vor der Messung wurden alle Endpunkte von Core, Analytics und Frontend-Proxy
+auf genau dieses Muster durchgesehen. Der Interceptor war lückenlos, aber
+zwölf Core-Endpunkte nahmen Kennungen im Body ungeprüft an, Analytics lieferte
+ohne Kennungsliste plattformweite Aggregate, und das Frontend-Proxy ließ über
+`..%2F` den Präfix `/api/v1` verlassen. Alle drei sind geschlossen, der Guard
+hat einen eigenen Unit-Test für seine Entscheidungstabelle.
+
+| Lauf | Versuche | DENIED | FILTERED | LEAK | Audit-Einträge |
+|---|---|---|---|---|---|
+| mandantenfremd, Durchsetzung an | 138 | 132 | 6 | 0 | 132 |
+| Selbsttest gegen eigene Ressourcen | 106 | 6 | 35 | 65 | 0 |
+
+Die sechs `FILTERED` sind die Listen-Endpunkte `/projects`, `/tenants` und
+`/events`, die keinen fremden Mandanten benennen und deshalb einengen statt
+abzulehnen. Sie erzeugen bewusst keinen Audit-Eintrag, weil kein fremder
+Mandant adressiert wurde. Die sechs Verweigerungen im Selbsttest sind
+Rollenprüfungen für `viewer` (`/tenants/{id}/members`, `/fleet/status`,
+`/discovered-devices`), keine Mandantenfehler. `LEAK` im Selbsttest bedeutet
+"eigene Daten geliefert" und ist dort das erwartete Ergebnis.
+
+Die Messung für Kapitel 6 erfolgt im Cluster unter der Grundlast aus QS-PER-03.

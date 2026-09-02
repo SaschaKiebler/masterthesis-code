@@ -23,7 +23,7 @@ export async function GET(
   const from = parseEpoch(url.searchParams.get("from")) ?? to - 24 * 3600;
 
   try {
-    const channelsResponse = await coreGet(req, `/sites/${siteId}/channels`);
+    const channelsResponse = await coreGet(req, `/sites/${encodeURIComponent(siteId)}/channels`);
     if (!channelsResponse.ok) {
       return new NextResponse(channelsResponse.body, { status: channelsResponse.status });
     }
