@@ -52,13 +52,30 @@ run_load() {
   local iv=$1 dur=$2 async=${3:-}
   local args="run,--sites=25,--rooms=3,--interval=$iv,--duration=$dur,--broker=$BROKER:1883,--connections=8"
   if [ "$GEN" = cloudrun ]; then
-    if [ -n "$async" ]; then
-      gcloud run jobs execute "$JOB" --region="$REGION" --project="$PROJECT" \
-        --args="$args" --async --format="value(name)" 2>/dev/null
-    else
-      gcloud run jobs execute "$JOB" --region="$REGION" --project="$PROJECT" \
-        --args="$args" --wait --format="value(name)" 2>/dev/null
-    fi
+    local wait_flag=--wait
+    [ -n "$async" ] && wait_flag=--async
+    # Never swallow the error here. A run whose spike silently failed to start
+    # looks like a completed measurement and is worse than no measurement: it
+    # was a local network outage that once cost a full 15-minute run, and the
+    # report still came out looking plausible. Retry, then give up loudly.
+    local attempt out err
+    err=$(mktemp)
+    for attempt in 1 2 3; do
+      # stderr must go to a FILE, not into `out`: gcloud writes progress there,
+      # and folding it into stdout once produced an execution name that no
+      # describe call could resolve, so the wait loop below span all night.
+      if out=$(gcloud run jobs execute "$JOB" --region="$REGION" --project="$PROJECT" \
+                 --args="$args" "$wait_flag" --format="value(name)" 2>"$err"); then
+        rm -f "$err"
+        printf '%s' "$(printf '%s' "$out" | tr -d '[:space:]')"
+        return 0
+      fi
+      echo "run_load: attempt $attempt failed: $(cat "$err")" >&2
+      sleep 20
+    done
+    rm -f "$err"
+    echo "run_load: could not start the generator after 3 attempts, aborting" >&2
+    return 1
   else
     local flags="--sites=25 --rooms=3 --broker=$BROKER:1883 --interval=$iv --duration=$dur --connections=8"
     if [ -n "$async" ]; then "$MOCK" run $flags >"$OUT/$SCENARIO-$STAMP-async.log" 2>&1 & echo $!
@@ -74,6 +91,27 @@ generator_stats() {
     "resource.type=cloud_run_job AND labels.\"run.googleapis.com/execution_name\"=\"$exec\" AND textPayload:\"run finished\"" \
     --project="$PROJECT" --limit=1 --format="value(textPayload)" 2>/dev/null
 }
+
+# Scaling is a response measure of its own (AT-12), and a snapshot taken after
+# the run misses the peak because the autoscaler has already scaled back down.
+# Sample it as a time series for as long as the load runs.
+scaling_csv=$OUT/$SCENARIO-$STAMP-scaling.csv
+echo "time_utc,replicas,ready_pods,hpa_cpu_pct,db_cpu_millicores,ingest_cpu_millicores" > "$scaling_csv"
+sample_scaling() {
+  while :; do
+    printf '%s,%s,%s,%s,%s,%s\n' \
+      "$(date -u +%H:%M:%S)" \
+      "$(kubectl -n $NS get hpa ingestion-service -o jsonpath='{.status.currentReplicas}' 2>/dev/null)" \
+      "$(kubectl -n $NS get pods -l app=ingestion-service --no-headers 2>/dev/null | grep -c '1/1')" \
+      "$(kubectl -n $NS get hpa ingestion-service -o jsonpath='{.status.currentMetrics[0].resource.current.averageUtilization}' 2>/dev/null)" \
+      "$(kubectl top pod measurement-db-0 -n $NS --no-headers 2>/dev/null | awk '{gsub(/m/,"",$2); print $2}')" \
+      "$(kubectl top pods -n $NS -l app=ingestion-service --no-headers 2>/dev/null | awk '{gsub(/m/,"",$2); s+=$2} END {print s}')" \
+      >> "$scaling_csv"
+    sleep 15
+  done
+}
+sample_scaling & sampler_pid=$!
+trap 'kill $sampler_pid 2>/dev/null' EXIT
 
 start=$(utc)
 case "$SCENARIO" in
@@ -99,11 +137,27 @@ case "$SCENARIO" in
     step "spike: +2000 measurements/s for 300 s"
     # A second generator on the same fleet: the devices simply report more
     # often, which is the spike the scenario describes.
-    e=$(run_load 0.125 300)
+    if ! e=$(run_load 0.125 300); then
+      echo "FAILED: the spike never started, so this run carries no spike." >&2
+      echo "Discard it and repeat the scenario." >&2
+      kill $sampler_pid 2>/dev/null
+      exit 1
+    fi
     generator_stats "$e"
     step "spike over, base load continues (recovery window)"
     if [ "$GEN" = cloudrun ]; then
-      until [ "$(gcloud run jobs executions describe "$base" --region="$REGION" --project="$PROJECT" --format='value(status.completionTime)' 2>/dev/null)" != "" ]; do sleep 20; done
+      # Bounded, and loud when it gives up. An unbounded version of this loop
+      # kept a cluster alive overnight after the execution name it polled for
+      # turned out to be unresolvable.
+      deadline=$(( $(date +%s) + dur + 600 ))
+      until [ -n "$(gcloud run jobs executions describe "$base" --region="$REGION" --project="$PROJECT" --format='value(status.completionTime)' 2>/dev/null)" ]; do
+        if [ "$(date +%s)" -gt "$deadline" ]; then
+          echo "base load execution '$base' did not report completion in time, aborting" >&2
+          kill $sampler_pid 2>/dev/null
+          exit 1
+        fi
+        sleep 20
+      done
     else
       wait "$base"
     fi
@@ -112,6 +166,7 @@ case "$SCENARIO" in
   *) echo "unknown scenario: $SCENARIO"; exit 1 ;;
 esac
 end=$(utc)
+kill $sampler_pid 2>/dev/null; trap - EXIT
 
 step "Window: $start .. $end"
 report=$OUT/$SCENARIO-$STAMP.txt
@@ -129,6 +184,15 @@ report=$OUT/$SCENARIO-$STAMP.txt
   echo "######## ingestion ########"
   kubectl -n $NS get hpa ingestion-service
   kubectl -n $NS get pods -l app=ingestion-service
+  echo
+  echo "######## scaling over time ########"
+  echo "peak replicas: $(awk -F, 'NR>1 && $2>m {m=$2} END {print m+0}' "$scaling_csv")"
+  echo "full series in $(basename "$scaling_csv")"
+  echo
+  echo "######## autoscaler decisions ########"
+  # Why it scaled and when; these events expire after about an hour, so they
+  # only survive if they are captured here.
+  kubectl -n $NS describe hpa ingestion-service | sed -n '/Events:/,$p'
 } | tee "$report"
 
 step "Written to $report"

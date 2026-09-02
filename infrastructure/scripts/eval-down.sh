@@ -40,10 +40,38 @@ if [ "$MODE" = "--all" ]; then
   terraform -chdir="$ROOT/infrastructure/terraform" destroy -auto-approve -var project_id="$PROJECT"
 else
   step "Destroy the cluster only (registry and network stay)"
-  terraform -chdir="$ROOT/infrastructure/terraform" destroy -auto-approve \
-    -target=google_container_cluster.cluster -var project_id="$PROJECT"
+  # Terraform refreshes before it destroys, and that refresh has been seen to
+  # die on a transient "http2: client connection lost". It then exits without
+  # destroying anything, so retry rather than trust a single attempt.
+  for attempt in 1 2 3; do
+    if terraform -chdir="$ROOT/infrastructure/terraform" destroy -auto-approve \
+         -target=google_container_cluster.cluster -var project_id="$PROJECT"; then
+      break
+    fi
+    echo "    destroy attempt $attempt failed, retrying in 30 s"
+    sleep 30
+  done
 fi
 
+step "Verify"
+# Never report success from an exit code alone: ask GCP what is actually left.
+# A cluster that survives a failed teardown keeps billing silently.
+if [ -n "$(gcloud container clusters list --project "$PROJECT" --format='value(name)' 2>/dev/null)" ]; then
+  echo
+  echo "FAILED: the cluster still exists. It is still costing money."
+  echo "Re-run this script, or destroy it by hand:"
+  echo "  terraform -chdir=infrastructure/terraform destroy -target=google_container_cluster.cluster -var project_id=$PROJECT"
+  exit 1
+fi
+echo "    cluster gone"
+
 step "Check for leftovers that would keep billing"
-gcloud compute forwarding-rules list --project "$PROJECT" --format="table(name,region,IPAddress)" 2>/dev/null || true
-gcloud artifacts repositories list --project "$PROJECT" --format="table(name,format)" 2>/dev/null || true
+leftover=$(gcloud compute forwarding-rules list --project "$PROJECT" --format="value(name,region,IPAddress)" 2>/dev/null)
+if [ -n "$leftover" ]; then
+  echo "WARNING: forwarding rules survived the cluster, delete them by hand:"
+  echo "$leftover"
+else
+  echo "    no forwarding rules left"
+fi
+echo "    images kept in:"
+gcloud artifacts repositories list --project "$PROJECT" --format="value(name,format)" 2>/dev/null || true

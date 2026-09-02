@@ -1,0 +1,115 @@
+scenario  : qs-per-02
+generator : cloudrun (broker 10.10.0.53)
+window    : 2026-09-01 16:32:06+00 .. 2026-09-01 16:47:38+00
+
+######## loss-rate ########
+── Persisted measurements in the window ────────────────────────────────
+ persisted_measurements | devices |        first_received         |         last_received         | measurements_per_second 
+------------------------+---------+-------------------------------+-------------------------------+-------------------------
+                 795234 |     100 | 2026-09-01 16:32:23.886925+00 | 2026-09-01 16:47:23.864995+00 |                   883.6
+(1 row)
+
+── Per device family (boiler vs. Shelly carry different metric counts) ─
+ family | measurements | devices 
+--------+--------------+---------
+ boiler |       312908 |      25
+ sensor |       482326 |      75
+(2 rows)
+
+── Rejected payloads (parse/route failures, NOT silent loss) ───────────
+ ingestion_errors | first_error | last_error 
+------------------+-------------+------------
+                0 |             | 
+(1 row)
+
+── Error reasons, most frequent first ──────────────────────────────────
+ error_message | occurrences 
+---------------+-------------
+(0 rows)
+
+── Per-minute arrival profile (spot the spike and the recovery) ────────
+         minute         | measurements 
+------------------------+--------------
+ 2026-09-01 16:32:00+00 |        18660
+ 2026-09-01 16:33:00+00 |        30900
+ 2026-09-01 16:34:00+00 |        30900
+ 2026-09-01 16:35:00+00 |        30900
+ 2026-09-01 16:36:00+00 |        30900
+ 2026-09-01 16:37:00+00 |        71814
+ 2026-09-01 16:38:00+00 |        90072
+ 2026-09-01 16:39:00+00 |        91187
+ 2026-09-01 16:40:00+00 |       101858
+ 2026-09-01 16:41:00+00 |        82149
+ 2026-09-01 16:42:00+00 |        80060
+ 2026-09-01 16:43:00+00 |        30900
+ 2026-09-01 16:44:00+00 |        30900
+ 2026-09-01 16:45:00+00 |        30900
+ 2026-09-01 16:46:00+00 |        30900
+ 2026-09-01 16:47:00+00 |        12234
+(16 rows)
+
+
+######## latency-percentiles ########
+── Ingest latency, system entry to persistence (the response measure) ──
+ samples | p50_ms | p95_ms | p99_ms | max_ms 
+---------+--------+--------+--------+--------
+  795234 |    1.5 |  177.8 |  791.0 | 5332.8
+(1 row)
+
+── Ingest latency per minute (QS-PER-02: recovery after the spike) ─────
+         minute         | samples | p95_ms 
+------------------------+---------+--------
+ 2026-09-01 16:32:00+00 |   18660 |    5.4
+ 2026-09-01 16:33:00+00 |   30900 |    5.4
+ 2026-09-01 16:34:00+00 |   30900 |    5.4
+ 2026-09-01 16:35:00+00 |   30900 |    5.4
+ 2026-09-01 16:36:00+00 |   30900 |    5.4
+ 2026-09-01 16:37:00+00 |   71814 |   10.9
+ 2026-09-01 16:38:00+00 |   90072 |   79.0
+ 2026-09-01 16:39:00+00 |   91187 |  151.0
+ 2026-09-01 16:40:00+00 |  101858 |  367.0
+ 2026-09-01 16:41:00+00 |   82149 |  381.3
+ 2026-09-01 16:42:00+00 |   80060 |  569.4
+ 2026-09-01 16:43:00+00 |   30900 |    9.4
+ 2026-09-01 16:44:00+00 |   30900 |   10.0
+ 2026-09-01 16:45:00+00 |   30900 |    9.5
+ 2026-09-01 16:46:00+00 |   30900 |    9.9
+ 2026-09-01 16:47:00+00 |   12234 |    9.8
+(16 rows)
+
+── End to end incl. transport, only where a device clock exists ────────
+        family         | samples | p50_ms | p95_ms  
+-----------------------+---------+--------+---------
+ boiler (device clock) |  312908 |   13.2 | 33678.6
+(1 row)
+
+── Coverage: how many rows carry a device clock at all ─────────────────
+ with_device_clock | receive_time_fallback | pre_instrumentation | total  
+-------------------+-----------------------+---------------------+--------
+            312908 |                482326 |                   0 | 795234
+(1 row)
+
+
+######## ingestion ########
+NAME                REFERENCE                      TARGETS        MINPODS   MAXPODS   REPLICAS   AGE
+ingestion-service   Deployment/ingestion-service   cpu: 12%/70%   2         10        6          72m
+NAME                                 READY   STATUS    RESTARTS      AGE
+ingestion-service-6657886859-4ch54   1/1     Running   4 (71m ago)   72m
+ingestion-service-6657886859-52p59   1/1     Running   0             6m55s
+ingestion-service-6657886859-hgr5n   1/1     Running   0             9m41s
+ingestion-service-6657886859-lsh9f   1/1     Running   0             8m39s
+ingestion-service-6657886859-qb4kk   1/1     Running   0             9m41s
+ingestion-service-6657886859-tlfd2   1/1     Running   4 (71m ago)   72m
+
+################################################################
+VERWORFEN. Der Spitzenteil dieses Laufs ist nicht verwertbar.
+Beide Generatoren (Grundlast und Spitze) verbanden sich unter
+denselben MQTT-Client-IDs mock-pub-0..7, weil runner.py die ID
+allein aus prefix und Verbindungsindex bildete. Der Broker warf
+jeweils die aeltere Verbindung raus, beide reconnecteten in einer
+Schleife. Der Spitzen-Generator verwarf dadurch 205.914 Nachrichten
+und erreichte statt 2.500 nur rund 1.700 Messwerte/s. Gemessen wurde
+damit der Generator, nicht die Plattform.
+Behoben durch einen prozess-eindeutigen Suffix in der Client-ID.
+Die Grundlastfenster (16:32-16:36 und 16:43-16:47) sind unauffaellig.
+################################################################

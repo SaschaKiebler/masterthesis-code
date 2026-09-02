@@ -102,10 +102,14 @@ spec:
               # Raised from 500m/1Gi after the ramp of 2026-09-01 put the
               # ingest ceiling at ~1400 measurements/s with the store as the
               # binding constraint (one commit per measurement, see db.rs).
-              cpu: "2"
-              memory: 2Gi
-            limits:
+              # 4 CPU rather than the 2 the ramp used: at 2 the pod drew
+              # 2472 millicores, i.e. it burst past its own request and the
+              # measurement leaned on capacity it was not guaranteed. Autopilot
+              # also wants at least 1 GiB of memory per CPU.
+              cpu: "4"
               memory: 4Gi
+            limits:
+              memory: 6Gi
       volumes:
         - name: init
           configMap:

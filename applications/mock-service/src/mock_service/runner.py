@@ -9,6 +9,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import math
+import os
+import uuid
 from dataclasses import dataclass, field
 
 import aiomqtt
@@ -16,6 +18,13 @@ import aiomqtt
 from .devices import SimDevice, build_devices
 from .fleet import KIND_BOILER, KIND_SHELLY_HT, build_fleet
 from .scenario import FaultSpec, Scenario
+
+# Unique per generator process. A broker drops the older connection as soon as
+# a second client connects under the same id, so two generators running at once
+# (QS-PER-02 puts a spike on top of the base load) would kick each other in a
+# reconnect loop instead of both publishing. Set MOCK_RUN_ID to make the ids
+# reproducible for a specific run.
+RUN_ID = os.environ.get("MOCK_RUN_ID") or uuid.uuid4().hex[:6]
 
 log = logging.getLogger("mock")
 
@@ -103,7 +112,7 @@ async def _publisher_worker(
             async with aiomqtt.Client(
                 hostname=scenario.broker_host,
                 port=scenario.broker_port,
-                identifier=f"{scenario.prefix}-pub-{index}",
+                identifier=f"{scenario.prefix}-pub-{RUN_ID}-{index}",
             ) as client:
                 while True:
                     if pending is None:

@@ -7,6 +7,17 @@ use uuid::Uuid;
 /// Shared-subscription group used unless `MQTT_SHARE_GROUP` overrides it.
 const DEFAULT_SHARE_GROUP: &str = "ingestion";
 
+/// Connections a single instance may hold against the measurement store.
+///
+/// This has to be a fixed budget rather than deadpool's default of four per
+/// CPU, because that default scales with the NODE, not with what the database
+/// can serve. The store runs with `max_connections` of 100 and is shared with
+/// analytics and core, so ten replicas at the autoscaler's ceiling must stay
+/// well inside that. Six per instance leaves room for the other readers.
+/// Undersizing costs latency and not correctness: a saturated pool makes
+/// callers wait, which is the backpressure this service otherwise lacks.
+const DEFAULT_DB_MAX_CONNECTIONS: usize = 6;
+
 #[derive(Debug, Deserialize)]
 pub struct AppConfig {
     pub mqtt: MqttConfig,
@@ -41,6 +52,8 @@ pub struct DatabaseConfig {
     pub user: String,
     pub password: String,
     pub dbname: String,
+    /// Connections this instance may hold, see `DEFAULT_DB_MAX_CONNECTIONS`.
+    pub max_connections: usize,
 }
 
 #[derive(Debug, Deserialize)]
@@ -85,6 +98,7 @@ impl Default for DatabaseConfig {
             user: "postgres".to_string(),
             password: "password".to_string(),
             dbname: "digital_demon_measurements".to_string(),
+            max_connections: DEFAULT_DB_MAX_CONNECTIONS,
         }
     }
 }
@@ -161,6 +175,11 @@ pub fn load_config() -> Result<AppConfig> {
         user: std::env::var("DB_USER").unwrap_or_else(|_| "postgres".to_string()),
         password: std::env::var("DB_PASSWORD").unwrap_or_else(|_| "password".to_string()),
         dbname: std::env::var("DB_NAME").unwrap_or_else(|_| "digital_demon_measurements".to_string()),
+        max_connections: std::env::var("DB_MAX_CONNECTIONS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .filter(|n| *n > 0)
+            .unwrap_or(DEFAULT_DB_MAX_CONNECTIONS),
     };
 
     let kafka = KafkaConfig {

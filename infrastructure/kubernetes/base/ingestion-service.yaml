@@ -53,6 +53,14 @@ spec:
               value: "5432"
             - name: DB_NAME
               value: digital_demon_measurements
+            # Connection budget. The store runs with max_connections=100 and is
+            # shared with analytics and core, so the ingestion tier at its
+            # autoscaler ceiling of 10 replicas may claim at most 6 each, i.e.
+            # 60. Without this cap deadpool sizes the pool from the node's CPU
+            # count, which under a spike exhausted the store's connections and
+            # cost 5.65 % of the measurements in QS-PER-02.
+            - name: DB_MAX_CONNECTIONS
+              value: "6"
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -81,7 +89,10 @@ spec:
     kind: Deployment
     name: ingestion-service
   minReplicas: 2
-  maxReplicas: 6
+  # 10 rather than 6: at 2500 measurements/s the tier sat at 6/6 and 80 % CPU,
+  # so its own ceiling was in play and the ingest ceiling could no longer be
+  # attributed to the measurement store alone.
+  maxReplicas: 10
   metrics:
     - type: Resource
       resource:

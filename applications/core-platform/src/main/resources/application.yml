@@ -20,7 +20,13 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
-    baseline-version: 1
+    # Version 0, not 1. The master-data schema is shared with
+    # notification-service, so core cannot assume it migrates an empty
+    # database: whichever service starts first fills the schema, and a
+    # baseline at 1 would then mark core's own V1 as applied and skip the
+    # migration that creates `sites`. Same reasoning as the notification
+    # service, which already baselines at 0.
+    baseline-version: 0
     locations: classpath:db/migration
     out-of-order: true
 

@@ -6,7 +6,7 @@
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use deadpool_postgres::{Config, Pool, Runtime};
+use deadpool_postgres::{Config, Pool, PoolConfig, Runtime};
 use tokio_postgres::NoTls;
 use tracing::info;
 
@@ -20,13 +20,23 @@ pub async fn create_pool(cfg: &DatabaseConfig) -> Result<Pool> {
     pool_config.user = Some(cfg.user.clone());
     pool_config.password = Some(cfg.password.clone());
     pool_config.dbname = Some(cfg.dbname.clone());
+    // Bound the pool explicitly. Deadpool's default is four connections per
+    // CPU of the NODE, which has nothing to do with what the store can serve:
+    // under a load spike the autoscaler ran nine replicas, their pools together
+    // exceeded the store's max_connections of 100, and measurements were lost
+    // with connection errors while the store itself sat at half its CPU.
+    // A bounded pool turns that overload into waiting instead of loss.
+    pool_config.pool = Some(PoolConfig::new(cfg.max_connections));
 
     let pool = pool_config.create_pool(Some(Runtime::Tokio1), NoTls)?;
 
     // Test connection
     let client = pool.get().await?;
     client.simple_query("SELECT 1").await?;
-    info!("Database connection verified");
+    info!(
+        max_connections = cfg.max_connections,
+        "Database connection verified"
+    );
 
     Ok(pool)
 }
