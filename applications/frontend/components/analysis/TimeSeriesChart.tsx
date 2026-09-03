@@ -5,6 +5,7 @@ import type { Measurement, TimeRange } from "@/lib/api/types";
 import type { ChartDefinition, ChartSource } from "@/lib/api/analysis";
 import type { ProjectMetricPoint } from "@/lib/api/projects";
 import { useChartCalculations } from "@/lib/hooks/useChartCalculations";
+import { splitOnGaps, expectedStepMs, gapMarkArea } from "@/lib/chart/gaps";
 
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
@@ -78,17 +79,28 @@ export function TimeSeriesChart({ chart, measurements, metricPoints, timeRange, 
         );
         const calcById = new Map(chart.calculations.map((c) => [c.id, c]));
 
-        // Source series
-        const allSeries: any[] = formulaOnly ? [] : chart.sources.map((src) => ({
-            name: src.label,
-            type: "line",
-            yAxisIndex: src.yAxisIndex || 0,
-            data: seriesDataMap.get(src.id) || [],
-            itemStyle: { color: src.color },
-            lineStyle: { color: src.color, width: 2 },
-            showSymbol: false,
-            smooth: false,
-        }));
+        // Source series. An interval the channel did not deliver must stay
+        // empty rather than be bridged by a straight segment, otherwise an
+        // outage reads as measured data (QS-INT-01).
+        const allSeries: any[] = formulaOnly ? [] : chart.sources.map((src) => {
+            const mp = src.metricPointId ? mpMap.get(src.metricPointId) : undefined;
+            const { data, gaps } = splitOnGaps(
+                seriesDataMap.get(src.id) || [],
+                expectedStepMs(bucketMinutes, mp?.sampleIntervalSeconds)
+            );
+            return {
+                name: src.label,
+                type: "line",
+                yAxisIndex: src.yAxisIndex || 0,
+                data,
+                itemStyle: { color: src.color },
+                lineStyle: { color: src.color, width: 2 },
+                showSymbol: false,
+                smooth: false,
+                connectNulls: false,
+                markArea: gapMarkArea(gaps, src.color),
+            };
+        });
 
         // Add computed calculation series
         const computed = computedSeries;
@@ -101,11 +113,14 @@ export function TimeSeriesChart({ chart, measurements, metricPoints, timeRange, 
                 allSeries.push({
                     name: cs.label,
                     type: "line",
-                    data: cs.data,
+                    // Spacing is inferred: the grid of a computed series is the
+                    // server's and carries no declared interval.
+                    data: splitOnGaps(cs.data as any, null).data,
                     itemStyle: { color: liveColor },
                     lineStyle: { color: liveColor, width: 2, type: isFormula && formulaOnly ? "solid" : "dashed" },
                     showSymbol: false,
                     smooth: true,
+                    connectNulls: false,
                 });
             } else if (cs.type === "markline" && cs.mark_value != null) {
                 // Add markLine to the first source series
@@ -173,11 +188,17 @@ export function TimeSeriesChart({ chart, measurements, metricPoints, timeRange, 
                         name: `${src.label} (compare)`,
                         type: "line",
                         yAxisIndex: src.yAxisIndex || 0,
-                        data: compareData,
+                        // Gaps in the reference period break the same way, so the
+                        // two lines stay comparable.
+                        data: splitOnGaps(
+                            compareData,
+                            expectedStepMs(bucketMinutes, mp.sampleIntervalSeconds)
+                        ).data,
                         itemStyle: { color: src.color },
                         lineStyle: { color: src.color, width: 1.5, type: "dashed", opacity: 0.6 },
                         showSymbol: false,
                         smooth: false,
+                        connectNulls: false,
                     });
                 }
             }
