@@ -5,7 +5,7 @@ import type { Measurement, TimeRange } from "@/lib/api/types";
 import type { ChartDefinition, ChartSource } from "@/lib/api/analysis";
 import type { ProjectMetricPoint } from "@/lib/api/projects";
 import { useChartCalculations } from "@/lib/hooks/useChartCalculations";
-import { splitOnGaps, expectedStepMs, gapMarkArea } from "@/lib/chart/gaps";
+import { splitOnGaps, expectedStepMs, gapMarkArea, type ChartPoint } from "@/lib/chart/gaps";
 
 import ReactEChartsCore from "echarts-for-react/lib/core";
 import * as echarts from "echarts/core";
@@ -17,10 +17,11 @@ import {
     DataZoomComponent,
     ToolboxComponent,
     MarkLineComponent,
+    MarkAreaComponent,
 } from "echarts/components";
 import { CanvasRenderer } from "echarts/renderers";
 
-echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, ToolboxComponent, MarkLineComponent, CanvasRenderer]);
+echarts.use([LineChart, GridComponent, TooltipComponent, LegendComponent, DataZoomComponent, ToolboxComponent, MarkLineComponent, MarkAreaComponent, CanvasRenderer]);
 
 interface TimeSeriesChartProps {
     chart: ChartDefinition;
@@ -115,7 +116,7 @@ export function TimeSeriesChart({ chart, measurements, metricPoints, timeRange, 
                     type: "line",
                     // Spacing is inferred: the grid of a computed series is the
                     // server's and carries no declared interval.
-                    data: splitOnGaps(cs.data as any, null).data,
+                    data: splitOnGaps(cs.data as ChartPoint[], null).data,
                     itemStyle: { color: liveColor },
                     lineStyle: { color: liveColor, width: 2, type: isFormula && formulaOnly ? "solid" : "dashed" },
                     showSymbol: false,
@@ -229,6 +230,9 @@ export function TimeSeriesChart({ chart, measurements, metricPoints, timeRange, 
                             const val = typeof p.data[1] === "number" ? p.data[1].toFixed(2) : "–";
                             return `<span style="color:${p.color}">\u25CF</span> ${p.seriesName}: <b>${val}</b>`;
                         });
+                    // Inside a gap every series is null. Saying so is clearer
+                    // than an empty box, and it names the gap as a gap.
+                    if (lines.length === 0) return `${timeStr}<br/><i>keine Daten</i>`;
                     return `${timeStr}<br/>${lines.join("<br/>")}`;
                 },
             },
@@ -246,7 +250,7 @@ export function TimeSeriesChart({ chart, measurements, metricPoints, timeRange, 
             ] : [],
             toolbox: { right: 10, top: 5, feature: { saveAsImage: { pixelRatio: 2, title: "PNG" }, restore: { title: "Reset" } } },
         };
-    }, [chart, measurements, metricPoints, computedSeries, compareRange, compareMeasurements, timeRange]);
+    }, [chart, measurements, metricPoints, computedSeries, compareRange, compareMeasurements, timeRange, bucketMinutes]);
 
     if (!option) {
         return (

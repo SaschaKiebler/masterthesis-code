@@ -1,5 +1,5 @@
 scenario  : qs-int-01
-started   : 2026-09-03 12:25:47+00
+started   : 2026-09-03 15:15:25+00
 fleet     : prefix 'gap', 1 site(s) x 3 rooms, interval 0.5s, duration 544s
 outage    : gap-ht-001-01 metric 1, from +60s for 300s
 
@@ -16,8 +16,8 @@ NOTE: 9947 is below that. The run length already compensates for the 1200 measur
 channel               : gap-ht-001-01, metric 1
 values in the window  : 488
 median cadence        : 0.50 s
-gap starts after      : 2026-09-03T12:27:27.093000+00:00
-gap ends before       : 2026-09-03T12:32:27.602472+00:00
+gap starts after      : 2026-09-03T15:17:05.643341+00:00
+gap ends before       : 2026-09-03T15:22:06.144188+00:00
 gap length            : 300.5 s   (injected 300 s)
 deviation from injected: 0.5 s (plausible)
 
@@ -25,9 +25,9 @@ deviation from injected: 0.5 s (plausible)
 rows strictly inside  : 0   target 0
 
 ######## 4 neighbouring channels (isolates the outage from a platform stall) ########
-  gap-boiler-001               1088 values   2026-09-03 12:26:27.462446+00:00 .. 2026-09-03 12:35:30.973784+00:00
-  gap-ht-001-02                1088 values   2026-09-03 12:26:27.715830+00:00 .. 2026-09-03 12:35:31.228376+00:00
-  gap-ht-001-03                1088 values   2026-09-03 12:26:27.841092+00:00 .. 2026-09-03 12:35:31.356220+00:00
+  gap-boiler-001               1088 values   2026-09-03 15:16:06.011238+00:00 .. 2026-09-03 15:25:09.512880+00:00
+  gap-ht-001-02                1088 values   2026-09-03 15:16:06.265627+00:00 .. 2026-09-03 15:25:09.766105+00:00
+  gap-ht-001-03                1088 values   2026-09-03 15:16:06.392120+00:00 .. 2026-09-03 15:25:09.892689+00:00
 channels that kept reporting across the outage: 3 of 3
 
 ######## 5 the same window through the analytics API ########
@@ -39,7 +39,7 @@ buckets before the gap: 1
 buckets inside the gap: 0   target 0
 buckets after the gap : 3
 The series carries values on both sides of the outage and none within it. The read path leaves the hole open rather than closing it.
-series written to qs-int-01-20260903-142547-series.csv
+series written to qs-int-01-20260903-171525-series.csv
 
 ######## verdict ########
 [ok] loss rate 0 %                      0.0000 %

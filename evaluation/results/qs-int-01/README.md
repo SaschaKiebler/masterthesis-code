@@ -47,35 +47,65 @@ die injizierte ist.
 Stillstand der ganzen Plattform und nicht der simulierte Ausfall, und die
 Messung sagte nichts aus.
 
-**Die API-Antwort muss beide Seiten des Ausfalls tragen.** Der erste Lauf
-dieses Skripts las das falsche Feld der Antwort, bekam eine leere Liste und
-meldete deshalb Bestanden, ohne irgendetwas geprüft zu haben. Seitdem gilt eine
-leere oder einseitige Antwort ausdrücklich als Fehlschlag, denn sie ist von
-einer korrekt offenen Lücke nicht zu unterscheiden.
+**Die API-Antwort muss beide Seiten des Ausfalls tragen.** Eine leere oder
+einseitige Antwort gilt als Fehlschlag, denn sie ist von einer korrekt offenen
+Lücke nicht zu unterscheiden. Die Bucket-Breite muss dabei deutlich unter der
+Lückenlänge liegen, sonst überspannt ein einziger Bucket den ganzen Ausfall.
+Das Skript verweigert eine Kombination, in der kein vollständiger Bucket in die
+Lücke fällt. Bei 60 s Buckets und 300 s Ausfall liegen vier Buckets vollständig
+darin, und genau diese vier fehlen in der Antwort.
 
-Die Bucket-Breite muss dabei deutlich unter der Lückenlänge liegen, sonst
-überspannt ein einziger Bucket den ganzen Ausfall. Das Skript verweigert eine
-Kombination, in der kein vollständiger Bucket in die Lücke fällt. Bei 60 s
-Buckets und 300 s Ausfall liegen vier Buckets vollständig darin, und genau
-diese vier fehlen in der Antwort.
+## Die Darstellung in der Weboberfläche
+
+Der Response Measure endet bei der Abfrage-API. Die Analyse-Ansicht ist der
+dritte Ort, an den eine auswertende Fachkraft tatsächlich schaut, und auch dort
+bleibt die Lücke offen.
+
+Die Ansicht fügt an jeder Stelle, an der der nächste Messwert fällig gewesen
+wäre, eine Leerstelle ein und verbindet nicht darüber hinweg. Als fällig gilt
+ein Abstand von mehr als dem Anderthalbfachen des mittleren Abstands der Reihe.
+Damit unterbricht schon ein einzelner fehlender Wert die Linie, gewöhnliches
+Jitter im Sendeintervall dagegen nicht. Der Ausfall erscheint als Unterbrechung
+der Kurve mit farbig hinterlegter Fläche.
+
+`screenshots/analyse-luecke-20260903-172826-diagramm.png` zeigt beide Kanäle
+untereinander über dasselbe Fenster und dieselbe Auflösung. Das Paar ist
+notwendig, denn eine einzelne unterbrochene Kurve könnte auch ein Diagramm
+sein, das nicht geladen hat. Neben einem Nachbarn, der über dieselben Minuten
+durchgehend zeichnet, kann die Unterbrechung nur der Ausfall sein.
+
+Die Detailseite einer Anlage zeichnet ihre Zeitreihe mit einer Kategorieachse,
+in der fehlende Abschnitte zusammenrücken. Sie ist nicht Gegenstand der
+Abbildung.
 
 ## Dateien
 
 | Datei | Inhalt |
 |---|---|
-| `qs-int-01-20260903-142547.txt` | Verlustrate, gefundene Lücke, Werte darin, Nachbarkanäle, API-Antwort, Urteil |
-| `qs-int-01-20260903-142547-series.csv` | die Buckets der API-Antwort mit Kennzeichnung, welcher in die Lücke fällt |
+| `qs-int-01-20260903-171525.txt` | Verlustrate, gefundene Lücke, Werte darin, Nachbarkanäle, API-Antwort, Urteil |
+| `qs-int-01-20260903-171525-series.csv` | die Buckets der API-Antwort mit Kennzeichnung, welcher in die Lücke fällt |
+| `screenshots/analyse-luecke-20260903-172826-diagramm.png` | beide Diagramme der Analyse-Ansicht über das Ausfallfenster |
+| `screenshots/analyse-luecke-20260903-172826-ganze-seite.png` | dieselbe Ansicht als ganze Seite |
+| `screenshots/analyse-luecke-20260903-172826.json` | Fenster, Ausfallzeiten, Auflösung und Dateinamen der Aufnahme |
 
 ## Reproduktion
 
 ```bash
 scripts/dev.sh up
 evaluation/scripts/.venv/bin/python evaluation/scripts/qs_int_01_gap_run.py
+evaluation/usability/.venv/bin/python evaluation/scripts/qs_int_01_analysis_figure.py --resolution Raw
 ```
 
-Das Skript seedet die Flotte selbst, wartet auf die Freigabe der Geräte,
+Das erste Skript seedet die Flotte selbst, wartet auf die Freigabe der Geräte,
 erzeugt die Telemetrie samt Ausfall und wertet danach beide Hälften aus. Ein
 Lauf dauert rund zehn Minuten, davon neun Minuten Telemetrie.
+
+Das zweite Skript sucht den jüngsten Ausfall in den Daten, legt das Fenster
+mit etwas Rand darum und nimmt die Analyse-Ansicht auf. Liegen dort bereits
+zwei Diagramme mit den Titeln „Sensor mit Ausfall" und „Nachbarsensor ohne
+Ausfall", benutzt es sie und setzt nur ihre Quelle auf die beiden Sensoren des
+Laufs, ohne die Ansicht zu speichern. Das Usability-venv braucht dafür
+zusätzlich `psycopg`.
 
 ```bash
 # kürzer, mit entsprechend kleinerer Lücke
@@ -88,59 +118,9 @@ erste passende Gerät in Flottenreihenfolge. Betroffen ist deshalb immer
 `<präfix>-ht-001-01`. Das Skript verlässt sich nicht darauf, sondern prüft es
 über die Nachbarkanäle nach.
 
-## Befund, die Darstellung überbrückt die Lücke
-
-Der Response Measure endet bei der Abfrage-API. Die Weboberfläche ist der
-dritte Ort, an den eine auswertende Fachkraft tatsächlich schaut, und dort hält
-die Lücke nicht.
-
-In der Analyse-Ansicht läuft die Kurve des ausgefallenen Sensors über die fünf
-Minuten als eine einzige gerade Strecke durch, während der Nachbarsensor über
-denselben Zeitraum sein normales Rauschen zeigt. Die Zeitachse ordnet den
-Ausfall richtig ein, seine Dauer bleibt also ablesbar, die Linie wird aber ohne
-Unterbrechung von der letzten Messung davor zur ersten danach gezogen.
-
-Die Plattform zeichnet Zeitreihen an zwei Stellen mit verschiedenen
-Bibliotheken, und beide gehen unterschiedlich mit fehlenden Werten um.
-
-| Ansicht | Achse | Verhalten bei fehlenden Werten |
-|---|---|---|
-| Analyse-Ansicht | ECharts, `xAxis: { type: "time" }` | Lücke behält ihre Breite, Linie wird als gerade Strecke durchgezogen |
-| Detailseite einer Anlage | Recharts, `<XAxis dataKey="time">` ohne `type="number"`, also Kategorieachse | Lücke fällt vollständig zusammen, nur die Achsenbeschriftungen springen |
-
-Beide verletzen die Forderung, dass die Lücke als Lücke erscheint, die zweite
-stärker als die erste. Der Entwurf verbietet das Zurückschreiben abgeleiteter
-Werte, sagt aber nichts darüber, wie eine Ansicht fehlende Werte zu zeichnen
-hat. Genau diese Lücke in der Festlegung ist der Befund.
-
-Zu schließen wäre er an zwei Stellen. Entweder bekommt die Kategorieachse der
-Detailseite `type="number"` mit einer Zeitdomäne, dann verhält sie sich wie die
-Analyse-Ansicht. Oder die Abfrage liefert leere Zeitabschnitte ausdrücklich als
-`null` und die Linien zeichnen ohne Verbinden über Lücken, dann bricht die
-Kurve sichtbar ab. Die zweite Variante zeigt den Ausfall deutlicher, kostet
-aber eine Änderung an der Aggregation im Analytics-Dienst.
-
-## Die Abbildung
-
-`screenshots/analyse-luecke-<zeitstempel>-diagramm.png` zeigt beide Kanäle
-untereinander über dasselbe Fenster und dieselbe Auflösung. Das Paar ist
-notwendig, denn eine einzelne Kurve mit einem auffällig geraden Stück könnte
-auch ein Diagramm sein, das nicht geladen hat. Neben einem Nachbarn, der über
-dieselben Minuten durchgehend rauscht, kann die gerade Strecke nur der Ausfall
-sein.
-
-```bash
-evaluation/usability/.venv/bin/python evaluation/scripts/qs_int_01_analysis_figure.py
-```
-
-Das Skript sucht den Ausfall selbst in den Daten, legt das Fenster mit etwas
-Rand darum, baut in der Analyse-Ansicht zwei beschriftete Diagramme und nimmt
-sie auf. Das Usability-venv braucht dafür zusätzlich `psycopg`.
-
 ## Grenzen
 
 Der Ausfall ist ein sauberes Verstummen. Ein reales Gerät kann stattdessen
 verzögert, doppelt oder mit eingefrorenen Werten senden. Für den eingefrorenen
-Fall kennt der Generator `stuck`, dieser Lauf prüft ihn nicht. Die Darstellung
-in der Weboberfläche ist nicht Gegenstand, geprüft sind Speicher und
-Abfrage-API, wie es der Response Measure verlangt.
+Fall kennt der Generator `stuck`, dieser Lauf prüft ihn nicht. Geprüft sind
+Speicher, Abfrage-API und die Analyse-Ansicht.

@@ -1,22 +1,22 @@
 {
-  "taken_at": "2026-09-03T15:08:05.259464+02:00",
+  "taken_at": "2026-09-03T17:28:48.044121+02:00",
   "view": "analysis canvas (ECharts, xAxis type time)",
   "faulted_device": "gap-ht-001-01",
   "healthy_device": "gap-ht-001-02",
   "metric_id": 1,
   "window_local": [
-    "2026-09-03T14:21",
-    "2026-09-03T14:38"
+    "2026-09-03T17:11",
+    "2026-09-03T17:28"
   ],
   "outage_local": [
-    "2026-09-03T14:27:27.093000+02:00",
-    "2026-09-03T14:32:27.602472+02:00"
+    "2026-09-03T17:17:05.643341+02:00",
+    "2026-09-03T17:22:06.144188+02:00"
   ],
   "outage_seconds": 300.5,
   "resolution": "Raw",
   "files": [
-    "analyse-luecke-20260903-150740-ganze-seite.png",
-    "analyse-luecke-20260903-150740-diagramm.png"
+    "analyse-luecke-20260903-172826-ganze-seite.png",
+    "analyse-luecke-20260903-172826-diagramm.png"
   ],
   "note": "Both channels share one chart and one window. The neighbour is continuous across the outage, so the stretch without points on the other channel is the sensor outage and not a failed load."
 }

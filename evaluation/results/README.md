@@ -16,7 +16,7 @@ die Ergebnisse.
 | [qs-per-03](qs-per-03) | Abfrage-APIs unter Last | teilweise erfüllt | p95 7.600 ms gegen 300 ms, Fehlerrate 0,51 % eingehalten |
 | [qs-sec-01](qs-sec-01) | mandantenübergreifender Zugriffsversuch | erfüllt | 0 Lecks aus 122.787 Versuchen, 107.401 Audit-Einträge |
 | [qs-sec-02](qs-sec-02) | Auskunft und Löschung nach DSGVO | erfüllt | 100 % Abdeckung, 0 Treffer nach dem Löschlauf, 0,8 s |
-| [qs-int-01](qs-int-01) | Messlücke bei Sensorausfall | erfüllt | Verlust 0 %, 0 Werte in der Lücke in Speicher und API |
+| [qs-int-01](qs-int-01) | Messlücke bei Sensorausfall | erfüllt | Verlust 0 %, 0 Werte in der Lücke in Speicher, API und Analyse-Ansicht |
 | [qs-int-02](qs-int-02) | Provenance der Messwerte | erfüllt | 4 Felder zu 100 %, 0 Kanäle ohne Registrierung, 100/100 rückverfolgbar |
 
 Die vier Lastszenarien und QS-SEC-01 liefen in der Messumgebung auf Google

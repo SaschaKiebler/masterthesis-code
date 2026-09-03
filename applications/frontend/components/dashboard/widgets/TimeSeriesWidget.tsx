@@ -16,6 +16,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/Card";
 import { getMeasurements } from "@/lib/api/assets";
 import { getKpiHistory, type KpiHistoryResponse } from "@/lib/api/kpiFormulas";
 import { TIME_PRESET_SECONDS, bucketForPreset, autoBucketMinutes } from "@/lib/utils/timeBuckets";
+import { splitOnGaps, expectedStepMs } from "@/lib/chart/gaps";
 import type { DashboardWidget, TimeRange, Measurement } from "@/lib/api/types";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { AlertCircle } from "lucide-react";
@@ -205,13 +206,18 @@ export function TimeSeriesWidget({ widget, timeRange }: Props) {
                 .map((m) => [m.time * 1000, m.value] as [number, number])
                 .sort((a, b) => a[0] - b[0]);
 
+            // An interval without a value stays empty instead of being bridged
+            // by a straight segment, same rule as in the analysis chart.
+            const { data: gapped } = splitOnGaps(data, expectedStepMs(effectiveBucket, null));
+
             const color = s.color || "#6366f1";
             echartsSeries.push({
                 name: s.label || s.metric.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
                 type: "line",
-                data,
+                data: gapped,
                 showSymbol: false,
                 smooth: false,
+                connectNulls: false,
                 lineStyle: { width: 2, color },
                 itemStyle: { color },
                 emphasis: { lineStyle: { width: 3 } },
@@ -232,9 +238,11 @@ export function TimeSeriesWidget({ widget, timeRange }: Props) {
             echartsSeries.push({
                 name: label,
                 type: "line",
-                data,
+                // Spacing inferred, a KPI history has no declared interval.
+                data: splitOnGaps(data, null).data,
                 showSymbol: false,
                 smooth: false,
+                connectNulls: false,
                 lineStyle: { width: 2, color },
                 itemStyle: { color },
                 emphasis: { lineStyle: { width: 3 } },
@@ -262,14 +270,19 @@ export function TimeSeriesWidget({ widget, timeRange }: Props) {
                     if (!Array.isArray(params) || params.length === 0) return "";
                     const time = formatTooltipTime(params[0].data[0]);
                     let html = `<div style="font-weight:600;margin-bottom:4px">${time}</div>`;
+                    let rows = 0;
                     for (const p of params) {
                         if (p.data[1] == null) continue;
+                        rows++;
                         html += `<div style="display:flex;align-items:center;gap:6px;margin:2px 0">
                             <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${p.color}"></span>
                             <span style="flex:1">${p.seriesName}</span>
                             <span style="font-weight:600">${p.data[1].toFixed(2)}${config.yAxis?.unit ? ` ${config.yAxis.unit}` : ""}</span>
                         </div>`;
                     }
+                    // Inside a gap every series is null, so say it instead of
+                    // showing an empty box.
+                    if (rows === 0) html += `<div style="opacity:0.7">keine Daten</div>`;
                     return html;
                 },
             },
@@ -303,7 +316,7 @@ export function TimeSeriesWidget({ widget, timeRange }: Props) {
             ],
             series: echartsSeries,
         };
-    }, [metricSeries, kpiSeries, measurementsByAsset, kpiHistories, config.yAxis]);
+    }, [metricSeries, kpiSeries, measurementsByAsset, kpiHistories, config.yAxis, effectiveBucket]);
 
     const noSeriesConfigured = series.length === 0 || series.every((s) => !s.kpiFormulaId && (!s.assetId || !s.metric));
 
