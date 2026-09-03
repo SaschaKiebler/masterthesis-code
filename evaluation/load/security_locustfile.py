@@ -25,12 +25,27 @@ which is what the thesis cites for the choice of attack patterns:
 
   API1  Broken Object Level Authorization (BOLA) — ask for tenant B's objects,
         projects, metric points and analytics series by id. The core case.
-  API2  Broken Authentication — no token, a malformed token, a token with a
-        valid body but a wrong signature. Every one must be refused with 401.
-  API3  Broken Object Property Level Authorization — list endpoints must filter
-        tenant B out of the collection rather than expose it.
-  API5  Broken Function Level Authorization (BFLA) — a viewer attempts writes
-        and privileged reads on tenant B (opt-in, destructive, see below).
+  API2  Broken Authentication — no token, a malformed token, a wrong signature,
+        alg:none and an empty signature. Every one must be refused with 401.
+  API3  Broken Object Property Level Authorization — two halves. Excessive data
+        exposure, where a collection endpoint must filter tenant B out rather
+        than return it. And mass assignment, where a body field names tenant B
+        (POST /projects takes tenantId from the body). The second half is what
+        TenantBodyGuard exists for, so these attempts are its regression test.
+  API5  Broken Function Level Authorization (BFLA) — a viewer attempts writes on
+        tenant B and, more sharply, privilege escalation: adding itself to
+        tenant B's members and inviting itself in as an admin.
+  API9  Improper Inventory Management — API surface that should not be reachable
+        through the public proxy at all, above all the analytics OpenAPI schema
+        and Spring's actuator, including one path-traversal probe.
+
+Risks deliberately not covered, each with its reason, so the thesis can say so
+instead of implying full coverage: API4 (resource consumption) is QA-PER and is
+measured by QS-PER-01..03; API6 needs a defined abusable business flow that
+says nothing about tenant isolation; API7 found no request-supplied URL, the
+outbound calls use configured endpoints; API8 would mostly report artefacts of
+the deliberately TLS-free evaluation deployment; API10 concerns how the platform
+consumes third-party APIs and is not observable from outside.
 
 Outcome of a single attempt:
 
@@ -42,6 +57,10 @@ Outcome of a single attempt:
                                                platform; must be zero in a run
                                                that gets reported
   ERROR      5xx or transport                -> FAILURE, counted apart
+  EXPOSED    an API9 surface answered 2xx     -> FAILURE, but a finding about
+                                               the attack surface, NOT a
+                                               cross-tenant data leak; counted
+                                               and reported separately
 
 Locust's failure count is therefore the QS-SEC-01 leak count, and the per-name
 stats table is the coverage map (one row per OWASP-tagged attack pattern). The
@@ -149,6 +168,12 @@ class Target:
 TARGET = Target(TARGET_PREFIX, TARGET_SITES, TARGET_ROOMS, TARGET_PERSONS)
 FOREIGN_IDS = TARGET.identifiers()
 
+# The attacker's OWN anchors, for the body-carried attempts: an owned project,
+# site, asset and metric point into which a tenant-B id is smuggled. Derived
+# the same way; only the first site of tenant A is needed.
+ATTACKER_PREFIX = os.environ.get("ATTACKER_PREFIX", "tenanta")
+OWN = Target(ATTACKER_PREFIX, 1, 1, 0)
+
 
 # ── Classification ───────────────────────────────────────────────────────────
 
@@ -170,15 +195,37 @@ def classify(status: int, body: str, write: bool) -> str:
     return "ERROR"
 
 
+def classify_inventory(status: int) -> str:
+    """API9 inverts the usual reading: a 2xx here means the surface is reachable.
+
+    These paths carry no tenant data, so a hit is not a QS-SEC-01 leak. It is a
+    finding about what the single public proxy forwards, which is why it gets
+    its own outcome instead of being folded into LEAK.
+    """
+    if 200 <= status < 300:
+        return "EXPOSED"
+    if status in (400, 401, 403):
+        # 400 is the proxy itself refusing a traversal segment ("..", an
+        # encoded slash) before anything is forwarded; that is a refusal.
+        return "DENIED"
+    if status == 404:
+        return "NOT_FOUND"
+    return "ERROR"
+
+
 PASS = {"DENIED", "NOT_FOUND", "FILTERED"}
 _counts: Counter = Counter()
 _leaks: list[str] = []
+_exposed: list[str] = []
+ATTACKER_USER_ID: str | None = None
 
 
 def _record(outcome: str, name: str) -> None:
     _counts[outcome] += 1
     if outcome == "LEAK":
         _leaks.append(name)
+    elif outcome == "EXPOSED":
+        _exposed.append(name)
 
 
 # ── Crafted tokens for API2 (no real secret needed) ──────────────────────────
@@ -195,10 +242,22 @@ def _jwt(secret: str, claims: dict) -> str:
     return f"{header}.{payload}.{sig}"
 
 
+def _claims() -> dict:
+    return {"sub": "local|attacker@example.org", "exp": int(time.time()) + 3600}
+
+
 def _wrong_signature_token() -> str:
     # Well-formed claims, but signed with a key the platform does not hold.
-    claims = {"sub": "local|attacker@example.org", "exp": int(time.time()) + 3600}
-    return _jwt("a-key-the-platform-does-not-have", claims)
+    return _jwt("a-key-the-platform-does-not-have", _claims())
+
+
+def _unsigned_token(alg: str) -> str:
+    """A token with an empty signature. With alg 'none' this is the classic
+    algorithm-confusion attempt; with 'HS256' it checks that an empty signature
+    is not treated as a match. Neither needs the platform's secret."""
+    header = _b64(json.dumps({"alg": alg, "typ": "JWT"}).encode())
+    payload = _b64(json.dumps(_claims()).encode())
+    return f"{header}.{payload}."
 
 
 # ── Login ────────────────────────────────────────────────────────────────────
@@ -221,9 +280,17 @@ def on_test_start(environment, **_):
                          f"Is the frontend proxy reachable?")
     if r.status_code != 200:
         raise SystemExit(f"login as {LOGIN_EMAIL} failed: HTTP {r.status_code} {r.text[:200]}")
-    log.info("attacker %s logged in via the proxy; targeting %d ids of tenant '%s' "
-             "(writes %s)", LOGIN_EMAIL, len(FOREIGN_IDS), TARGET_PREFIX,
-             "ON" if INCLUDE_WRITES else "off")
+    # The attacker's own user id, needed for the privilege-escalation attempt
+    # (adding ITSELF to tenant B). Without it the endpoint would answer 404 for
+    # an unknown user and a real escalation hole could hide behind that.
+    global ATTACKER_USER_ID
+    try:
+        ATTACKER_USER_ID = (r.json().get("user") or {}).get("id")
+    except Exception:  # noqa: BLE001
+        ATTACKER_USER_ID = None
+    log.info("attacker %s (user %s) logged in via the proxy; targeting %d ids of "
+             "tenant '%s' (writes %s)", LOGIN_EMAIL, ATTACKER_USER_ID or "unknown",
+             len(FOREIGN_IDS), TARGET_PREFIX, "ON" if INCLUDE_WRITES else "off")
 
 
 @events.quitting.add_listener
@@ -231,8 +298,14 @@ def on_quitting(environment, **_):
     total = sum(_counts.values())
     log.info("QS-SEC-01 outcomes over %d attempts: %s", total,
              ", ".join(f"{k}={v}" for k, v in sorted(_counts.items())))
+    if _exposed:
+        log.warning("EXPOSED (%d attempts, %d distinct): %s — reachable API surface, "
+                    "not a cross-tenant data leak", len(_exposed), len(set(_exposed)),
+                    ", ".join(sorted(set(_exposed))))
     if _leaks:
         log.error("LEAKS (%d): %s", len(_leaks), ", ".join(sorted(set(_leaks))))
+        environment.process_exit_code = 1
+    elif _exposed:
         environment.process_exit_code = 1
     elif _counts.get("BAD_INPUT"):
         log.error("BAD_INPUT present: this script sent a malformed request; fix "
@@ -311,6 +384,29 @@ class TenantAttacker(HttpUser):
             response_time=(time.perf_counter() - t0) * 1000,
             response_length=length, exception=exc, context={})
 
+    def _inventory(self, path: str, name: str) -> None:
+        """API9 probe. Sent WITHOUT the session, because the question is what an
+        unauthenticated caller reaches through the single public proxy."""
+        url = f"{FRONTEND_HOST}{path}"
+        t0 = time.perf_counter()
+        exc = None
+        status = 0
+        length = 0
+        try:
+            r = requests.get(url, timeout=15)
+            status, length = r.status_code, len(r.content)
+            outcome = classify_inventory(status)
+        except Exception as e:  # noqa: BLE001
+            outcome = "ERROR"
+            exc = e
+        _record(outcome, name)
+        if outcome not in PASS and exc is None:
+            exc = Exception(f"{outcome} HTTP {status}")
+        self.environment.events.request.fire(
+            request_type="SURFACE", name=name,
+            response_time=(time.perf_counter() - t0) * 1000,
+            response_length=length, exception=exc, context={})
+
     # -- API1: Broken Object Level Authorization -----------------------------
 
     @task(6)
@@ -365,6 +461,10 @@ class TenantAttacker(HttpUser):
         self._raw("API2 malformed-token", headers={"Authorization": "Bearer not-a-jwt"})
         # Valid-looking claims, signed with a key the platform does not hold.
         self._raw("API2 wrong-signature", headers={"Authorization": f"Bearer {_wrong_signature_token()}"})
+        # Algorithm confusion: the caller declares that nothing was signed.
+        self._raw("API2 alg-none", headers={"Authorization": f"Bearer {_unsigned_token('none')}"})
+        # HS256 declared but the signature left empty.
+        self._raw("API2 empty-signature", headers={"Authorization": f"Bearer {_unsigned_token('HS256')}"})
 
     # -- API3: Broken Object Property Level Authorization ---------------------
 
@@ -380,7 +480,127 @@ class TenantAttacker(HttpUser):
         ):
             self._read(path, name)
 
-    # -- API5: Broken Function Level Authorization (opt-in, destructive) ------
+    # -- API9: Improper Inventory Management ---------------------------------
+
+    @task(1)
+    def api9_reachable_surface(self):
+        # The analytics app is built without docs_url=None, and its auth hangs
+        # on the routers rather than on the app, so these three sit in front of
+        # it. If the proxy forwards them, the whole API schema is public.
+        for path in ("/api/analytics/openapi.json", "/api/analytics/docs",
+                     "/api/analytics/redoc"):
+            self._inventory(path, f"API9 GET {path}")
+        # The proxy forwards only /api/v1 and /api/analytics, so Spring's
+        # actuator should be unreachable. Probed plainly and once through an
+        # encoded traversal, because the proxy concatenates the path unchecked.
+        self._inventory("/api/v1/actuator/health", "API9 GET /api/v1/actuator/health")
+        self._inventory("/api/v1/..%2f..%2factuator/env", "API9 traversal to /actuator/env")
+
+    # -- API3 (second half): ids carried OUTSIDE the URL ----------------------
+
+    @task(2)
+    def api3_body_ids_read(self):
+        """The non-destructive half of the body-carried family. A foreign id in
+        a query parameter the interceptor does not parse, and two analytics
+        calls that name NO id and, before the fix of 2026-09-02, aggregated the
+        whole measurement store. A 2xx on the latter is a leak even though no
+        tenant-B id can appear in an aggregate, so they are judged as writes."""
+        self._read(f"/api/v1/projects/{OWN.project_id}/channels"
+                   f"?metricPointIds={TARGET.metric_point_ids[0]}",
+                   "API3 GET /projects/{own}/channels?metricPointIds=foreign")
+        self._write("POST", "/api/analytics/stats/ingest-rate",
+                    "API3 POST /stats/ingest-rate (no ids, whole store)",
+                    {"window_minutes": 60})
+        self._write("POST", "/api/analytics/stats/ingest-rate",
+                    "API3 POST /stats/ingest-rate (empty ids, whole store)",
+                    {"metric_point_ids": [], "window_minutes": 60})
+
+    @task(1)
+    def api3_body_ids_write(self):
+        """Writes anchored on the attacker's OWN resources with a tenant-B id in
+        the payload: the twelve handlers the review of 2026-09-02 found without
+        a check on that field, each now guarded by TenantBodyGuard. Refused
+        writes leave no trace; an accepted one is a leak and mutates data, so
+        the group shares the INCLUDE_WRITES gate."""
+        if not INCLUDE_WRITES:
+            return
+        own_site = OWN.building_ids[0]
+        own_asset = OWN.asset_object_ids[0]
+        foreign_obj = TARGET.asset_object_ids[0]
+        foreign_mp = TARGET.metric_point_ids[0]
+        foreign_dev = TARGET.device_ids[0]
+        self._write("POST", f"/api/v1/projects/{OWN.project_id}/sites",
+                    "API3 POST /projects/{own}/sites siteId=foreign",
+                    {"siteId": TARGET.building_ids[0]})
+        self._write("POST", "/api/v1/links",
+                    "API3 POST /links targetId=foreign",
+                    {"sourceId": own_site, "targetId": foreign_obj, "linkTypeName": "CONTAINS"})
+        self._write("POST", "/api/v1/objects",
+                    "API3 POST /objects tenantId=foreign",
+                    {"objectTypeName": "ROOM", "displayName": "qs-sec-01 probe",
+                     "tenantId": TARGET.tenant_id})
+        self._write("POST", "/api/v1/objects",
+                    "API3 POST /objects projectId=foreign",
+                    {"objectTypeName": "ROOM", "displayName": "qs-sec-01 probe",
+                     "tenantId": OWN.tenant_id, "projectId": TARGET.project_id})
+        self._write("POST", f"/api/v1/objects/{own_asset}/kpi-formulas",
+                    "API3 POST /objects/{own}/kpi-formulas metricPointId=foreign",
+                    {"name": "qs_sec_01_probe", "formula": "x",
+                     "variables": {"x": {"source": "DIRECT", "metricPointId": foreign_mp}}})
+        self._write("POST", "/api/v1/anomaly-rules",
+                    "API3 POST /anomaly-rules binding=foreign",
+                    {"name": "qs-sec-01 probe", "detector": "short_cycle",
+                     "bindings": [{"role": "switch", "metricPointId": foreign_mp}]})
+        self._write("POST", "/api/v1/derived-properties",
+                    "API3 POST /derived-properties objectId=foreign",
+                    {"objectId": foreign_obj, "propertyName": "qs_sec_01_probe", "valueText": "x"})
+        self._write("POST", f"/api/v1/assets/{own_asset}/relocate",
+                    "API3 POST /assets/{own}/relocate targetSiteId=foreign",
+                    {"targetSiteId": TARGET.building_ids[0]})
+        self._write("POST", "/api/v1/analysis-templates",
+                    "API3 POST /analysis-templates tenantId=foreign",
+                    {"name": "qs-sec-01 probe", "definition": {}, "tenantId": TARGET.tenant_id})
+        self._write("POST", f"/api/v1/objects/{own_asset}/kpi-formulas/generate",
+                    "API3 POST /objects/{own}/kpi-formulas/generate projectId=foreign",
+                    {"prompt": "probe", "projectId": TARGET.project_id})
+        self._write("POST", f"/api/v1/objects/{own_asset}/metrics",
+                    "API3 POST /objects/{own}/metrics deviceId=foreign",
+                    {"deviceId": foreign_dev, "metricId": 99, "unit": "x"})
+        self._write("POST", f"/api/v1/objects/{own_asset}/metrics",
+                    "API3 POST /objects/{own}/metrics tenantId=foreign",
+                    {"deviceId": "qs-sec-01-probe", "metricId": 99, "unit": "x",
+                     "tenantId": TARGET.tenant_id})
+
+    # -- API3 (second half) and API5: writes, opt-in and destructive ----------
+
+    @task(1)
+    def api3_mass_assignment(self):
+        """A body field naming tenant B. This is the blind spot TenantBodyGuard
+        was built for: the audit filter cannot see a tenant carried in a body,
+        so only the guard stands between this call and a cross-tenant write."""
+        if not INCLUDE_WRITES:
+            return
+        self._write("POST", "/api/v1/projects",
+                    "API3 POST /projects tenantId=foreign (mass assignment)",
+                    {"name": "qs-sec-01 mass assignment",
+                     "description": "QS-SEC-01 probe, delete me",
+                     "tenantId": TARGET.tenant_id})
+
+    @task(1)
+    def api5_privilege_escalation(self):
+        """Sharper than a write on a foreign object: the attacker tries to make
+        itself a member of tenant B, which would turn every later request into
+        a legitimate one."""
+        if not INCLUDE_WRITES:
+            return
+        if ATTACKER_USER_ID:
+            self._write("POST", f"/api/v1/tenants/{TARGET.tenant_id}/members",
+                        "API5 POST /tenants/{id}/members (add self)",
+                        {"userId": ATTACKER_USER_ID, "tenantRole": "admin"})
+        self._write("POST", "/api/v1/invitations",
+                    "API5 POST /invitations (invite self as admin)",
+                    {"email": LOGIN_EMAIL, "tenantId": TARGET.tenant_id,
+                     "tenantRole": "admin", "globalRole": "viewer"})
 
     @task(1)
     def api5_privileged_and_writes(self):

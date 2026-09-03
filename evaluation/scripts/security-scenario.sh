@@ -16,6 +16,7 @@
 #
 # Measured, per thesis ch. 6:
 #   - leaks: responses carrying tenant B identifiers  (target 0)
+#   - exposed surface: API9 probes that answered 2xx, reported apart from leaks
 #   - audit coverage: access_audit rows for the window (target: one per attempt
 #     that named a tenant; see evaluation/sql/audit-coverage.sql)
 #   - the attack traffic IS the scenario's 50 requests/s base load
@@ -124,18 +125,23 @@ report=$OUT/qs-sec-01-$STAMP.txt
   echo "writes    : $INCLUDE_WRITES"
   echo
   echo "######## outcome summary (from the generator) ########"
-  grep -E "QS-SEC-01 outcomes|LEAKS \(|BAD_INPUT present|logged in via the proxy" "$logs" | tail -6
+  grep -E "QS-SEC-01 outcomes|LEAKS \(|EXPOSED \(|BAD_INPUT present|logged in via the proxy" "$logs" | tail -8
   echo
   echo "######## per attack pattern (OWASP API Top 10 tagged) ########"
   # Name, request count and failure count per pattern: the coverage map.
   awk -F',' 'NR==1 || $2 ~ /^"?(API|auth)/ {printf "%-46s %8s %8s\n", $2, $3, $4}' \
     "$OUT/qs-sec-01-$STAMP-stats.csv" | head -50
   echo
-  echo "######## failures (each row is a leak or a malformed request) ########"
+  echo "######## failures ########"
+  echo "A row is one of three things, and the summary above says which:"
+  echo "  LEAK    a response carried a tenant-$TARGET_PREFIX identifier (the response measure)"
+  echo "  EXPOSED an API9 surface answered 2xx (attack surface, not a data leak)"
+  echo "  BAD_INPUT this script sent a malformed request (fix before reporting)"
+  echo
   if [ -s "$OUT/qs-sec-01-$STAMP-failures.csv" ]; then
     cat "$OUT/qs-sec-01-$STAMP-failures.csv"
   else
-    echo "none — no response carried a tenant-$TARGET_PREFIX identifier"
+    echo "none"
   fi
   echo
   echo "######## audit coverage ########"

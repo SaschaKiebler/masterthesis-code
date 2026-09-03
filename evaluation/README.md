@@ -483,9 +483,38 @@ zusammen 42 Kennungen, deren Auftauchen in einer Antwort ein Leck ist.
 | Kategorie | Versuche | Erwartung |
 |---|---|---|
 | API1 Broken Object Level Authorization | Projekt, Messpunkte, Latest-Values, Graph, Health, Channels, Dashboards, Events, Objekte, Liegenschaften, Mandant, dazu fünf Analytics-Routen mit fremden Messpunkt-IDs | 401 oder 403 |
-| API2 Broken Authentication | ohne Token, mit kaputtem Token, mit gültig geformtem Token unter falscher Signatur | 401 |
-| API3 Broken Object Property Level Authorization | Sammel-Endpunkte, die filtern statt abzulehnen | 2xx ohne fremde Kennung |
+| API2 Broken Authentication | ohne Token, kaputtes Token, gültige Form mit falscher Signatur, `alg:none`, leere Signatur | 401 |
+| API3 Object Property Level Authorization, Teil 1 | Sammel-Endpunkte, die filtern statt abzulehnen | 2xx ohne fremde Kennung |
+| API3 Object Property Level Authorization, Teil 2 | Kennungen außerhalb der URL. Mass Assignment mit fremder `tenantId` in `POST /projects`, `/objects`, `/analysis-templates` und `/objects/{own}/metrics`, fremde `siteId` in ein eigenes Projekt, fremdes Link-Ziel, fremder Messpunkt als Formelvariable, Regelbindung oder Query-Parameter `metricPointIds`, fremdes `objectId` in `/derived-properties`, fremdes `targetSiteId` beim Verschieben, fremde `projectId` als KI-Kontext, fremde Geräte-ID beim Anlegen eines Messpunkts | 403 |
+| API3 Aggregat ohne Kennung | `POST /stats/ingest-rate` ohne und mit leerer Messpunktliste, vor der Korrektur ein Aggregat über den gesamten Messwertspeicher | 403 |
 | API5 Broken Function Level Authorization | Schreibversuche als viewer auf fremde Objekte, Projekte, Links und Personen | 401, 403 oder 404 |
+| API5 Rechteausweitung | sich selbst zu den Mitgliedern von Mandant B hinzufügen, sich selbst als Administrator einladen | 403 |
+| API9 Improper Inventory Management | OpenAPI-Schema, Docs und Redoc von Analytics, Actuator direkt und über kodierte Pfadsegmente | 404 oder 401 |
+
+Der zweite Teil von API3 ist kein beliebiger Zusatz. Der zentrale
+`TenantScopeInterceptor` löst jede Kennung in der URL ihrem Mandanten zu, sieht
+aber keinen Anfragekörper, und der Audit-Filter ebenso wenig, weil er dafür
+jede Anfrage puffern müsste, was QS-PER-03 verfälschen würde. Die Durchsicht
+aller Endpunkte am 02.09.2026 fand zwölf Handler von Core, die Kennungen im
+Körper ungeprüft annahmen, einen Analytics-Aufruf, der ohne Kennung den ganzen
+Speicher aggregierte, und ein Frontend-Proxy, das über `..%2F` den Präfix
+`/api/v1` verließ. Zwischen diesen Aufrufen und einem mandantenübergreifenden
+Zugriff steht seither der `TenantBodyGuard` mit derselben Entscheidungstabelle
+wie der Interceptor, die Wahrheitswert-Prüfung in `require_tenant_scope` und
+die Segmentprüfung in `lib/api/proxy-path.ts`. Diese Versuche sind deren
+Regressionstest. Die Schreibversuche darunter sind auf den Anker des Angreifers
+gesetzt und tragen nur die fremde Kennung im Körper, ein angenommener zählt als
+Leck, auch wenn die Antwort die Kennung nicht zurückgibt.
+
+Nicht abgedeckt sind sechs Risiken, jeweils mit Grund, damit im Kapitel keine
+Vollständigkeit behauptet wird, die nicht besteht. API4 gehört zu QA-PER und ist
+über QS-PER-01 bis QS-PER-03 gemessen. API6 bräuchte einen definierten
+missbrauchbaren Geschäftsablauf, der über die Mandantenisolation nichts aussagt.
+Für API7 wurde kein Pfad gefunden, in dem eine URL aus der Anfrage stammt, die
+ausgehenden Aufrufe gehen an konfigurierte Endpunkte. API8 würde in der
+bewusst TLS-freien Messumgebung vor allem Artefakte des Aufbaus melden. API10
+betrifft, wie die Plattform fremde APIs konsumiert, und ist von außen nicht
+beobachtbar.
 
 Die Bewertung je Versuch:
 
@@ -495,6 +524,7 @@ Die Bewertung je Versuch:
 | NOT_FOUND, 404 | nichts herausgegeben | bestanden |
 | FILTERED, 2xx ohne fremde Kennung | die Abfrage wurde eingeengt | bestanden |
 | LEAK, 2xx **mit** fremder Kennung | der Response Measure ist verletzt | **Fehlschlag** |
+| EXPOSED, 2xx auf einer API9-Sonde | erreichbare Angriffsfläche, **kein** Datenleck über Mandantengrenzen | Fehlschlag, getrennt berichtet |
 | BAD_INPUT, 400 oder 422 | das Skript selbst hat falsch angefragt | Fehler des Skripts, muss null sein |
 | ERROR, 5xx oder Transport | gesondert gezählt | Fehlschlag |
 
@@ -534,6 +564,12 @@ destruktiv und deshalb voreingestellt aus. Nach einem Lauf mit
 Vor der Cluster-Sitzung lohnt ein Trockenlauf auf dem Entwicklungsstack, er
 kostet nichts und findet Tippfehler in Pfaden.
 
+Das Dev-Profil des Core schaltet die Mandantendurchsetzung AUS und lässt
+Anfragen ohne Token durch. Für einen aussagekräftigen Trockenlauf den Core
+deshalb mit `TENANT_ENFORCEMENT_MODE=ENFORCE` starten, und die API2-Versuche
+ohne Token dort nicht werten, sie sind erst im Cluster mit der gesicherten
+Filterkette gültig.
+
 ```bash
 scripts/dev.sh up
 applications/mock-service/.venv/bin/mock-service seed --prefix tenanta --sites 1 --rooms 2
@@ -542,6 +578,52 @@ evaluation/scripts/.venv/bin/python evaluation/scripts/tenant_isolation_probe.py
 cd evaluation/load && FRONTEND_HOST=http://localhost:3000 \
   .venv/bin/locust -f security_locustfile.py --headless -u 5 -r 5 --run-time 60s
 ```
+
+### Vorbereitung vom 02.09.2026, lokal
+
+Vor der Cluster-Messung lief die ältere Sonde
+[`tenant_isolation_probe.py`](scripts/tenant_isolation_probe.py) gegen den
+Entwicklungsstack mit erzwungener Durchsetzung, direkt gegen Core und
+Analytics und um dieselbe Body-Familie erweitert. Sie bleibt als schneller
+Regressionstest ohne Cluster erhalten.
+
+| Lauf | Versuche | DENIED | FILTERED | LEAK | Audit-Einträge |
+|---|---|---|---|---|---|
+| mandantenfremd, Durchsetzung an | 138 | 132 | 6 | 0 | 132 |
+| Selbsttest gegen eigene Ressourcen | 106 | 6 | 35 | 65 | 0 |
+
+Die sechs `FILTERED` sind die Listen-Endpunkte `/projects`, `/tenants` und
+`/events`, die keinen fremden Mandanten benennen und deshalb einengen statt
+abzulehnen. Sie erzeugen bewusst keinen Audit-Eintrag, weil kein fremder
+Mandant adressiert wurde. Die sechs Verweigerungen im Selbsttest sind
+Rollenprüfungen für `viewer` (`/tenants/{id}/members`, `/fleet/status`,
+`/discovered-devices`), keine Mandantenfehler. `LEAK` im Selbsttest bedeutet
+"eigene Daten geliefert" und ist dort das erwartete Ergebnis.
+
+### Ergebnis vom 03.09.2026
+
+Protokoll `qs-sec-01-20260903-125158.txt` mit den drei Locust-CSVs daneben.
+Zehn Minuten, 25 Nutzer, Schreibversuche eingeschaltet, durch
+`frontend-internal` aus einem Cloud-Run-Job.
+
+| Kenngröße | Zielwert | Gemessen |
+|---|---|---|
+| Versuche | mindestens 100 | 122.787 in 48 Mustern |
+| fremde Datensätze in Antworten | 0 | 0 (LEAK 0, EXPOSED 0, BAD_INPUT 0, ERROR 0) |
+| Abweisungen | | 115.131 DENIED, 4.914 FILTERED, 2.742 NOT_FOUND |
+| Audit-Einträge im Fenster | 1 je Versuch mit Mandantenbezug | 107.401, davon 100.518 mit adressiertem Mandanten, 16.091 von Analytics |
+
+Die 15.386 Versuche ohne Audit-Eintrag sind drei erklärbare Gruppen. 6.812
+Anfragen mit beschädigtem oder falsch signiertem Token weist der
+Authentifizierungsfilter ab, bevor der Audit-Filter läuft. 4.900 Lesezugriffe
+auf Sammel-Endpunkte benennen keinen Mandanten. 3.656 Inventarsonden erreichten
+keinen Dienst, Analytics antwortet auf Schema und Docs mit 404, das Proxy auf
+die Traversal-Anfrage mit 400. Die erste Gruppe ist eine echte Grenze des
+Audit-Trails, aber außerhalb des Stimulus, der einen authentifizierten Nutzer
+voraussetzt.
+
+Im Log des Core lassen sich die Abweisungen der Stelle zuordnen, nach zwei
+Minuten standen dort 8.545 Abweisungen des Interceptors und 1.412 des Guards.
 
 ### Ergebnisse
 
@@ -566,83 +648,3 @@ Abschnitt 4 desselben SQL trennt außerdem, welcher Dienst die Zeile geschrieben
 hat. Analytics schreibt für den Audit selbst in den Stammdatenspeicher, was die
 dokumentierte Abweichung der geteilten Datenbank vertieft und in Kapitel 6 als
 Sensitivity Point gehört.
-
-## 11 QS-SEC-01, mandantenübergreifender Zugriffsversuch
-
-| Szenario | Umgebung | Zielwerte |
-|---|---|---|
-| QS-SEC-01 | zwei Mandanten mit je einer Flotte, je ein Nutzer mit Rolle `viewer`, Grundlast 50 Requests/s aus QS-PER-03 | 0 mandantenfremde Datensätze in den Antworten, je Versuch genau 1 Audit-Eintrag, mindestens 100 Versuche |
-
-Die Sonde ist [`evaluation/scripts/tenant_isolation_probe.py`](scripts/tenant_isolation_probe.py).
-Sie legt über den Einladungsfluss je Mandant einen Nutzer an, sammelt als
-Administrator die Kennungen beider Flotten und fährt dann jeden Versuch in
-beide Richtungen, Nutzer A gegen Daten von B und umgekehrt. Jede Antwort wird
-nach der Art der Abwehr eingeordnet, nicht nur nach bestanden oder nicht.
-
-| Einordnung | Bedeutung |
-|---|---|
-| `DENIED` | 401 oder 403, der einzige Ausgang, der Durchsetzung beweist |
-| `FILTERED` | 2xx ohne fremde Kennung im Body, der Endpunkt hat die Abfrage eingeengt statt abzulehnen |
-| `LEAK` | 2xx mit fremder Kennung im Body, oder ein angenommener mandantenübergreifender Schreibversuch |
-| `NOT_FOUND` | 404, sagt nichts über Durchsetzung aus |
-| `BAD_REQUEST` | 400, ein Fehler der Sonde selbst, muss null sein |
-
-Zwei Familien von Versuchen, weil der Core sie an zwei Stellen abwehrt.
-
-- **Kennungen in der URL** (`/projects/{B}`, `/objects/{B}/metrics`,
-  `?tenantId=B`) löst der `TenantScopeInterceptor` auf, der jede Pfadvariable
-  ihrem Mandanten zuordnet und Fremde mit 403 abweist.
-- **Kennungen im Request-Body** (`{"siteId": B}`, `{"sourceId": A, "targetId": B}`,
-  `{"bindings": [{"metricPointId": B}]}`, `?metricPointIds=B`) sieht der
-  Interceptor nicht. Sie prüft der `TenantBodyGuard` in den betroffenen
-  Handlern mit derselben Entscheidungstabelle. Diese Familie sind
-  Schreibversuche mit eigenem Anker und fremder Kennung im Payload. Ein
-  angenommener Schreibversuch zählt als `LEAK`, auch wenn die Antwort die
-  fremde Kennung nicht zurückgibt. Im Selbsttest werden sie ausgelassen, weil
-  sie echte Zeilen anlegen würden.
-
-Der Analytics-Dienst prüft die Kennungen im Body selbst (`require_tenant_scope`)
-und wird direkt angesprochen. Dazu gehören zwei Aufrufe ohne jede Kennung an
-`/stats/ingest-rate`, die vor der Korrektur ein Aggregat über den gesamten
-Messwertspeicher lieferten.
-
-```bash
-# lokal: das Dev-Profil schaltet die Durchsetzung AUS, deshalb den Core mit
-# TENANT_ENFORCEMENT_MODE=ENFORCE starten, sonst misst die Sonde das Dev-Profil
-applications/mock-service/.venv/bin/mock-service seed --prefix tenanta --sites 1 --rooms 2 --persons 1
-applications/mock-service/.venv/bin/mock-service seed --prefix tenantb --sites 1 --rooms 2 --persons 1
-evaluation/scripts/.venv/bin/python evaluation/scripts/tenant_isolation_probe.py \
-  --csv evaluation/results/qs-sec-01-<datum>.csv \
-  --dsn postgresql://postgres:password@localhost:5432/digital_demon
-
-# Gegenprobe: dieselben Aufrufe gegen die eigenen Ressourcen, muss 2xx liefern.
-# Ohne sie wäre "0 Lecks" auch das Ergebnis eines Mechanismus, der alles ablehnt.
-evaluation/scripts/.venv/bin/python evaluation/scripts/tenant_isolation_probe.py --self-check
-
-# im Cluster: CORE_HOST und ANALYTICS_HOST auf die internen Endpunkte setzen,
-# die Audit-Zählung danach per kubectl exec gegen stammdaten-db
-```
-
-### Vorbereitung vom 02.09.2026, lokal
-
-Vor der Messung wurden alle Endpunkte von Core, Analytics und Frontend-Proxy
-auf genau dieses Muster durchgesehen. Der Interceptor war lückenlos, aber
-zwölf Core-Endpunkte nahmen Kennungen im Body ungeprüft an, Analytics lieferte
-ohne Kennungsliste plattformweite Aggregate, und das Frontend-Proxy ließ über
-`..%2F` den Präfix `/api/v1` verlassen. Alle drei sind geschlossen, der Guard
-hat einen eigenen Unit-Test für seine Entscheidungstabelle.
-
-| Lauf | Versuche | DENIED | FILTERED | LEAK | Audit-Einträge |
-|---|---|---|---|---|---|
-| mandantenfremd, Durchsetzung an | 138 | 132 | 6 | 0 | 132 |
-| Selbsttest gegen eigene Ressourcen | 106 | 6 | 35 | 65 | 0 |
-
-Die sechs `FILTERED` sind die Listen-Endpunkte `/projects`, `/tenants` und
-`/events`, die keinen fremden Mandanten benennen und deshalb einengen statt
-abzulehnen. Sie erzeugen bewusst keinen Audit-Eintrag, weil kein fremder
-Mandant adressiert wurde. Die sechs Verweigerungen im Selbsttest sind
-Rollenprüfungen für `viewer` (`/tenants/{id}/members`, `/fleet/status`,
-`/discovered-devices`), keine Mandantenfehler. `LEAK` im Selbsttest bedeutet
-"eigene Daten geliefert" und ist dort das erwartete Ergebnis.
-
-Die Messung für Kapitel 6 erfolgt im Cluster unter der Grundlast aus QS-PER-03.

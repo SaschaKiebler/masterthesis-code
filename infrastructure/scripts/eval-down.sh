@@ -88,5 +88,20 @@ if [ -n "$leftover" ]; then
 else
   echo "    no forwarding rules left"
 fi
+# Persistent disks the CSI driver did not reclaim before the cluster went.
+# Deleting the PVCs first (above) usually suffices, but on 2026-09-03 three
+# unattached pvc-* disks survived anyway. Unattached and named pvc-, so they
+# can only be leftovers of a cluster that no longer exists.
+orphans=$(gcloud compute disks list --project "$PROJECT" \
+  --filter='name~^pvc- AND -users:*' --format='value(name,zone.basename())' 2>/dev/null || true)
+if [ -n "$orphans" ]; then
+  echo "$orphans" | while IFS=$'\t' read -r name zone; do
+    [ -n "$name" ] || continue
+    gcloud compute disks delete "$name" --zone "$zone" --project "$PROJECT" --quiet >/dev/null 2>&1 \
+      && echo "    deleted orphaned disk $name" || echo "    could not delete disk $name ($zone)"
+  done
+else
+  echo "    no orphaned disks left"
+fi
 echo "    images kept in:"
 gcloud artifacts repositories list --project "$PROJECT" --format="value(name,format)" 2>/dev/null || true

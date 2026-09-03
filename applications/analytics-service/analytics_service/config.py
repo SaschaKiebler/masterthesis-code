@@ -16,6 +16,11 @@ class Settings(BaseSettings):
     # Auth: validate the platform's self-issued HS256 tokens on all /stats
     # routes (same shared secret core signs with, env LOCAL_AUTH_JWT_SECRET).
     auth_enabled: bool = True
+    # The interactive docs (/docs, /redoc, /openapi.json) hang on the app, not
+    # on the authenticated routers, and the frontend proxy forwards them. Off
+    # unless a developer turns them on locally (ANALYTICS_EXPOSE_DOCS=true).
+    # Found by the QS-SEC-01 API9 probe of 2026-09-03.
+    analytics_expose_docs: bool = False
     local_auth_jwt_secret: str = "insecure-local-dev-secret-change-me"
 
     # Tenant authorisation on /stats (see tenancy.py). Twin of the core's

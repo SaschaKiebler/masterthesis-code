@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 
@@ -45,6 +47,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleCrossTenant(CrossTenantAccessException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
             .body(Map.of("message", ex.getMessage()));
+    }
+
+    /**
+     * No handler and no static resource for the path. Without this the
+     * catch-all below turns every unknown path into a 500, which the API9
+     * probe of 2026-09-03 read as a server error on a path that simply does
+     * not exist.
+     */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<Map<String, Object>> handleUnknownPath(Exception ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", "Not found"));
     }
 
     @ExceptionHandler(Exception.class)

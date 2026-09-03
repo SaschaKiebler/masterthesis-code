@@ -1,0 +1,144 @@
+scenario  : qs-sec-01
+window    : 2026-09-03 10:52:02+00 .. 2026-09-03 11:02:32+00
+surface   : http://10.10.0.78:3000 (frontend proxy only, no backend service addressed)
+attacker  : probe-tenanta@example.org (tenant-bound, NOT the bootstrap admin)
+target    : tenant 'tenantb', 2 sites x 2 rooms
+load      : 25 users x 2 req/s = 50 req/s for 10m
+writes    : true
+
+######## outcome summary (from the generator) ########
+[2026-09-03 11:02:23,964] localhost/INFO/qssec01: QS-SEC-01 outcomes over 122787 attempts: DENIED=115131, FILTERED=4914, NOT_FOUND=2742
+
+######## per attack pattern (OWASP API Top 10 tagged) ########
+Name                                           Request Count Failure Count
+API1 GET /metric-points/{id}                      12714        0
+API1 GET /objects/{id}/metrics                     5223        0
+API1 GET /projects/{id}                            5073        0
+API1 GET /projects/{id}/channels                   5069        0
+API1 GET /projects/{id}/dashboards                 5069        0
+API1 GET /projects/{id}/events                     5069        0
+API1 GET /projects/{id}/graph                      5070        0
+API1 GET /projects/{id}/health                     5070        0
+API1 GET /projects/{id}/latest-values              5071        0
+API1 GET /projects/{id}/metric-points              5073        0
+API1 GET /sites/{id}/graph                         3482        0
+API1 GET /sites/{id}/objects                       3482        0
+API1 GET /tenants/{id}                             1777        0
+API1 GET /tenants/{id}/members                     1776        0
+API1 POST /stats/descriptive                       2525        0
+API1 POST /stats/latest                            2526        0
+API1 POST /stats/latest-by-channel                 2525        0
+API1 POST /stats/series                            2525        0
+API1 POST /stats/timeseries                        2526        0
+API2 alg-none                                      1703        0
+API2 empty-signature                               1703        0
+API2 malformed-token                               1703        0
+API2 no-token                                      1704        0
+API2 wrong-signature                               1703        0
+API3 GET /events (filtered?)                       1633        0
+API3 GET /projects (filtered?)                     1634        0
+API3 GET /projects/{own}/channels?metricPointIds=foreign     1720        0
+API3 GET /sites?tenantId= (filtered?)              1633        0
+API3 GET /tenants (filtered?)                      1633        0
+API3 POST /analysis-templates tenantId=foreign      849        0
+API3 POST /anomaly-rules binding=foreign            849        0
+API3 POST /assets/{own}/relocate targetSiteId=foreign      849        0
+API3 POST /derived-properties objectId=foreign      849        0
+API3 POST /links targetId=foreign                   851        0
+API3 POST /objects projectId=foreign                850        0
+API3 POST /objects tenantId=foreign                 851        0
+API3 POST /objects/{own}/kpi-formulas metricPointId=foreign      849        0
+API3 POST /objects/{own}/kpi-formulas/generate projectId=foreign      849        0
+API3 POST /objects/{own}/metrics deviceId=foreign      849        0
+API3 POST /objects/{own}/metrics tenantId=foreign      849        0
+API3 POST /projects tenantId=foreign (mass assignment)      842        0
+API3 POST /projects/{own}/sites siteId=foreign      851        0
+"API3 POST /stats/ingest-rate (empty ids        whole store)"     1720
+"API3 POST /stats/ingest-rate (no ids           whole store)"     1720
+API5 DELETE /objects/{id}                          1752        0
+API5 PATCH /projects/{id}                           876        0
+API5 POST /invitations (invite self as admin)       820        0
+API5 POST /links                                    876        0
+API5 POST /tenants/{id}/members (add self)          820        0
+
+######## failures ########
+A row is one of three things, and the summary above says which:
+  LEAK    a response carried a tenant-tenantb identifier (the response measure)
+  EXPOSED an API9 surface answered 2xx (attack surface, not a data leak)
+  BAD_INPUT this script sent a malformed request (fix before reporting)
+
+Method,Name,Error,Occurrences,First Seen,Last Seen
+
+######## audit coverage ########
+── 1. Audit rows in the window, by outcome ─────────────────────────────
+     outcome     |  rows  
+-----------------+--------
+ DENIED          | 104782
+ UNAUTHENTICATED |   2619
+(2 rows)
+
+── 2. By subject: who was recorded (the attacker must appear) ──────────
+             subject             |     outcome     |  rows  
+---------------------------------+-----------------+--------
+ local|probe-tenanta@example.org | DENIED          | 104782
+                                 | UNAUTHENTICATED |   2619
+(2 rows)
+
+── 3. By endpoint, most recorded first (the coverage map) ──────────────
+ method |                   route                    |     outcome     | rows  
+--------+--------------------------------------------+-----------------+-------
+ GET    | /api/v1/metric-points/{id}                 | DENIED          | 12733
+ GET    | /api/v1/projects/{id}/channels             | DENIED          |  6798
+ GET    | /api/v1/objects/{id}/metrics               | DENIED          |  5231
+ GET    | /api/v1/projects/{id}/latest-values        | DENIED          |  5079
+ GET    | /api/v1/projects/{id}                      | DENIED          |  5079
+ GET    | /api/v1/projects/{id}/metric-points        | DENIED          |  5079
+ GET    | /api/v1/projects/{id}/health               | DENIED          |  5078
+ GET    | /api/v1/projects/{id}/graph                | DENIED          |  5077
+ GET    | /api/v1/projects/{id}/dashboards           | DENIED          |  5075
+ GET    | /api/v1/projects/{id}/events               | DENIED          |  5075
+ GET    | /api/v1/sites/{id}/objects                 | DENIED          |  3485
+ GET    | /api/v1/sites/{id}/graph                   | DENIED          |  3483
+ POST   | /stats/ingest-rate                         | DENIED          |  3444
+ POST   | /stats/latest                              | DENIED          |  2530
+ POST   | /stats/timeseries                          | DENIED          |  2530
+ POST   | /stats/series                              | DENIED          |  2529
+ POST   | /stats/latest-by-channel                   | DENIED          |  2529
+ POST   | /stats/descriptive                         | DENIED          |  2529
+ GET    | /api/v1/tenants/{id}                       | DENIED          |  1781
+ GET    | /api/v1/tenants/{id}/members               | DENIED          |  1780
+ DELETE | /api/v1/objects/{id}                       | DENIED          |  1756
+ POST   | /api/v1/links                              | DENIED          |  1730
+ POST   | /api/v1/objects                            | DENIED          |  1706
+ GET    | /api/v1/projects/{id}                      | UNAUTHENTICATED |  1705
+ POST   | /api/v1/objects/{id}/metrics               | DENIED          |  1702
+ GET    | /api/v1/sites                              | DENIED          |  1638
+ GET    | /api/v1/actuator/health                    | UNAUTHENTICATED |   914
+ PATCH  | /api/v1/projects/{id}                      | DENIED          |   877
+ POST   | /api/v1/objects/{id}/kpi-formulas          | DENIED          |   853
+ POST   | /api/v1/projects/{id}/sites                | DENIED          |   853
+ POST   | /api/v1/assets/{id}/relocate               | DENIED          |   852
+ POST   | /api/v1/derived-properties                 | DENIED          |   852
+ POST   | /api/v1/anomaly-rules                      | DENIED          |   852
+ POST   | /api/v1/analysis-templates                 | DENIED          |   851
+ POST   | /api/v1/objects/{id}/kpi-formulas/generate | DENIED          |   851
+ POST   | /api/v1/projects                           | DENIED          |   845
+ POST   | /api/v1/tenants/{id}/members               | DENIED          |   820
+ POST   | /api/v1/invitations                        | DENIED          |   820
+(38 rows)
+
+── 4. Which service recorded it (core filter vs. analytics dependency) ─
+ recorded_by |     outcome     | rows  
+-------------+-----------------+-------
+ core        | DENIED          | 88691
+ analytics   | DENIED          | 16091
+ core        | UNAUTHENTICATED |  2619
+(3 rows)
+
+── 5. Sanity: rows naming a tenant vs. rows naming none ────────────────
+ names_a_tenant |  rows  
+----------------+--------
+ f              |   6883
+ t              | 100518
+(2 rows)
+

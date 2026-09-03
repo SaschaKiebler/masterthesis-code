@@ -31,6 +31,9 @@ app = FastAPI(
     title="Digital Demon Analytics",
     version="0.1.0",
     lifespan=lifespan,
+    docs_url="/docs" if settings.analytics_expose_docs else None,
+    redoc_url="/redoc" if settings.analytics_expose_docs else None,
+    openapi_url="/openapi.json" if settings.analytics_expose_docs else None,
 )
 
 app.add_middleware(
