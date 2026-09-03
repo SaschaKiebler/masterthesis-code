@@ -1,0 +1,54 @@
+scenario  : qs-int-01
+started   : 2026-09-03 12:25:47+00
+fleet     : prefix 'gap', 1 site(s) x 3 rooms, interval 0.5s, duration 544s
+outage    : gap-ht-001-01 metric 1, from +60s for 300s
+
+######## 1 loss rate (generated against persisted) ########
+generator published   : 6683 messages, 9947 measurements
+thereof commissioned  : 9947 measurements   (the expected row count)
+generator dropped     : 0, publish errors 0
+persisted in window   : 9947
+loss rate             : 0.0000 %   target 0 %
+scenario asks for     : 10000 sent measurements
+NOTE: 9947 is below that. The run length already compensates for the 1200 measurements the outage removes, so a remaining shortfall points at the generator, not at the scenario.
+
+######## 2 the gap, detected in the data and not assumed ########
+channel               : gap-ht-001-01, metric 1
+values in the window  : 488
+median cadence        : 0.50 s
+gap starts after      : 2026-09-03T12:27:27.093000+00:00
+gap ends before       : 2026-09-03T12:32:27.602472+00:00
+gap length            : 300.5 s   (injected 300 s)
+deviation from injected: 0.5 s (plausible)
+
+######## 3 values inside the gap, in the store ########
+rows strictly inside  : 0   target 0
+
+######## 4 neighbouring channels (isolates the outage from a platform stall) ########
+  gap-boiler-001               1088 values   2026-09-03 12:26:27.462446+00:00 .. 2026-09-03 12:35:30.973784+00:00
+  gap-ht-001-02                1088 values   2026-09-03 12:26:27.715830+00:00 .. 2026-09-03 12:35:31.228376+00:00
+  gap-ht-001-03                1088 values   2026-09-03 12:26:27.841092+00:00 .. 2026-09-03 12:35:31.356220+00:00
+channels that kept reporting across the outage: 3 of 3
+
+######## 5 the same window through the analytics API ########
+metric point          : c499b23b-2db5-5e92-b45a-49df00777c1d
+resample              : 1min (60 s per bucket)
+buckets returned      : 6
+thereof with a value  : 6
+buckets before the gap: 1
+buckets inside the gap: 0   target 0
+buckets after the gap : 3
+The series carries values on both sides of the outage and none within it. The read path leaves the hole open rather than closing it.
+series written to qs-int-01-20260903-142547-series.csv
+
+######## verdict ########
+[ok] loss rate 0 %                      0.0000 %
+[ok] a gap is present                   found
+[ok] 0 values inside the gap, store     0
+[ok] 0 values inside the gap, API       0
+[ok] API answer spans the outage        1 before, 3 after
+[ok] outage isolated to one channel     3 neighbours healthy
+
+RESULT: all response measures met
+
+Reading note. The scenario asks for the ABSENCE of invented data, so a pass is the absence of rows and buckets, not their presence. The neighbour check is what keeps that absence meaningful.

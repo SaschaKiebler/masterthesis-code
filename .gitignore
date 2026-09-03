@@ -8,6 +8,8 @@
 *.md
 # Ausnahme: der Messaufbau der Evaluation gehoert zur Abgabe.
 !evaluation/README.md
+# Je Szenario ein Ergebnisordner mit eigener README, siehe evaluation/results.
+!evaluation/results/**/README.md
 
 # ── OS & IDE ──
 .DS_Store

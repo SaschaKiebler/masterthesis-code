@@ -1,0 +1,24 @@
+{
+  "taken_at": "2026-09-03T14:52:31.626802+02:00",
+  "frontend": "http://localhost:3000",
+  "preset": "1h",
+  "note": "The faulted and the healthy channel over the SAME window. The healthy one proves the window carried data, so the hole in the other is the outage and not a failed load.",
+  "screenshots": [
+    {
+      "role": "ausfall",
+      "device": "gap-ht-001-01",
+      "asset_id": "bb330772-b242-581a-8da3-b093c01ffeec",
+      "preset": "1h",
+      "full_page": "ausfall-gap-ht-001-01-1h-ganze-seite.png",
+      "chart": "ausfall-gap-ht-001-01-1h-diagramm.png"
+    },
+    {
+      "role": "gesund",
+      "device": "gap-ht-001-02",
+      "asset_id": "9fa8cf17-3992-5fe5-860a-a7345898e1e1",
+      "preset": "1h",
+      "full_page": "gesund-gap-ht-001-02-1h-ganze-seite.png",
+      "chart": "gesund-gap-ht-001-02-1h-diagramm.png"
+    }
+  ]
+}

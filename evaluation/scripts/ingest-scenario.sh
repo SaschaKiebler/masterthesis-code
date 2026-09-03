@@ -25,6 +25,13 @@
 set -uo pipefail
 
 SCENARIO=${1:?usage: ingest-scenario.sh <ramp|qs-per-01|qs-per-02> [duration_s]}
+# Validated here rather than at the case statement below, because the results
+# folder is named after the scenario and a typo would otherwise leave an empty
+# directory behind before the run aborts.
+case "$SCENARIO" in
+  ramp|qs-per-01|qs-per-02) ;;
+  *) echo "unknown scenario: $SCENARIO (expected ramp, qs-per-01 or qs-per-02)" >&2; exit 1 ;;
+esac
 PROJECT=${PROJECT:-heating-platform-eval}
 REGION=${REGION:-europe-west3}
 JOB=${JOB:-mock-load}
@@ -33,7 +40,8 @@ NS=heating-platform
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 MOCK=$ROOT/applications/mock-service/.venv/bin/mock-service
 STAMP=$(date +%Y%m%d-%H%M%S)
-OUT=$ROOT/evaluation/results
+# One folder per scenario, each with its own README explaining the run.
+OUT=$ROOT/evaluation/results/$SCENARIO
 mkdir -p "$OUT"
 
 step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }

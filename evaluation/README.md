@@ -232,7 +232,10 @@ Messung macht.
 
 ## 7 Ergebnisse nachvollziehen
 
-Jeder Lauf schreibt nach [evaluation/results](results) zwei Dateien.
+Jeder Lauf schreibt in den Ordner seines Szenarios unter
+[evaluation/results](results), also etwa `results/qs-per-01`. Jeder dieser
+Ordner hat ein eigenes README, das den Test, sein Ergebnis und seine
+Reproduktion erklärt. Ein Lastlauf hinterlässt dort zwei Dateien.
 
 | Datei | Inhalt |
 |---|---|
@@ -389,7 +392,8 @@ also wiederholen. Mit `--subject-id` lässt sich auch eine beliebige andere
 
 ### Was das Skript als Beleg schreibt
 
-Zwei Dateien in [evaluation/results](results).
+Zwei Dateien in [results/qs-sec-02](results/qs-sec-02), wo auch das README
+zu diesem Szenario liegt.
 
 | Datei | Inhalt |
 |---|---|
@@ -431,7 +435,8 @@ und QA-INT in Kapitel 6 und gehört deshalb ins Protokoll.
 ### Ergebnis vom 02.09.2026
 
 Protokoll `qs-sec-02-20260902-164933.txt` mit Export
-`qs-sec-02-20260902-164933-export.json` in [evaluation/results](results).
+`qs-sec-02-20260902-164933-export.json` in
+[results/qs-sec-02](results/qs-sec-02).
 Subjekt war eine Person mit einem Raum, einem darüber erreichbaren Sensor und
 126 Messwerten aus zwei Minuten Telemetrie.
 
@@ -602,7 +607,8 @@ Rollenprüfungen für `viewer` (`/tenants/{id}/members`, `/fleet/status`,
 
 ### Ergebnis vom 03.09.2026
 
-Protokoll `qs-sec-01-20260903-125158.txt` mit den drei Locust-CSVs daneben.
+Protokoll `qs-sec-01-20260903-125158.txt` mit den drei Locust-CSVs daneben
+in [results/qs-sec-01](results/qs-sec-01).
 Zehn Minuten, 25 Nutzer, Schreibversuche eingeschaltet, durch
 `frontend-internal` aus einem Cloud-Run-Job.
 

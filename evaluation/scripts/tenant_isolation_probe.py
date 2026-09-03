@@ -60,7 +60,7 @@ Usage:
     mock-service seed --prefix tenanta --sites 1 --rooms 2 --persons 1
     mock-service seed --prefix tenantb --sites 1 --rooms 2 --persons 1
     # 2. run the probe
-    python3 tenant_isolation_probe.py --csv ../results/qs-sec-01-attempts.csv
+    python3 tenant_isolation_probe.py --csv ../results/qs-sec-01/qs-sec-01-attempts.csv
 
 Audit verification is a separate step, because the databases are not exposed
 outside the cluster. The script prints the exact SQL to run afterwards, e.g.

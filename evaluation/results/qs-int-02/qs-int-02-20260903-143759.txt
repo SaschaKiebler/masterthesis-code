@@ -1,0 +1,56 @@
+scenario  : qs-int-02
+started   : 2026-09-03 12:37:59+00
+window    : 2026-09-03T12:16:56.601108+00:00 .. 2026-09-03T12:36:57.601108+00:00
+devices   : prefix gap
+
+######## 1 completeness of the four provenance fields ########
+rows in window        : 19076
+missing device_id     : 0
+missing metric_id     : 0
+missing measured time : 0
+missing received_at   : 0
+complete              : 100.00 %   target 100 %
+
+######## 2 every value resolves to a registered metric point ########
+distinct channels     : 13
+resolved in registry  : 13
+orphans               : 0   target 0
+
+######## 3 traceability of a sample of 100 values ########
+sampled               : 100   (deterministic, ordered by receipt)
+traceable to topic and payload field : 100   target 100
+written to qs-int-02-20260903-143759-sample.csv
+Each row names the MQTT topic and the JSON field the value was parsed from, which is the route back to the raw payload. The raw bytes of a SUCCESSFUL payload are not retained, only the route; the bytes of a failed one are, see the next check.
+
+Worked example of one chain.
+    value        22.1 celsius
+    measured     2026-09-03T12:16:56.660706+00:00
+    received     2026-09-03T12:16:56.660706+00:00
+    persisted    2026-09-03T12:16:56.663986+00:00
+    device       gap-ht-001-01, metric 1
+    metric point c499b23b-2db5-5e92-b45a-49df00777c1d
+    arrived on   gap-ht-001-01/status/temperature:0  field 'tC'
+
+######## 4 the error path, and what it does NOT cover ########
+rejected payloads in ingestion_errors : 0
+None in this window, which means no payload failed to parse.
+
+The finding of this check is the boundary, not the count. Ingestion has two ways to discard a message and only one of them leaves a trace.
+  parse or write failure   -> ingestion_errors, raw payload retained
+  device not commissioned  -> dropped, INFO log line only, no row
+The second path returns success from the handler (mqtt.rs, the gate before parsing), so traffic from an unknown device leaves no persistent record. Verified by running the generator with --rogue, which published from uncommissioned devices and produced no rows here. For provenance that is defensible, since nothing was stored and nothing needs an origin. For operations it is a blind spot, because a misconfigured real device disappears without anything an operator can query later.
+
+######## 5 independence of the two timestamps, the honest caveat ########
+  sensor (receive-time fallback)       10692 values,         0 with an independent measurement time (0.0 %)
+  boiler (device clock)                 8384 values,      8384 with an independent measurement time (100.0 %)
+overall independent   : 44.0 % of all values
+Where the payload carries no device clock, ingestion stamps the receive time into both fields. All four provenance fields are then present, but the measurement time adds nothing over the receive time. This is a property of the device protocol, not of the platform, and it is reported rather than averaged away.
+
+######## verdict ########
+[ok] four fields complete         100.00 %
+[ok] no orphaned channels         0 orphans
+[ok] sample fully traceable       100/100
+
+RESULT: all measurable response measures met
+
+Not covered by this run. The calibration of a measuring device under RB-REG-04 cannot be shown with simulated hardware. It is carried in the data model and reported as constructively fulfilled and unmeasured.

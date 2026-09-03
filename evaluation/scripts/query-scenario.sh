@@ -22,7 +22,8 @@ REGISTRY=${REGISTRY:-europe-west3-docker.pkg.dev/heating-platform-eval/heating-p
 NS=heating-platform
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 STAMP=$(date +%Y%m%d-%H%M%S)
-OUT=$ROOT/evaluation/results
+# One folder per scenario, each with its own README explaining the run.
+OUT=$ROOT/evaluation/results/qs-per-03
 mkdir -p "$OUT"
 
 step() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }

@@ -353,7 +353,9 @@ def main() -> int:
     ap.add_argument("--master-dsn", default="postgresql://postgres:password@localhost:5432/digital_demon")
     ap.add_argument("--measurement-dsn",
                     default="postgresql://postgres:password@localhost:5433/digital_demon_measurements")
-    ap.add_argument("--results-dir", default=str(REPO_ROOT / "evaluation" / "results"))
+    ap.add_argument("--results-dir",
+                    default=str(REPO_ROOT / "evaluation" / "results" / "qs-sec-02"),
+                    help="one folder per scenario, each with its own README")
     ap.add_argument("--skip-erase", action="store_true", help="stop after the export comparison")
     args = ap.parse_args()
 

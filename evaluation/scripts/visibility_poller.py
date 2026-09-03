@@ -35,7 +35,7 @@ Usage:
     python3 visibility_poller.py --duration 300 \
         --core-host http://<core-lb>:8080 \
         --analytics-host http://<analytics-lb>:8100 \
-        --csv ../results/qs-per-01-visibility.csv
+        --csv ../results/qs-per-01/qs-per-01-visibility.csv
 
 Preconditions: platform up, fleet seeded, mock-service run active (otherwise
 no new values appear and the script reports zero observations).
