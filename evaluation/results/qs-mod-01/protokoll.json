@@ -1,0 +1,197 @@
+{
+  "scenario": "QS-MOD-01",
+  "started_at": "2026-09-03T18:32:07.490476+02:00",
+  "steps": [
+    {
+      "nr": 1,
+      "label": "Device Scanner geoeffnet",
+      "screenshot": "01-device-scanner-geoeffnet.png",
+      "counted": false,
+      "note": ""
+    },
+    {
+      "nr": 2,
+      "label": "Geraete-ID eingegeben",
+      "screenshot": "02-geraete-id-eingegeben.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 3,
+      "label": "Nachrichten des Geraets empfangen",
+      "screenshot": "03-nachrichten-des-geraets-empfangen.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 4,
+      "label": "Empfang beendet",
+      "screenshot": "04-empfang-beendet.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 5,
+      "label": "Payload analysiert, Signal-Map vorgeschlagen",
+      "screenshot": "05-payload-analysiert-signal-map-vorgeschlagen.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 6,
+      "label": "Vorlage aus der Analyse vorbelegt",
+      "screenshot": "06-vorlage-aus-der-analyse-vorbelegt.png",
+      "counted": false,
+      "note": "Signal-Map und Protokoll sind uebernommen"
+    },
+    {
+      "nr": 7,
+      "label": "Vorlage benannt und Objekttyp gewaehlt",
+      "screenshot": "07-vorlage-benannt-und-objekttyp-gewaehlt.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 8,
+      "label": "Signal-Map nachbearbeitet, Zeitstempel entfernt, Einheiten gesetzt",
+      "screenshot": "08-signal-map-nachbearbeitet-zeitstempel-entfernt-einheiten-gesetzt.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 9,
+      "label": "Vorlage angelegt",
+      "screenshot": "09-vorlage-angelegt.png",
+      "counted": false,
+      "note": ""
+    },
+    {
+      "nr": 10,
+      "label": "Neue Vorlage im Geraetekatalog",
+      "screenshot": "10-neue-vorlage-im-geraetekatalog.png",
+      "counted": false,
+      "note": ""
+    },
+    {
+      "nr": 11,
+      "label": "Sensor-Wizard geoeffnet",
+      "screenshot": "11-sensor-wizard-geoeffnet.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 12,
+      "label": "Ort gewaehlt",
+      "screenshot": "12-ort-gewaehlt.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 13,
+      "label": "Sensortyp gewaehlt",
+      "screenshot": "13-sensortyp-gewaehlt.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 14,
+      "label": "Neue Vorlage gewaehlt",
+      "screenshot": "14-neue-vorlage-gewaehlt.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 15,
+      "label": "Name und Geraete-ID eingetragen",
+      "screenshot": "15-name-und-geraete-id-eingetragen.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 16,
+      "label": "Sensor angelegt",
+      "screenshot": "16-sensor-angelegt.png",
+      "counted": false,
+      "note": ""
+    },
+    {
+      "nr": 17,
+      "label": "Messwerte des neuen Geraets sichtbar",
+      "screenshot": "17-messwerte-des-neuen-geraets-sichtbar.png",
+      "counted": false,
+      "note": ""
+    }
+  ],
+  "facts": {
+    "before": {
+      "commit": "1594e27",
+      "uncommitted_changes_in_services": [],
+      "containers": [
+        "191d7a11f80d docker-kafka-1 2026-07-24 09:30:28 +0200 CEST",
+        "4713b5669fc1 docker-mosquitto-1 2026-07-24 09:30:28 +0200 CEST",
+        "6024ac02f201 docker-measurement-db-1 2026-07-24 09:30:28 +0200 CEST",
+        "782c7be98c01 docker-stammdaten-db-1 2026-08-10 10:51:22 +0200 CEST",
+        "7ee62c8059ec docker-kafka-ui-1 2026-07-24 09:30:29 +0200 CEST"
+      ]
+    },
+    "device": {
+      "device_id": "wmz-001",
+      "topic": "wmz-001/data",
+      "payload_example": "{\"flow_c\": 61.6, \"return_c\": 47.3, \"power_kw\": 12.64, \"energy_kwh\": 48213.756, \"volume_m3\": 1830.412, \"ts\": 1788453172}",
+      "discovered_before_configuration": {
+        "protocol": "MQTT",
+        "sample_topic": "wmz-001/data",
+        "first_seen_at": "2026-09-03T16:29:22.148109+00:00"
+      },
+      "measurements_before_configuration": 0
+    },
+    "first_value_after_create_s": 28.9,
+    "metric_points": [
+      {
+        "metric_id": 1,
+        "source": "data",
+        "field": "flow_c",
+        "unit": "celsius"
+      },
+      {
+        "metric_id": 2,
+        "source": "data",
+        "field": "return_c",
+        "unit": "celsius"
+      },
+      {
+        "metric_id": 3,
+        "source": "data",
+        "field": "power_kw",
+        "unit": "kW"
+      },
+      {
+        "metric_id": 4,
+        "source": "data",
+        "field": "energy_kwh",
+        "unit": "kWh"
+      },
+      {
+        "metric_id": 5,
+        "source": "data",
+        "field": "volume_m3",
+        "unit": "m3"
+      }
+    ],
+    "asset_id": "a0bef89f-7cb9-47c5-99ff-d33245329788",
+    "published_by_device": 15,
+    "measurements_after": 15,
+    "after": {
+      "commit": "1594e27",
+      "uncommitted_changes_in_services": [],
+      "containers": [
+        "191d7a11f80d docker-kafka-1 2026-07-24 09:30:28 +0200 CEST",
+        "4713b5669fc1 docker-mosquitto-1 2026-07-24 09:30:28 +0200 CEST",
+        "6024ac02f201 docker-measurement-db-1 2026-07-24 09:30:28 +0200 CEST",
+        "782c7be98c01 docker-stammdaten-db-1 2026-08-10 10:51:22 +0200 CEST",
+        "7ee62c8059ec docker-kafka-ui-1 2026-07-24 09:30:29 +0200 CEST"
+      ]
+    },
+    "steps_counted": 11
+  }
+}

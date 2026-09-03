@@ -1,0 +1,122 @@
+{
+  "scenario": "QS-MOD-02",
+  "started_at": "2026-09-03T18:30:26.647752+02:00",
+  "steps": [
+    {
+      "nr": 1,
+      "label": "Projekt-IDE geoeffnet",
+      "screenshot": "01-projekt-ide-geoeffnet.png",
+      "counted": false,
+      "note": ""
+    },
+    {
+      "nr": 2,
+      "label": "Anlage gewaehlt, bestehende Regeln sichtbar",
+      "screenshot": "02-anlage-gewaehlt-bestehende-regeln-sichtbar.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 3,
+      "label": "Regelformular geoeffnet",
+      "screenshot": "03-regelformular-geoeffnet.png",
+      "counted": false,
+      "note": ""
+    },
+    {
+      "nr": 4,
+      "label": "Erkennungsmuster gewaehlt",
+      "screenshot": "04-erkennungsmuster-gewaehlt.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 5,
+      "label": "Schaltsignal der Anlage gebunden",
+      "screenshot": "05-schaltsignal-der-anlage-gebunden.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 6,
+      "label": "Parameter Warmwetterschwelle eingetragen",
+      "screenshot": "06-parameter-warmwetterschwelle-eingetragen.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 7,
+      "label": "Neue Regel in der Liste",
+      "screenshot": "07-neue-regel-in-der-liste.png",
+      "counted": false,
+      "note": ""
+    },
+    {
+      "nr": 8,
+      "label": "Bestehende Regel deaktiviert",
+      "screenshot": "08-bestehende-regel-deaktiviert.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 9,
+      "label": "Bestehende Regel wieder aktiviert",
+      "screenshot": "09-bestehende-regel-wieder-aktiviert.png",
+      "counted": true,
+      "note": ""
+    },
+    {
+      "nr": 10,
+      "label": "Condition Builder fuer eine freie Regel",
+      "screenshot": "10-condition-builder-fuer-eine-freie-regel.png",
+      "counted": false,
+      "note": ""
+    }
+  ],
+  "facts": {
+    "before": {
+      "commit": "1594e27",
+      "uncommitted_changes_in_services": [],
+      "containers": [
+        "191d7a11f80d docker-kafka-1 2026-07-24 09:30:28 +0200 CEST",
+        "4713b5669fc1 docker-mosquitto-1 2026-07-24 09:30:28 +0200 CEST",
+        "6024ac02f201 docker-measurement-db-1 2026-07-24 09:30:28 +0200 CEST",
+        "782c7be98c01 docker-stammdaten-db-1 2026-08-10 10:51:22 +0200 CEST",
+        "7ee62c8059ec docker-kafka-ui-1 2026-07-24 09:30:29 +0200 CEST"
+      ]
+    },
+    "bound_channel": {
+      "metric_point_id": "23e44b8b-10a5-5b01-9546-5f8233de0930",
+      "name": "Pump Running"
+    },
+    "new_rule": {
+      "id": "834e0fe0-99d9-436e-94a0-91b6fd2bd03a",
+      "detector": "weather_heating",
+      "params": {
+        "min_duty": 0.5,
+        "t_warm_c": 18,
+        "min_flow_c": 45
+      },
+      "bindings": [
+        {
+          "role": "switch",
+          "metricPointId": "23e44b8b-10a5-5b01-9546-5f8233de0930"
+        }
+      ],
+      "enabled": true
+    },
+    "new_rule_on_topic": true,
+    "after": {
+      "commit": "1594e27",
+      "uncommitted_changes_in_services": [],
+      "containers": [
+        "191d7a11f80d docker-kafka-1 2026-07-24 09:30:28 +0200 CEST",
+        "4713b5669fc1 docker-mosquitto-1 2026-07-24 09:30:28 +0200 CEST",
+        "6024ac02f201 docker-measurement-db-1 2026-07-24 09:30:28 +0200 CEST",
+        "782c7be98c01 docker-stammdaten-db-1 2026-08-10 10:51:22 +0200 CEST",
+        "7ee62c8059ec docker-kafka-ui-1 2026-07-24 09:30:29 +0200 CEST"
+      ]
+    },
+    "steps_counted": 6
+  }
+}

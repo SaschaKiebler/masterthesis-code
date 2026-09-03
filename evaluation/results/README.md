@@ -18,13 +18,16 @@ die Ergebnisse.
 | [qs-sec-02](qs-sec-02) | Auskunft und Löschung nach DSGVO | erfüllt | 100 % Abdeckung, 0 Treffer nach dem Löschlauf, 0,8 s |
 | [qs-int-01](qs-int-01) | Messlücke bei Sensorausfall | erfüllt | Verlust 0 %, 0 Werte in der Lücke in Speicher, API und Analyse-Ansicht |
 | [qs-int-02](qs-int-02) | Provenance der Messwerte | erfüllt | 4 Felder zu 100 %, 0 Kanäle ohne Registrierung, 100/100 rückverfolgbar |
+| [qs-mod-01](qs-mod-01) | Aufnahme eines neuen Gerätetyps | erfüllt | 0 Codeänderungen, 0 Neuausrollungen, 11 Bedienschritte, erster Messwert nach 28,9 s |
+| [qs-mod-02](qs-mod-02) | Änderung einer regulatorischen Regel | erfüllt | 0 Codeänderungen, 0 Neuausrollungen, 6 Bedienschritte, Regel nach dem Commit auf dem Topic |
 
 Die vier Lastszenarien und QS-SEC-01 liefen in der Messumgebung auf Google
-Kubernetes Engine, QS-SEC-02 sowie die beiden Integritätsszenarien auf dem
-lokalen Entwicklungsstack. Die Gründe stehen im jeweiligen README.
+Kubernetes Engine, QS-SEC-02, die beiden Integritätsszenarien und die beiden
+Änderungsexperimente auf dem lokalen Entwicklungsstack. Die Gründe stehen im
+jeweiligen README.
 
-Noch offen sind QS-MOD-01, QS-MOD-02 und QS-USA-01. Für sie gibt es hier noch
-keinen Ordner.
+Noch offen ist QS-USA-01. Der Durchlauf liegt unter
+[evaluation/usability](../usability), ein Ergebnisordner fehlt hier noch.
 
 ## Was ein Ergebnisordner enthält
 
