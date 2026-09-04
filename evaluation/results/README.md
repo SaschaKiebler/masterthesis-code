@@ -20,14 +20,14 @@ die Ergebnisse.
 | [qs-int-02](qs-int-02) | Provenance der Messwerte | erfüllt | 4 Felder zu 100 %, 0 Kanäle ohne Registrierung, 100/100 rückverfolgbar |
 | [qs-mod-01](qs-mod-01) | Aufnahme eines neuen Gerätetyps | erfüllt | 0 Codeänderungen, 0 Neuausrollungen, 11 Bedienschritte, erster Messwert nach 28,9 s |
 | [qs-mod-02](qs-mod-02) | Änderung einer regulatorischen Regel | erfüllt | 0 Codeänderungen, 0 Neuausrollungen, 6 Bedienschritte, Regel nach dem Commit auf dem Topic |
+| [qs-usa-01](qs-usa-01) | Selbsterklärende Erstinbetriebnahme | erfüllt | 7 Bedienschritte ab der Startseite, 9 ab der Anmeldung |
 
 Die vier Lastszenarien und QS-SEC-01 liefen in der Messumgebung auf Google
-Kubernetes Engine, QS-SEC-02, die beiden Integritätsszenarien und die beiden
-Änderungsexperimente auf dem lokalen Entwicklungsstack. Die Gründe stehen im
-jeweiligen README.
+Kubernetes Engine, QS-SEC-02, die beiden Integritätsszenarien, die beiden
+Änderungsexperimente und der Bedienbarkeitsdurchlauf auf dem lokalen
+Entwicklungsstack. Die Gründe stehen im jeweiligen README.
 
-Noch offen ist QS-USA-01. Der Durchlauf liegt unter
-[evaluation/usability](../usability), ein Ergebnisordner fehlt hier noch.
+Damit haben alle zehn Szenarien einen Ergebnisordner.
 
 ## Was ein Ergebnisordner enthält
 

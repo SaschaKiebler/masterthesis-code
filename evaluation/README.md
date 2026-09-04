@@ -2,8 +2,7 @@
 
 Zugehörig zu Kapitel 6 der Masterarbeit. Dieses Dokument beschreibt, wie die
 Lastszenarien aufgebaut sind, welche Endpunkte und Testdaten sie verwenden und
-wie ein Messlauf gestartet und nachvollzogen wird. Es richtet sich an alle, die
-ein Ergebnis aus Kapitel 6 nachrechnen oder einen Lauf wiederholen wollen.
+wie ein Messlauf gestartet und nachvollzogen wird.
 
 ## 1 Was gemessen wird
 
@@ -16,9 +15,9 @@ ein Ergebnis aus Kapitel 6 nachrechnen oder einen Lauf wiederholen wollen.
 Dazu kommt ein Vorlauf, der nicht Teil der Szenarien ist, aber Voraussetzung für
 deren Einordnung.
 
-| Vorlauf | Last | Zweck |
-|---|---|---|
-| `ramp` | Vier Stufen à drei Minuten mit 500, 1.000, 2.000 und 2.500 Messwerten/s | Bestimmt die Sättigungsgrenze der Erfassungskette und damit, ob die Spitze aus QS-PER-02 überhaupt erreichbar ist |
+| Vorlauf | Last                                                                    | Zweck                                                                                                             |
+| ---------| -------------------------------------------------------------------------| -------------------------------------------------------------------------------------------------------------------|
+| `ramp`  | Vier Stufen à drei Minuten mit 500, 1.000, 2.000 und 2.500 Messwerten/s | Bestimmt die Sättigungsgrenze der Erfassungskette und damit, ob die Spitze aus QS-PER-02 überhaupt erreichbar ist |
 
 ## 2 Die beiden Latenzbegriffe
 
