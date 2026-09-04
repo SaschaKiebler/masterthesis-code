@@ -51,7 +51,7 @@ pro Sekunde selbst, ein zweiter Generator ist nicht nötig.
 
 | Kenngröße | Zielwert | Gemessen |
 |---|---|---|
-| Versuche | mindestens 100 | 122.787 in 48 Mustern |
+| Versuche | mindestens 100 | 122.787 in 54 Mustern |
 | fremde Datensätze in Antworten | 0 | 0 |
 | angenommene Schreibversuche | 0 | 0 |
 | erreichbare Angriffsfläche | 0 | 0 |
@@ -153,5 +153,5 @@ Der Angreifer ist ein Viewer, Rollen innerhalb eines Mandanten sind nicht
 Gegenstand des Szenarios. Die Herleitung der Kennungen setzt Kenntnis des
 Namensschemas voraus, ein Angreifer ohne dieses Wissen hätte weniger
 Angriffsfläche und nicht mehr. Der Nachweis gilt für die geprüfte Menge von
-48 Mustern und zeigt die Abwesenheit eines Fehlverhaltens für diese Menge,
+54 Mustern und zeigt die Abwesenheit eines Fehlverhaltens für diese Menge,
 nicht dessen generelle Unmöglichkeit.
