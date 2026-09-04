@@ -28,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Digital Demon Analytics",
+    title="Analytics Service",
     version="0.1.0",
     lifespan=lifespan,
     docs_url="/docs" if settings.analytics_expose_docs else None,

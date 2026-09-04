@@ -1,4 +1,4 @@
-//! Digital Demon Ingestion Service
+//! Ingestion Service
 //!
 //! This service:
 //! 1. Subscribes to MQTT topics from edge gateways
@@ -26,7 +26,7 @@ async fn main() -> Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    info!("Starting Digital Demon Ingestion Service...");
+    info!("Starting Ingestion Service...");
 
     // Load configuration
     let cfg = config::load_config()?;
