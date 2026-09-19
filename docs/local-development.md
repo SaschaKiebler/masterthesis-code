@@ -10,7 +10,7 @@ aus Docker, die Services starten nativ aus ihren Quellordnern. Ein Skript
 | --------------- | ------------- | ------------------------------------------------------- |
 | Docker + Compose | aktuell      | Kafka, Mosquitto, PostgreSQL, TimescaleDB               |
 | JDK             | 21            | core-platform, device-management, notification-service  |
-| Rust (cargo)    | ab 1.90       | ingestion-service                                       |
+| Rust (cargo)    | ab 1.90       | ingestion-service, dazu `protoc` und `cmake`            |
 | Python          | ab 3.10       | analytics-service, mock-service                         |
 | Node.js + npm   | ab 20         | frontend                                                |
 | bash            | ab 3.2        | `scripts/dev.sh`                                        |

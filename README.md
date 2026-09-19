@@ -11,7 +11,7 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 - [Lokal ausführen](docs/local-development.md). Was installiert sein muss, wie
   der gesamte Stack mit einem Skript startet und wie Telemetrie erzeugt wird.
 - [Deployment in Google Cloud](docs/deployment-gcloud.md). Was gebraucht wird,
-  wie Images gebaut werden und wie der Cluster hoch- und wieder abgefahren wird.
+  wie Images gebaut werden und wie der Cluster hoch- und wieder runtergefahren wird.
 
 ## Was liegt wo
 
@@ -31,7 +31,7 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 | -------------------- | ---------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | core-platform        | Java 21, Spring Boot   | Stammdaten und Objektmodell, Authentifizierung, API für das Frontend, Schema-Migration    | [docs](docs/applications/core-platform/)               |
 | device-management    | Java 21, Spring Boot   | Inbetriebnahme der Geräte, Gerätekonfiguration als Event, Erkennung unbekannter Geräte    | [docs](docs/applications/device-management/)           |
-| ingestion-service    | Rust                   | Nimmt Telemetrie per MQTT entgegen, parst die Gerätenutzlasten, schreibt Messwerte        | [docs](docs/applications/ingestion-service/)           |
+| ingestion-service    | Rust                   | Nimmt Telemetrie per MQTT entgegen, parst die Gerätenutzlasten, schreibt Messwerte        | [docs](docs/applications/ingestion-service/README.md)           |
 | analytics-service    | Python, FastAPI        | Schwellwert- und Anomalie-Erkennung, Statistik-Endpunkte auf dem Messwertspeicher         | [docs](docs/applications/analytics-service/)           |
 | notification-service | Java 21, Spring Boot   | Meldungen und Benachrichtigungsregeln, Webhook-Zustellung                                 | [docs](docs/applications/notification-service/)        |
 | frontend             | TypeScript, Next.js    | Web-Oberfläche                                                                            | [docs](docs/applications/frontend/)                    |
