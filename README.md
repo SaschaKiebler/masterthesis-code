@@ -29,7 +29,7 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 
 | Service              | Technologie            | Aufgabe                                                                                   | Doku                                                   |
 | -------------------- | ---------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| core-platform        | Java 21, Spring Boot   | Stammdaten und Objektmodell, Authentifizierung, API für das Frontend, Schema-Migration    | [docs](docs/applications/core-platform/)               |
+| core-platform        | Java 21, Spring Boot   | Stammdaten und Objektmodell, Authentifizierung, API für das Frontend, Schema-Migration    | [docs](docs/applications/core-platform/README.md)               |
 | device-management    | Java 21, Spring Boot   | Inbetriebnahme der Geräte, Gerätekonfiguration als Event, Erkennung unbekannter Geräte    | [docs](docs/applications/device-management/)           |
 | ingestion-service    | Rust                   | Nimmt Telemetrie per MQTT entgegen, parst die Gerätenutzlasten, schreibt Messwerte        | [docs](docs/applications/ingestion-service/README.md)           |
 | analytics-service    | Python, FastAPI        | Schwellwert- und Anomalie-Erkennung, Statistik-Endpunkte auf dem Messwertspeicher         | [docs](docs/applications/analytics-service/)           |
