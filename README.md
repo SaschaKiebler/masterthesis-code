@@ -1,7 +1,7 @@
 # Heizungsmonitoring-Plattform
 
 Prototyp zur Masterarbeit *Entwurf und Bewertung einer Referenzarchitektur für
-Heizungsmonitoring-Plattformen* (Sascha Kiebler, HTWG Konstanz, 2026). Das
+Heizungsmonitoring-Plattformen*. Das
 Repository enthält die Implementierung der in der Arbeit hergeleiteten
 Architektur als polyglotte Microservice-Plattform sowie den Messaufbau, mit dem
 sie in Kapitel 6 der Arbeit bewertet wird.
@@ -32,7 +32,7 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 | core-platform        | Java 21, Spring Boot   | Stammdaten und Objektmodell, Authentifizierung, API für das Frontend, Schema-Migration    | [docs](docs/applications/core-platform/README.md)               |
 | device-management    | Java 21, Spring Boot   | Inbetriebnahme der Geräte, Gerätekonfiguration als Event, Erkennung unbekannter Geräte    | [docs](docs/applications/device-management/)           |
 | ingestion-service    | Rust                   | Nimmt Telemetrie per MQTT entgegen, parst die Gerätenutzlasten, schreibt Messwerte        | [docs](docs/applications/ingestion-service/README.md)           |
-| analytics-service    | Python, FastAPI        | Schwellwert- und Anomalie-Erkennung, Statistik-Endpunkte auf dem Messwertspeicher         | [docs](docs/applications/analytics-service/)           |
+| analytics-service    | Python, FastAPI        | Schwellwert- und Anomalie-Erkennung, Statistik-Endpunkte auf dem Messwertspeicher         | [docs](docs/applications/analytics-service/README.md)           |
 | notification-service | Java 21, Spring Boot   | Meldungen und Benachrichtigungsregeln, Webhook-Zustellung                                 | [docs](docs/applications/notification-service/)        |
 | frontend             | TypeScript, Next.js    | Web-Oberfläche                                                                            | [docs](docs/applications/frontend/)                    |
 | mock-service         | Python                 | Simulierte Geräteflotte für Funktionstests und Lastmessung, ersetzt das Edge-Gerät        | [docs](docs/applications/mock-service/)                |
