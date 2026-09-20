@@ -34,7 +34,7 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 | ingestion-service    | Rust                   | Nimmt Telemetrie per MQTT entgegen, parst die Gerätenutzlasten, schreibt Messwerte        | [docs](docs/applications/ingestion-service/README.md)           |
 | analytics-service    | Python, FastAPI        | Schwellwert- und Anomalie-Erkennung, Statistik-Endpunkte auf dem Messwertspeicher         | [docs](docs/applications/analytics-service/README.md)           |
 | notification-service | Java 21, Spring Boot   | Meldungen und Benachrichtigungsregeln, Webhook-Zustellung                                 | [docs](docs/applications/notification-service/)        |
-| frontend             | TypeScript, Next.js    | Web-Oberfläche                                                                            | [docs](docs/applications/frontend/)                    |
+| frontend             | TypeScript, Next.js    | Web-Oberfläche                                                                            | [docs](docs/applications/frontend/README.md)                    |
 | mock-service         | Python                 | Simulierte Geräteflotte für Funktionstests und Lastmessung, ersetzt das Edge-Gerät        | [docs](docs/applications/mock-service/README.md)                |
 | simulation-engine    | Python                 | Vorgesehen für den digitalen Zwilling, noch nicht implementiert                           | keine                                                  |
 
