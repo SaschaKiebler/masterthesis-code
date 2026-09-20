@@ -30,12 +30,12 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 | Service              | Technologie            | Aufgabe                                                                                   | Doku                                                   |
 | -------------------- | ---------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ |
 | core-platform        | Java 21, Spring Boot   | Stammdaten und Objektmodell, Authentifizierung, API für das Frontend, Schema-Migration    | [docs](docs/applications/core-platform/README.md)               |
-| device-management    | Java 21, Spring Boot   | Inbetriebnahme der Geräte, Gerätekonfiguration als Event, Erkennung unbekannter Geräte    | [docs](docs/applications/device-management/)           |
+| device-management    | Java 21, Spring Boot   | Inbetriebnahme der Geräte, Gerätekonfiguration als Event, Erkennung unbekannter Geräte    | [docs](docs/applications/device-management/README.md)           |
 | ingestion-service    | Rust                   | Nimmt Telemetrie per MQTT entgegen, parst die Gerätenutzlasten, schreibt Messwerte        | [docs](docs/applications/ingestion-service/README.md)           |
 | analytics-service    | Python, FastAPI        | Schwellwert- und Anomalie-Erkennung, Statistik-Endpunkte auf dem Messwertspeicher         | [docs](docs/applications/analytics-service/README.md)           |
 | notification-service | Java 21, Spring Boot   | Meldungen und Benachrichtigungsregeln, Webhook-Zustellung                                 | [docs](docs/applications/notification-service/)        |
 | frontend             | TypeScript, Next.js    | Web-Oberfläche                                                                            | [docs](docs/applications/frontend/)                    |
-| mock-service         | Python                 | Simulierte Geräteflotte für Funktionstests und Lastmessung, ersetzt das Edge-Gerät        | [docs](docs/applications/mock-service/)                |
+| mock-service         | Python                 | Simulierte Geräteflotte für Funktionstests und Lastmessung, ersetzt das Edge-Gerät        | [docs](docs/applications/mock-service/README.md)                |
 | simulation-engine    | Python                 | Vorgesehen für den digitalen Zwilling, noch nicht implementiert                           | keine                                                  |
 
 Die Services kommunizieren über Kafka-Events, die Geräte liefern über MQTT an.

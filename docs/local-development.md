@@ -65,7 +65,7 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 Nach dem Seed dauert es bis zu 30 Sekunden, bis device-management die
 Gerätekonfiguration publiziert hat und der ingestion-service die Nachrichten
 annimmt. Weitere Optionen wie Störungsinjektion und Lastskalierung beschreibt
-[applications/mock-service/README.md](../applications/mock-service/README.md).
+[docs/applications/mock-service/cli.md](applications/mock-service/cli.md).
 
 ## Beobachten und stoppen
 
