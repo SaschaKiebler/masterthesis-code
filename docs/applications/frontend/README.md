@@ -6,10 +6,6 @@ an den eigenen Server-Teil des Frontends, der als Backend-for-Frontend (BFF)
 die Sitzung hält, das Token anhängt und an core, analytics oder notification
 weiterleitet. TypeScript, Next.js 16, React 19, Tailwind, SWR.
 
-Diese Doku beschränkt sich bewusst auf zwei Dinge, den Proxy und die
-Mandantenfähigkeit. Seiten, Komponenten und Charts sind hier nicht
-beschrieben.
-
 | Seite                                        | Inhalt                                                                                              |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------- |
 | [Proxy](proxy.md)                            | Wie Anfragen aus dem Browser zu den Diensten kommen, Sitzung, Pfadhärtung, zusammengesetzte Routen  |
