@@ -12,6 +12,8 @@ sie in Kapitel 6 der Arbeit bewertet wird.
   der gesamte Stack mit einem Skript startet und wie Telemetrie erzeugt wird.
 - [Deployment in Google Cloud](docs/deployment-gcloud.md). Was gebraucht wird,
   wie Images gebaut werden und wie der Cluster hoch- und wieder runtergefahren wird.
+- [Infrastruktur und Skripte](docs/infrastructure.md). Was Terraform anlegt,
+  was im Cluster läuft und was die Skripte der Reihe nach tun.
 
 ## Was liegt wo
 
@@ -22,7 +24,7 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 | `docker/`         | Compose-Stack für die lokale Infrastruktur (Kafka, Mosquitto, PostgreSQL, TimescaleDB)                                  |
 | `docs/`           | Diese Dokumentation, das Architekturdiagramm unter `docs/architecture/` und je Service eine Detaildoku                  |
 | `evaluation/`     | Messaufbau der Evaluation, Lastszenarien und Ergebnisse, siehe [evaluation/README.md](evaluation/README.md)             |
-| `infrastructure/` | Terraform und Kustomize für die GKE-Umgebung, siehe [infrastructure/README.md](infrastructure/README.md)                |
+| `infrastructure/` | Terraform und Kustomize für die GKE-Umgebung, siehe [docs/infrastructure.md](docs/infrastructure.md) und [infrastructure/README.md](infrastructure/README.md) |
 | `scripts/`        | `dev.sh` für den lokalen Stack                                                                                          |
 
 ## Services
