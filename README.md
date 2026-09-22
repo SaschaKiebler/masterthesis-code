@@ -14,6 +14,9 @@ sie in Kapitel 6 der Arbeit bewertet wird.
   wie Images gebaut werden und wie der Cluster hoch- und wieder runtergefahren wird.
 - [Infrastruktur und Skripte](docs/infrastructure.md). Was Terraform anlegt,
   was im Cluster läuft und was die Skripte der Reihe nach tun.
+- [Messaufbau der Evaluation](evaluation/README.md). Welche Lastszenarien
+  gemessen werden, welche Testdaten sie verwenden und wie ein Messlauf
+  gestartet und nachvollzogen wird.
 
 ## Was liegt wo
 

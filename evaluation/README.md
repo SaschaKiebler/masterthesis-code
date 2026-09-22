@@ -293,36 +293,7 @@ gcloud logging read \
 Das ist kein Plattformverlust, bedeutet aber, dass die angebotene Last nicht
 erreicht wurde. Beide Größen gehören getrennt ins Protokoll.
 
-## 8 Fallstricke, die einen Lauf still entwerten
-
-Alle folgenden Punkte sind in echten Läufen aufgetreten. Sie sind inzwischen im
-Code oder in den Skripten behoben, stehen hier aber, weil sie sich in einem
-Bericht nicht von einem gültigen Ergebnis unterscheiden lassen.
-
-- **Zwei Generatoren mit gleicher MQTT-Client-ID schießen sich gegenseitig ab.**
-  Der Broker trennt die ältere Verbindung, sobald sich eine zweite mit derselben
-  ID meldet. Beide reconnecten dann in einer Schleife. Sichtbar an hohen
-  `dropped`- und `errors`-Zählern des Generators. Behoben durch einen
-  prozess-eindeutigen Suffix.
-- **Der Startvorgang hängt an der Reihenfolge.** Core und notification teilen
-  sich die Stammdaten-Datenbank. Wer zuerst migriert, entscheidet, ob die
-  Baseline korrekt gesetzt wird. Ebenso legen die Dienste ihre Kafka-Topics nur
-  einmal beim Start an. Beides ist über `baseline-version: 0` und
-  `spring.kafka.admin.fail-fast` entschärft.
-- **Das Plattenkontingent begrenzt den Cluster, nicht die Rechenleistung.**
-  `SSD_TOTAL_GB` liegt bei 500 GB je Region, und jeder Autopilot-Knoten belegt
-  davon 100 GB für seine Boot-Platte. Da Autopilot je nicht platzierbarem Pod
-  einen Knoten nachlegt, entsteht ein Teufelskreis, sobald die Volumes fehlen.
-  `eval-up.sh` rollt deshalb gestaffelt aus, erst die Speicher und dann die
-  zustandslosen Dienste. Ein zerstörter Cluster nimmt seine Platten außerdem
-  nicht mit, weshalb `eval-down.sh` erst die PVCs löscht und dann den Cluster.
-- **Der Uhrenversatz der messenden Maschine ist bei der Sichtbarkeitslatenz
-  keine Kleinigkeit.** Er lag bei 59 ms und damit in der Größenordnung der
-  Messgröße selbst, erkennbar an physikalisch unmöglichen negativen Werten. Vor
-  und nach einem solchen Lauf `sntp -t 5 time.apple.com` ausführen und den
-  Versatz protokollieren.
-
-## 9 Abweichungen vom ursprünglichen Messplan
+## 8 Abweichungen vom ursprünglichen Messplan
 
 - **Der Generator läuft als Cloud-Run-Job in derselben Region** und nicht auf dem
   Rechner der Betreiberin oder des Betreibers. Der Grund ist zum einen, dass
@@ -341,7 +312,7 @@ Bericht nicht von einem gültigen Ergebnis unterscheiden lassen.
   was die client-seitig gemessenen Antwortzeiten näher an die reine
   Verarbeitungszeit der Plattform rückt.
 
-## 10 QS-SEC-02, Auskunft und Löschung
+## 9 QS-SEC-02, Auskunft und Löschung
 
 Das einzige Szenario, das nicht im Cluster, sondern auf dem lokalen Dev-Stack
 gemessen wird. Es braucht keine Last, und der Löschlauf ist auf einer
@@ -450,7 +421,7 @@ Subjekt war eine Person mit einem Raum, einem darüber erreichbaren Sensor und
 Was der Lauf nicht prüft, ist das Event-Backbone. Retention und Tombstones
 sind Topic-Konfiguration und werden hier nicht gemessen.
 
-## 11 QS-SEC-01, mandantenübergreifender Zugriffsversuch
+## 10 QS-SEC-01, mandantenübergreifender Zugriffsversuch
 
 Der Angriffslauf unterscheidet sich in zwei Punkten von jedem anderen Szenario,
 und beide sind der Grund, warum ein früherer lokaler Probelauf die Messung
@@ -591,18 +562,44 @@ Entwicklungsstack mit erzwungener Durchsetzung, direkt gegen Core und
 Analytics und um dieselbe Body-Familie erweitert. Sie bleibt als schneller
 Regressionstest ohne Cluster erhalten.
 
-| Lauf | Versuche | DENIED | FILTERED | LEAK | Audit-Einträge |
-|---|---|---|---|---|---|
-| mandantenfremd, Durchsetzung an | 138 | 132 | 6 | 0 | 132 |
-| Selbsttest gegen eigene Ressourcen | 106 | 6 | 35 | 65 | 0 |
+Die Sonde läuft zweimal, weil eine Leckzahl von null allein nichts beweist.
+Eine Durchsetzung, die schlicht jede Anfrage ablehnt, meldet ebenfalls null
+Lecks. Der erste Lauf ist der Angriff. Jeder Nutzer fragt die Ressourcen des
+anderen Mandanten an, und jede gelieferte fremde Kennung wäre ein Leck. Der
+zweite Lauf ist die Gegenprobe (`--self-check`). Dieselben Anfragen gehen an
+die eigenen Ressourcen des Nutzers, und hier muss die Plattform liefern. Erst
+beide Läufe zusammen zeigen, dass die Durchsetzung an der richtigen Stelle
+sitzt und nicht nur streng ist. Die Gegenprobe hat weniger Versuche, weil die
+Schreibversuche mit fremder Kennung im Körper dort ausgelassen werden, gegen
+die eigenen Ressourcen würden sie echte Zeilen anlegen.
 
-Die sechs `FILTERED` sind die Listen-Endpunkte `/projects`, `/tenants` und
-`/events`, die keinen fremden Mandanten benennen und deshalb einengen statt
-abzulehnen. Sie erzeugen bewusst keinen Audit-Eintrag, weil kein fremder
-Mandant adressiert wurde. Die sechs Verweigerungen im Selbsttest sind
-Rollenprüfungen für `viewer` (`/tenants/{id}/members`, `/fleet/status`,
-`/discovered-devices`), keine Mandantenfehler. `LEAK` im Selbsttest bedeutet
-"eigene Daten geliefert" und ist dort das erwartete Ergebnis.
+Die Sonde bewertet beide Läufe mit demselben Vokabular, denn sie prüft in
+beiden Fällen nur, ob die angefragte Kennung in der Antwort auftaucht. In der
+Gegenprobe ist die angefragte Kennung die eigene, und damit kehrt sich die
+Lesart der Spalten dort um. `LEAK` heißt in der Gegenprobe "eigene Daten
+geliefert" und ist das gewünschte Ergebnis. `DENIED` wäre dort der Befund,
+weil die Plattform einen Nutzer von seinen eigenen Daten ausgesperrt hätte.
+Die Sonde listet deshalb in der Gegenprobe jede Abweisung gesondert als
+`OVER-BLOCKED` auf, damit sie von Hand geprüft wird.
+
+| Lauf                                            | Versuche | DENIED | FILTERED | LEAK | Audit-Einträge |
+| ----------------------------------------------- | -------- | ------ | -------- | ---- | -------------- |
+| Angriff, Anfragen an den fremden Mandanten      | 138      | 132    | 6        | 0    | 132            |
+| Gegenprobe, Anfragen an die eigenen Ressourcen  | 106      | 6      | 35       | 65   | 0              |
+
+Im Angriff hat kein Versuch fremde Daten geliefert. Die sechs `FILTERED` sind
+die Listen-Endpunkte `/projects`, `/tenants` und `/events`, die keinen fremden
+Mandanten benennen und deshalb einengen statt abzulehnen. Sie erzeugen bewusst
+keinen Audit-Eintrag, weil kein fremder Mandant adressiert wurde.
+
+In der Gegenprobe sind die 65 `LEAK` die Endpunkte, die dem Nutzer seine
+eigenen Daten geliefert haben, so wie es sein soll. Die 35 `FILTERED` sind
+ebenfalls erfolgreiche Antworten, nur kommt in ihrem Körper keine der eigenen
+Kennungen wörtlich vor, etwa bei Projekteinstellungen, Messwertlisten und den
+Statistik-Endpunkten von Analytics. Die sechs `DENIED` sind Rollenprüfungen
+für `viewer` (`/tenants/{id}/members`, `/fleet/status`,
+`/discovered-devices`), keine Mandantenfehler. Kein Endpunkt hat einen Nutzer
+von seinen eigenen Daten ausgesperrt.
 
 ### Ergebnis vom 03.09.2026
 
