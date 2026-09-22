@@ -27,7 +27,7 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 | `applications/`   | Die Services der Plattform, je ein Unterordner (siehe unten)                                                            |
 | `apis/`           | Protobuf-Schemata der Kafka-Events und Service-Schnittstellen                                                           |
 | `docker/`         | Compose-Stack für die lokale Infrastruktur (Kafka, Mosquitto, PostgreSQL, TimescaleDB)                                  |
-| `docs/`           | Diese Dokumentation, das Architekturdiagramm unter `docs/architecture/` und je Service eine Detaildoku                  |
+| `docs/`           | Diese Dokumentation, Architekturdiagramm und [Event-Katalog](docs/architecture/events.md), je Service eine Detaildoku   |
 | `evaluation/`     | Messaufbau der Evaluation, Lastszenarien und Ergebnisse, siehe [evaluation/README.md](evaluation/README.md)             |
 | `infrastructure/` | Terraform und Kustomize für die GKE-Umgebung, siehe [docs/infrastructure.md](docs/infrastructure.md) und [infrastructure/README.md](infrastructure/README.md) |
 | `scripts/`        | `dev.sh` für den lokalen Stack                                                                                          |
@@ -46,4 +46,6 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 | simulation-engine    | Python                 | Vorgesehen für den digitalen Zwilling, noch nicht implementiert                           | keine                                                  |
 
 Die Services kommunizieren über Kafka-Events, die Geräte liefern über MQTT an.
-Stammdaten liegen in PostgreSQL, Messwerte in TimescaleDB.
+Welche Topics es gibt, wem sie gehören und was bewusst kein Topic bekommt,
+steht im [Event-Katalog](docs/architecture/events.md). Stammdaten liegen in
+PostgreSQL, Messwerte in TimescaleDB.
