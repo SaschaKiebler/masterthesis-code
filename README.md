@@ -8,6 +8,8 @@ sie in Kapitel 6 der Arbeit bewertet wird.
 
 ## Einstieg
 
+- [Schnellstart](docs/quickstart.md). Nur die Befehle, um den Stack lokal oder
+  in Google Cloud zum Laufen zu bringen.
 - [Lokal ausführen](docs/local-development.md). Was installiert sein muss, wie
   der gesamte Stack mit einem Skript startet und wie Telemetrie erzeugt wird.
 - [Deployment in Google Cloud](docs/deployment-gcloud.md). Was gebraucht wird,
