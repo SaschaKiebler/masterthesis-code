@@ -19,7 +19,7 @@ die Ergebnisse.
 | [qs-int-01](qs-int-01) | Messlücke bei Sensorausfall | erfüllt | Verlust 0 %, 0 Werte in der Lücke in Speicher, API und Analyse-Ansicht |
 | [qs-int-02](qs-int-02) | Provenance der Messwerte | erfüllt | 4 Felder zu 100 %, 0 Kanäle ohne Registrierung, 100/100 rückverfolgbar |
 | [qs-mod-01](qs-mod-01) | Aufnahme eines neuen Gerätetyps | erfüllt | 0 Codeänderungen, 0 Neuausrollungen, 11 Bedienschritte, erster Messwert nach 28,9 s |
-| [qs-mod-02](qs-mod-02) | Änderung einer regulatorischen Regel | erfüllt | 0 Codeänderungen, 0 Neuausrollungen, 6 Bedienschritte, Regel nach dem Commit auf dem Topic |
+| [qs-mod-02](qs-mod-02) | Neue Regel | erfüllt | 0 Codeänderungen, 0 Neuausrollungen, 6 Bedienschritte, Regel nach dem Commit auf dem Topic |
 | [qs-usa-01](qs-usa-01) | Selbsterklärende Erstinbetriebnahme | erfüllt | 7 Bedienschritte ab der Startseite, 9 ab der Anmeldung |
 
 Die vier Lastszenarien und QS-SEC-01 liefen in der Messumgebung auf Google

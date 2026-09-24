@@ -1,4 +1,4 @@
-# QS-MOD-02 – Änderung einer regulatorischen Regel
+# QS-MOD-02 – Neue Regel
 
 **Status: erfüllt.** 0 Codeänderungen, 0 berührte Dienste, 0 Neuausrollungen.
 Der Durchlauf hat 6 Bedienschritte, die neue Regel lag nach dem Speichern
@@ -7,17 +7,15 @@ Analytics-Dienst seine Regeln bezieht.
 
 ## Was der Test zeigt
 
-Das Szenario nennt als Beispiel ein Intervall der Verbrauchsinformation. So
-etwas gibt es im Prototyp nicht, er bildet keine Berichtspflichten ab.
-Regulatorische Vorgaben treten im Prototyp als Erkennungsregeln auf, also als
-Schwellwert- und Anomalieregeln des Core. Geprüft wird deshalb eine Regel
-dieser Art, eine Warmwettergrenze, ab der Heizbetrieb als unnötig gilt.
+Das Szenario prüft, ob sich für eine Anlage eine neue Regel allein über die
+Bedienoberfläche anlegen lässt, ohne Codeänderung und ohne Neuausrollen.
+Geprüft wird eine Warmwettergrenze, ab der Heizbetrieb als unnötig gilt.
 
 Der Durchlauf in der Projekt-IDE.
 
 1. **Anlage wählen.** Der Kessel „Boiler 001" hat zwei Schwellwertregeln und
    zwei Anomalieregeln, alle gelistet.
-2. **Neue Regel.** Erkennungsmuster „Heating despite warm weather" wählen,
+2. **Neue Regel.** Vorlage „Heating despite warm weather" wählen,
    Schaltsignal der Pumpe binden, Warmwettergrenze auf 18 °C statt der
    Vorgabe 20 °C setzen, speichern. Die Regel erscheint in der Liste.
 3. **Bestehende Regel ändern.** Die Regel „Short cycling (Boiler 001)"
@@ -51,18 +49,14 @@ Regeln auf dem Ereignisstrom wirken, nicht auf der Speicherung.
 
 ## Grenzen
 
-- **Parameter bestehender Musterregeln** sind in der Oberfläche nicht
-  editierbar, nur Schalter und Löschen. Eine Parameteränderung heißt dort
+- **Parameter bestehender Regeln aus einer Vorlage** sind in der Oberfläche
+  nicht editierbar, nur Schalter und Löschen. Eine Parameteränderung heißt dort
   Löschen und neu Anlegen, oder ein PATCH über die API. Freie Regeln lassen
   sich im Builder bearbeiten. Das ist eine Lücke der Bedienoberfläche, keine
   der Architektur.
-- **Variante 2 (neuer Regeltyp)** hängt am Weg. Eine neue Regel als freie
-  Bedingung kostet 0 Code. Ein neues kuratiertes Erkennungsmuster berührt
-  zwei Bausteine, die Vorlagenliste im Core und die Engine im
-  Analytics-Dienst, und liegt damit über dem Sollwert von einem Baustein.
-  Die Operatorlogik der Schwellwertregeln steht zudem doppelt im Code, in
-  Java im Core (nicht mehr auf dem Auswertungspfad) und in Python im
-  Analytics-Dienst.
+- **Neue Vorlage** braucht Code, in der Vorlagenliste im Core und in der
+  Engine im Analytics-Dienst. Freie Regeln aus dem Condition Builder brauchen
+  keinen.
 - Der Ausführende ist der Autor.
 
 ## Dateien

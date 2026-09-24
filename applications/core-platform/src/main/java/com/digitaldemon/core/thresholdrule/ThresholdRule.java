@@ -63,41 +63,4 @@ public class ThresholdRule {
     void preUpdate() {
         updatedAt = Instant.now();
     }
-
-    /**
-     * Returns true if this rule fires given the current measurement value and the
-     * previous known value for the same metric point.
-     *
-     * Threshold rules (GT/LT/GTE/LTE) only need the current value.
-     * State-change rules (CHANGED_TO_TRUE/FALSE) require a known previous value to
-     * detect a transition — they return false on the very first measurement so we
-     * don't fire on an unknown initial state.
-     *
-     * @param current  most recent measurement value
-     * @param previous last known value, or null if this is the first measurement
-     */
-    public boolean isTriggered(double current, Double previous) {
-        return switch (operator) {
-            case "GT"  -> threshold != null && current > threshold;
-            case "LT"  -> threshold != null && current < threshold;
-            case "GTE" -> threshold != null && current >= threshold;
-            case "LTE" -> threshold != null && current <= threshold;
-            // Transition to TRUE (1): previous was falsy, current is truthy.
-            // Require previous != null so we don't fire on initial state.
-            case "CHANGED_TO_TRUE"  -> previous != null && current > 0.5 && previous <= 0.5;
-            // Transition to FALSE (0): previous was truthy, current is falsy.
-            case "CHANGED_TO_FALSE" -> previous != null && current <= 0.5 && previous > 0.5;
-            default -> false;
-        };
-    }
-
-    /** Human-readable label for event details. */
-    public String direction() {
-        return switch (operator) {
-            case "GT", "GTE"          -> "ABOVE";
-            case "CHANGED_TO_TRUE"    -> "ON";
-            case "CHANGED_TO_FALSE"   -> "OFF";
-            default                   -> "BELOW";
-        };
-    }
 }

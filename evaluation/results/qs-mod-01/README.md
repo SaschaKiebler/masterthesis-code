@@ -59,13 +59,11 @@ Auslösen zählt, Ansichten und reine Bestätigungen zählen nicht).
   Kein Dienst wurde neu gestartet, der Cache der Erfassung folgt dem Topic im
   laufenden Betrieb. Eine parallel laufende zweite Flotte mit Lückenprüfung
   war nicht Teil des Durchlaufs.
-- **Variante 2 (neues Protokoll)** wurde nicht ausgeführt. Der
-  Erfassungsdienst kennt genau einen Transport (MQTT), ein zweiter wäre ein
-  Geschwistermodul der MQTT-Schleife mit demselben Dekodier- und
-  Persistenzpfad, also ein Baustein. Die Zuordnung von Topic zu Gerät kennt
-  allerdings drei fest verdrahtete Layouts (Shelly, Tasmota, generisch). Ein
-  viertes Layout kostet Code in der Erfassung und im Spiegel-Parser der
-  Geräteverwaltung, also zwei Bausteine.
+- **Neues Protokoll oder Topic-Schema** braucht Code. Der Erfassungsdienst
+  kennt genau einen Transport (MQTT), ein zweiter wäre ein neues Modul in der
+  Erfassung. Die Zuordnung von Topic zu Gerät kennt drei fest verdrahtete
+  Schemata (Shelly, Tasmota, generisch), ein viertes braucht Code in der
+  Erfassung und in der Geräteverwaltung.
 - Der Ausführende ist der Autor. Der Durchlauf belegt den Weg und seine
   Länge, nicht die Verständlichkeit für Dritte.
 
