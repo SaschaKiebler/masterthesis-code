@@ -10,7 +10,7 @@ die Ergebnisse.
 
 | Ordner | Szenario | Status | Kernzahl |
 |---|---|---|---|
-| [ramp](ramp) | Kalibrierung der Erfassungskette | Voraussetzung, kein Szenario | Sättigung bei rund 1.400 Messwerten/s mit 500 Millicores im Speicher |
+| [ramp](ramp) | Laststufenlauf, Kalibrierung der Erfassungskette | Voraussetzung, kein Szenario | Sättigung bei rund 1.400 Messwerten/s mit 500 Millicores im Speicher |
 | [qs-per-01](qs-per-01) | Ingest-Durchsatz im Dauerbetrieb | erfüllt | Verlust 0 %, p95 Persistierung 7,7 ms, p95 Bereitstellung 231 ms |
 | [qs-per-02](qs-per-02) | Lastspitze im Ingest | erfüllt | 2.575 Messwerte/s, Verlust 0 %, Skalierung 2 auf 8 Instanzen |
 | [qs-per-03](qs-per-03) | Abfrage-APIs unter Last | teilweise erfüllt | p95 7.600 ms gegen 300 ms, Fehlerrate 0,51 % eingehalten |

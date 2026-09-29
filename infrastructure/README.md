@@ -119,7 +119,7 @@ Abschnitt zum Abbau.
   und keine Knoten zu verwalten sind. Der Stack fordert im Ruhezustand rund
   6,9 vCPU und 9,1 GiB an, am Autoscaler-Limit von ingestion rund 8,9 vCPU
   und 11,1 GiB. Der Messwertspeicher allein steht für 4 dieser CPUs. Der
-  Bedarf hat sich etwa verdreifacht, als der Speicher nach dem Ramp vom
+  Bedarf hat sich etwa verdreifacht, als der Speicher nach dem Laststufenlauf vom
   2026-09-01 von 500m auf 4 CPU ging, und weil Autopilot das Angeforderte
   abrechnet, haben sich die laufenden Kosten mit verdreifacht. `eval-down.sh`
   nach jeder Sitzung hält das nahe null.

@@ -37,7 +37,7 @@ Strom und auf drei compacted Konfigurations-Topics.
 | aus       | HTTP zu Open-Meteo                                             | Außentemperatur für wetterabhängige Regeln                               |
 | lesen     | TimescaleDB `measurement-db`                                   | Messwerte, alleiniger Leser                                              |
 | lesen     | PostgreSQL `stammdaten-db`                                     | Messpunkt-Registry und Mitgliedschaften für die Mandantenprüfung         |
-| schreiben | PostgreSQL `stammdaten-db`, Tabelle `access_audit`             | Abgelehnte mandantenfremde Zugriffe, bewusste Abweichung                 |
+| schreiben | PostgreSQL `stammdaten-db`, Tabelle `access_audit`             | Abgelehnte mandantenfremde Zugriffe, nur zu Messzwecken für QS-SEC-01    |
 
 ## Was beim Start passiert
 

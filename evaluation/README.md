@@ -12,10 +12,10 @@ wie ein Messlauf gestartet und nachvollzogen wird.
 | QS-PER-02 | Aus der Grundlast heraus 5 Minuten auf 2.500 Messwerte/s | Verlustrate 0 %, Erholung binnen 5 Minuten |
 | QS-PER-03 | 50 Nutzer, 100 Requests/s gegen Core und Analytics | p95 unter 300 ms, Fehlerrate unter 1 % |
 
-Dazu kommt ein Vorlauf, der nicht Teil der Szenarien ist, aber Voraussetzung für
-deren Einordnung.
+Dazu kommt ein Laststufenlauf, der nicht Teil der Szenarien ist, aber
+Voraussetzung für deren Einordnung.
 
-| Vorlauf | Last                                                                    | Zweck                                                                                                             |
+| Lauf    | Last                                                                    | Zweck                                                                                                             |
 | ---------| -------------------------------------------------------------------------| -------------------------------------------------------------------------------------------------------------------|
 | `ramp`  | Vier Stufen à drei Minuten mit 500, 1.000, 2.000 und 2.500 Messwerten/s | Bestimmt die Sättigungsgrenze der Erfassungskette und damit, ob die Spitze aus QS-PER-02 überhaupt erreichbar ist |
 
@@ -610,7 +610,7 @@ Zehn Minuten, 25 Nutzer, Schreibversuche eingeschaltet, durch
 
 | Kenngröße | Zielwert | Gemessen |
 |---|---|---|
-| Versuche | mindestens 100 | 122.787 in 48 Mustern |
+| Versuche | mindestens 100 | 122.787 in 54 Mustern |
 | fremde Datensätze in Antworten | 0 | 0 (LEAK 0, EXPOSED 0, BAD_INPUT 0, ERROR 0) |
 | Abweisungen | | 115.131 DENIED, 4.914 FILTERED, 2.742 NOT_FOUND |
 | Audit-Einträge im Fenster | 1 je Versuch mit Mandantenbezug | 107.401, davon 100.518 mit adressiertem Mandanten, 16.091 von Analytics |
@@ -647,6 +647,8 @@ Das SQL trennt diese beiden Mengen in Abschnitt 5, statt eine Quote über alles
 zu berichten.
 
 Abschnitt 4 desselben SQL trennt außerdem, welcher Dienst die Zeile geschrieben
-hat. Analytics schreibt für den Audit selbst in den Stammdatenspeicher, was die
-dokumentierte Abweichung der geteilten Datenbank vertieft und in Kapitel 6 als
-Sensitivity Point gehört.
+hat. Analytics schreibt seine Abweisungen selbst in `access_audit`, damit
+QS-SEC-01 auch für die Statistik-Routen einen Eintrag je Versuch zählen kann.
+Dieser schreibende Zugriff dient allein der Messung, ist per
+`ANALYTICS_AUDIT_ENABLED` abschaltbar und wird in der Arbeit nicht als
+Abweichung geführt.

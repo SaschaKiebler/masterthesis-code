@@ -40,7 +40,7 @@ getrennt prüft.
 
 Der Katalog ist nach den OWASP API Security Top 10 in der Fassung von 2023
 geordnet und deckt API1, API2, API3, API5 und API9 ab. Die übrigen fünf
-Kategorien bleiben mit Begründung außen vor, siehe Abschnitt 11 von
+Kategorien bleiben mit Begründung außen vor, siehe Abschnitt 10 von
 [evaluation/README.md](../../README.md).
 
 ## Ergebnis vom 03.09.2026, bestanden
@@ -63,7 +63,9 @@ Die Ausgänge verteilen sich auf 115.131 abgewiesene, 4.914 eingeengte und
 vollständig abgewiesen. Im Log des Core lassen sich die Abweisungen der
 abweisenden Stelle zuordnen, nach zwei Minuten standen dort 8.545 Abweisungen
 des Interceptors und 1.412 des Guards. Der Analytics-Dienst schrieb seine
-16.091 Abweisungen selbst in dieselbe Tabelle.
+16.091 Abweisungen selbst in dieselbe Tabelle, ein schreibender Zugriff allein
+zu Messzwecken, damit auch die Statistik-Routen einen Eintrag je Versuch
+liefern.
 
 ### Die 15.386 Versuche ohne Audit-Eintrag
 

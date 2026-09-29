@@ -1,4 +1,4 @@
-# ramp, Kalibrierung der Erfassungskette
+# Laststufenlauf (ramp), Kalibrierung der Erfassungskette
 
 Kein Szenario aus Kapitel 3, sondern die Voraussetzung ihrer Einordnung. Der
 Lauf beantwortet eine einzige Frage, nämlich ob die von QS-PER-02 geforderte

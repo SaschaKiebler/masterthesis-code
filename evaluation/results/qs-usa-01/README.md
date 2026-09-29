@@ -1,9 +1,11 @@
 # QS-USA-01 – Selbsterklärende Erstinbetriebnahme
 
 **Status: erfüllt.** 7 Bedienschritte ab der Startseite, 9 ab der Anmeldung,
-Sollwert höchstens 10. Der Durchlauf wurde am 13.08.2026 von Hand in der
-Weboberfläche ausgeführt und mit einem beschrifteten Screenshot je Schritt
-festgehalten.
+Sollwert höchstens 10. Der Durchlauf wurde am 13.08.2026 mit dem
+Browser-Automatisierungsskript `evaluation/usability/qs_usa_01_walkthrough.py`
+ausgeführt, das den Bedienablauf in der Weboberfläche fährt und jeden Schritt
+mit einem Screenshot festhält. Die Zählung folgt der Regel aus Kapitel 6.2 der
+Arbeit und lässt sich aus den Screenshots nachvollziehen.
 
 ## Was der Test zeigt
 
@@ -39,10 +41,28 @@ Anmeldeformular und das Anmelden hinzu, also 9.
   Sensor ohne Signal-Map, der keinen Wert zeigt. Der Katalog ist Aufgabe des
   Betreibers.
 - Die Oberfläche ist englisch beschriftet.
-- Das Automationsskript unter `evaluation/usability/` fährt denselben Weg
-  mit Playwright. Sein dort abgelegtes Protokoll zählt noch nach der alten
-  Regel (Werkzeugaufrufe statt Bedienschritte) und ist nicht der Beleg.
 
 ## Dateien
 
-- `screenshots/` – die sieben beschrifteten Screenshots in Ablaufreihenfolge.
+- `screenshots/` – die sieben beschrifteten Screenshots der gezählten Schritte
+  in Ablaufreihenfolge, der Beleg für die Zählung.
+- `../../usability/screenshots/` – der Rohlauf des Skripts mit einem Screenshot
+  je Aktion, auch für die nicht gezählten wie Anmeldemaske oder Weiter. Die
+  dort liegende `protokoll.json` stammt aus der ersten Fassung des Skripts,
+  die Werkzeugaufrufe statt Bedienschritte zählte (16 statt 9 ab der
+  Anmeldung), und ist nicht der Beleg.
+
+## Wiederholen
+
+```bash
+scripts/dev.sh up
+evaluation/usability/.venv/bin/python evaluation/usability/qs_usa_01_walkthrough.py \
+  --device-id mock-ht-005-06 --location "Raum 005-06" \
+  --sensor-type "Digital Input" --template "Shelly Plus I4"
+```
+
+Das Skript meldet sich an, fährt den Sensor-Wizard, legt den Sensor an und
+wartet auf den ersten sichtbaren Messwert. Voreingestellt schreibt es
+Screenshots und `protokoll.json` nach `evaluation/usability/screenshots/`,
+mit `--out` in einen anderen Ordner. Das Gerät muss bereits am Broker senden,
+also Teil einer geseedeten und laufenden Mock-Flotte sein.

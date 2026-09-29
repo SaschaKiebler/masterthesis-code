@@ -67,9 +67,9 @@ Die Werte stehen in `infrastructure/kubernetes/base/analytics-service.yaml`.
 - **Externe Abhängigkeit Open-Meteo.** Ohne Antwort schweigen die
   wetterabhängigen Regeln, es gibt keinen Fehler.
 - **Schreibt in die Stammdaten-DB.** Abgelehnte Zugriffe landen in
-  `access_audit`, damit QS-SEC-01 einen Eintrag je Versuch bekommt. Das ist
-  eine bewusste Vertiefung der geteilten Datenbank, abschaltbar per
-  `ANALYTICS_AUDIT_ENABLED`.
+  `access_audit`, damit QS-SEC-01 einen Eintrag je Versuch bekommt. Dieser
+  Schreibzugriff dient allein der Messung in der Evaluation und ist per
+  `ANALYTICS_AUDIT_ENABLED` abschaltbar.
 - **Registry-Lookups auf dem Abfragepfad.** Die Endpunkte mit
   `metric_point_ids` lesen die Stammdaten-DB je Aufruf für den Anzeigekontext.
   Die Mandantenprüfung liest sie für jede Anfrage, bei Kanälen ohne Cache.

@@ -9,7 +9,7 @@ gemessenen Pfad liegt. Ein Systemadministrator beendet die Prüfung in ihrer
 ersten Zeile, ein Lauf unter seinem Konto würde ihre Kosten als null
 ausweisen.
 
-## Ergebnis vom 02.09.2026, nicht bestanden
+## Ergebnis vom 02.09.2026, teilweise erfüllt
 
 | Kenngröße | Zielwert | Gemessen |
 |---|---|---|
@@ -17,8 +17,9 @@ ausweisen.
 | Fehlerrate | unter 1 % | 0,51 %, 73 von 14.450 Requests |
 | Ingest während der Abfragelast | | 307.914 Messwerte, p95 der Persistierung 23,2 ms |
 
-Das Szenario scheitert am p95 und hält die Fehlerrate ein. Entscheidend für
-die Einordnung ist die Aufteilung je Endpunkt.
+Das Szenario ist teilweise erfüllt. Die Antwortzeit verfehlt ihren Sollwert um
+etwa den Faktor 25, Fehlerrate und Verlustrate der Erfassung halten ihre
+Sollwerte. Entscheidend für die Einordnung ist die Aufteilung je Endpunkt.
 
 | Endpunkt | Requests | Fehler | Median |
 |---|---|---|---|
@@ -36,9 +37,12 @@ Alle 73 Fehler entfallen auf den Analytics-Dienst, keiner auf den Core. Der
 Engpass liegt damit nicht in der Abfrageschicht allgemein, sondern im
 Lesepfad des Messwertspeichers. Analytics aggregiert über Zeitreihen, während
 der Speicher zugleich die Ingest-Grundlast schreibt, und beides trifft auf
-dieselbe Instanz. Das ist eine Folge der geteilten Datenbank, also einer
-dokumentierten Abweichung des Prototyps vom Entwurf, und keine Eigenschaft der
-Architektur.
+dieselbe Instanz. Das ist eine Folge des Entwurfs, der Erfassung und Abfrage
+auf denselben Messwertspeicher setzt, unter der Ausstattung der Messumgebung
+mit einer einzigen Instanz. Die Konkurrenz wirkt einseitig, der Schreibpfad
+behält seine Rate, der Lesepfad bricht ein. Kapitel 6 führt das als Sensitivity
+Point und Trade-off innerhalb von QA-PER und nicht als Abweichung des
+Prototyps.
 
 Die Ingest-Kette blieb davon unberührt. Ihr p95 stieg von 7,7 ms ohne
 Abfragelast auf 23,2 ms, blieb also weit unter dem Zielwert von QS-PER-01.
