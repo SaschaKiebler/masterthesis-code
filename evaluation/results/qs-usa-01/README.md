@@ -4,8 +4,9 @@
 Sollwert höchstens 10. Der Durchlauf wurde am 13.08.2026 mit dem
 Browser-Automatisierungsskript `evaluation/usability/qs_usa_01_walkthrough.py`
 ausgeführt, das den Bedienablauf in der Weboberfläche fährt und jeden Schritt
-mit einem Screenshot festhält. Die Zählung folgt der Regel aus Kapitel 6.2 der
-Arbeit und lässt sich aus den Screenshots nachvollziehen.
+mit einem Screenshot festhält. Die Zählung folgt der Zählregel in
+[results/README.md](../README.md), die Kapitel 6.2 der Arbeit festlegt, und
+lässt sich aus den Screenshots nachvollziehen.
 
 ## Was der Test zeigt
 
@@ -27,7 +28,8 @@ Die sieben Schritte ab der Startseite mit bestehendem Mandantenkonto.
 | 6 | „Create Sensor", der Sensor erscheint in der Topologie mit seiner Konfiguration | 06 |
 | 7 | In das Projekt-Dashboard wechseln, der Sensor zeigt aktuelle Werte | 07 |
 
-Zählregel wie in Kapitel 6.2 der Arbeit. Auswahl, Eingabe oder Auslösen
+Zählregel wie in [results/README.md](../README.md) und Kapitel 6.2 der
+Arbeit. Auswahl, Eingabe oder Auslösen
 zählt, ein Weiter nach einer getroffenen Auswahl zählt nicht, die Felder
 eines Formulars zählen zusammen. Ab der Anmeldung kommen das
 Anmeldeformular und das Anmelden hinzu, also 9.

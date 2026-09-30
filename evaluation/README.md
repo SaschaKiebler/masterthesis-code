@@ -194,6 +194,13 @@ evaluation/scripts/query-scenario.sh
 infrastructure/scripts/eval-down.sh
 ```
 
+Locust fährt jeden Nutzer mit fester Zielrate (`constant_throughput`, zwei
+Anfragen je Sekunde und Nutzer, bei 50 Nutzern also 100 je Sekunde). Die
+angebotene Last hängt damit nicht von der Antwortzeit ab, ein Nutzer hat aber
+nie mehr als eine Anfrage offen. Antwortet das System langsamer als der Takt,
+sinkt die durchgesetzte Rate unter die angebotene, und der Bericht weist beide
+aus. Bei QS-PER-03 waren es 24,9 von 100 je Sekunde.
+
 Die Anmeldung bei QS-PER-03 erfolgt voreingestellt als
 `probe-tenanta@example.org`, also mandantengebunden. Diesen Nutzer legt
 `eval-up.sh` beim Aufbau an, indem es
@@ -614,6 +621,19 @@ Zehn Minuten, 25 Nutzer, Schreibversuche eingeschaltet, durch
 | fremde Datensätze in Antworten | 0 | 0 (LEAK 0, EXPOSED 0, BAD_INPUT 0, ERROR 0) |
 | Abweisungen | | 115.131 DENIED, 4.914 FILTERED, 2.742 NOT_FOUND |
 | Audit-Einträge im Fenster | 1 je Versuch mit Mandantenbezug | 107.401, davon 100.518 mit adressiertem Mandanten, 16.091 von Analytics |
+
+Die 54 Muster verteilen sich so auf die fünf geprüften Kategorien, gezählt
+aus `qs-sec-01-20260903-125158-stats.csv`.
+
+| Kategorie | Muster | Versuche |
+|---|---|---|
+| API1 Broken Object Level Authorization | 19 | 81.645 |
+| API2 Broken Authentication | 5 | 8.516 |
+| API3 Object Property Level Authorization, beide Teile und das Aggregat ohne Kennung | 20 | 22.730 |
+| API5 Broken Function Level Authorization samt Rechteausweitung | 5 | 5.144 |
+| API9 Improper Inventory Management | 5 | 4.563 |
+| Summe | 54 | 122.598 |
+
 
 Die 15.386 Versuche ohne Audit-Eintrag sind drei erklärbare Gruppen. 6.812
 Anfragen mit beschädigtem oder falsch signiertem Token weist der

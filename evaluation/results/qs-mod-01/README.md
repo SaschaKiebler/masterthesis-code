@@ -40,7 +40,8 @@ Das Skript hält vor und nach der Handlung den Commit-Stand, das
 Arbeitsverzeichnis unter `applications/` und `apis/` sowie Kennung und
 Startzeit aller laufenden Container fest. Beide Aufnahmen sind identisch,
 daraus folgen die drei Nullen. Jeder Schritt hat einen Screenshot, die
-Zählung folgt der Regel aus Kapitel 6.2 der Arbeit (Auswahl, Eingabe oder
+Zählung folgt der Zählregel in [results/README.md](../README.md), die
+Kapitel 6.2 der Arbeit festlegt (Auswahl, Eingabe oder
 Auslösen zählt, Ansichten und reine Bestätigungen zählen nicht).
 
 | Größe | Wert |

@@ -37,3 +37,14 @@ dem bestandenen Lauf auch einen verworfenen und die Skalierungsdaten eines
 Laufs mit erschöpftem Verbindungspool. Ein Protokoll ohne Ergebnis wird
 umbenannt und bekommt eine Fußnote, die erklärt, warum es nicht zählt, damit
 es sich nicht später wie ein gültiges Ergebnis liest.
+
+## Zählregel für Bedienschritte
+
+QS-USA-01, QS-MOD-01 und QS-MOD-02 zählen Bedienschritte. Die Regel legt
+Kapitel 6.2 der Arbeit fest und gilt hier wörtlich. Als Bedienschritt zählt
+jede Stelle, an der die Fachkraft etwas auswählt, eingibt oder auslöst. Ein
+Weiter, das nur eine getroffene Auswahl bestätigt, zählt nicht, die Felder
+eines Formulars zählen zusammen, Scrollen, Lesen und Überfahren zählen nie.
+Jeder Schritt ist mit einem Screenshot belegt, sodass die Zahl nachgezählt
+werden kann. Weil auch der Startpunkt eine Wertung ist, weist QS-USA-01 zwei
+Summen aus, ab der Anmeldung und ab der Startseite.
