@@ -221,6 +221,13 @@ Kurzfassung gehört hierher, weil jeder Punkt eine Betriebsfalle ist.
   Sicherheit eine Eigenschaft der Mosquitto-Queue-Größe ist und nicht des
   Services.
 
+## Betriebskosten
+
+Was die Umgebung im Dauerbetrieb kostet, steht in
+[betriebskosten.md](betriebskosten.md), mit den EUR-Listenpreisen vom
+01.10.2026, den Pod-Requests aus `kubernetes/base` und zwei Varianten mit
+verwalteten Speichern. Das ist die Rechnung hinter Anhang A.7 der Arbeit.
+
 ## Abbau, zwei Wege, Geld zu verlieren
 
 Beides ist tatsächlich passiert, und `eval-down.sh` behandelt beides. Sie
