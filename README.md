@@ -49,3 +49,7 @@ Die Services kommunizieren über Kafka-Events, die Geräte liefern über MQTT an
 Welche Topics es gibt, wem sie gehören und was bewusst kein Topic bekommt,
 steht im [Event-Katalog](docs/architecture/events.md). Stammdaten liegen in
 PostgreSQL, Messwerte in TimescaleDB.
+
+## Lizenz
+
+Der Code steht unter der MIT-Lizenz, siehe [LICENSE](LICENSE).
