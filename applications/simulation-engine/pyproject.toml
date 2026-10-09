@@ -1,6 +1,7 @@
 [project]
 name = "simulation-engine"
 version = "0.1.0"
+license = "MIT"
 description = "Simulation Engine"
 authors = [
     {name = "Sascha Kiebler", email = "saschakiebler@gmail.com"}

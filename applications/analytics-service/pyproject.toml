@@ -1,6 +1,7 @@
 [project]
 name = "analytics-service"
 version = "0.1.0"
+license = "MIT"
 description = "Analytics Microservice — statistical analysis for heating system data"
 requires-python = ">=3.10"
 dependencies = [

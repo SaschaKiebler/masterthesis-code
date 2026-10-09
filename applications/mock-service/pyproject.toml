@@ -1,6 +1,7 @@
 [project]
 name = "mock-service"
 version = "0.1.0"
+license = "MIT"
 description = "Device-fleet mock: stands in for edge devices by publishing realistic heating telemetry over MQTT, for functional and load evaluation"
 authors = [
     {name = "Sascha Kiebler", email = "saschakiebler@gmail.com"}
