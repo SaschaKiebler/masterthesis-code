@@ -3,7 +3,7 @@ name = "mock-service"
 version = "0.1.0"
 description = "Device-fleet mock: stands in for edge devices by publishing realistic heating telemetry over MQTT, for functional and load evaluation"
 authors = [
-    {name = "Digital Demon",email = "dev@digitaldemon.com"}
+    {name = "Sascha Kiebler", email = "saschakiebler@gmail.com"}
 ]
 requires-python = ">=3.10"
 dependencies = [

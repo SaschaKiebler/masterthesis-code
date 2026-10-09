@@ -149,7 +149,7 @@ applications/mock-service/.venv/bin/mock-service seed --prefix tenantb --sites 1
 
 evaluation/scripts/.venv/bin/python evaluation/scripts/tenant_isolation_probe.py \
   --csv evaluation/results/qs-sec-01/qs-sec-01-lokal-$(date +%Y%m%d-%H%M%S).csv \
-  --dsn postgresql://postgres:password@localhost:5432/digital_demon
+  --dsn postgresql://postgres:password@localhost:5432/heating_platform
 
 evaluation/scripts/.venv/bin/python evaluation/scripts/tenant_isolation_probe.py --self-check
 ```

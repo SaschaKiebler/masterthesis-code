@@ -2,11 +2,11 @@
 
 Zwei Stellen tragen den Service. Die Auszüge sind gekürzt, die Zeilenangaben
 führen zur vollständigen Fassung. Beide Pfade liegen unter
-`src/main/java/com/digitaldemon/notification/`.
+`src/main/java/com/heatingplatform/notification/`.
 
 ## 1. Regelanwendung `MeldungService.process`
 
-[MeldungService.java#L43-L63](../../../applications/notification-service/src/main/java/com/digitaldemon/notification/MeldungService.java#L43-L63)
+[MeldungService.java#L43-L63](../../../applications/notification-service/src/main/java/com/heatingplatform/notification/MeldungService.java#L43-L63)
 
 ```java
 public void process(UUID tenantId, DetectionEvent event) {
@@ -41,7 +41,7 @@ Webhook hat.
 
 ## 2. Mandantenauflösung `TenantResolver.resolveTenant`
 
-[auth/TenantResolver.java#L30-L76](../../../applications/notification-service/src/main/java/com/digitaldemon/notification/auth/TenantResolver.java#L30-L76)
+[auth/TenantResolver.java#L30-L76](../../../applications/notification-service/src/main/java/com/heatingplatform/notification/auth/TenantResolver.java#L30-L76)
 
 ```java
 public UUID resolveTenant(UUID requestedTenantId) {

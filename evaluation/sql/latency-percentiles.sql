@@ -20,7 +20,7 @@
 --                 its own send queue delay is included (see P0.1b).
 --
 -- Usage (psql against the MEASUREMENT store):
---   psql -U postgres -d digital_demon_measurements \
+--   psql -U postgres -d heating_platform_measurements \
 --     -v start="'2026-08-11 10:00:00+02'" -v end="'2026-08-11 10:30:00+02'" \
 --     -f evaluation/sql/latency-percentiles.sql
 

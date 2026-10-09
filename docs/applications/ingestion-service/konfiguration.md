@@ -38,7 +38,7 @@ sehen den Präfix nie.
 | `DB_PORT`            | `5433`                         | Lokaler Compose-Port. Im Cluster `5432`     |
 | `DB_USER`            | `postgres`                     |                                             |
 | `DB_PASSWORD`        | `password`                     |                                             |
-| `DB_NAME`            | `digital_demon_measurements`   |                                             |
+| `DB_NAME`            | `heating_platform_measurements`   |                                             |
 | `DB_MAX_CONNECTIONS` | `6`                            | Verbindungen je Instanz, siehe unten        |
 
 **Verbindungsbudget.** Ohne den Wert dimensioniert der Pool nach der CPU-Zahl

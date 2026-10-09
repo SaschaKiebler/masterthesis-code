@@ -288,9 +288,9 @@ def main() -> int:
     ap.add_argument("--admin-email", default="admin@local")
     ap.add_argument("--admin-password", default="admin")
     ap.add_argument("--master-dsn",
-                    default="postgresql://postgres:password@localhost:5432/digital_demon")
+                    default="postgresql://postgres:password@localhost:5432/heating_platform")
     ap.add_argument("--measurement-dsn",
-                    default="postgresql://postgres:password@localhost:5433/digital_demon_measurements")
+                    default="postgresql://postgres:password@localhost:5433/heating_platform_measurements")
     ap.add_argument("--results-dir",
                     default=str(REPO_ROOT / "evaluation" / "results" / "qs-int-01"))
     ap.add_argument("--skip-seed", action="store_true")

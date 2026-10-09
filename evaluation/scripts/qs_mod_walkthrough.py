@@ -67,7 +67,7 @@ from playwright.sync_api import Page, sync_playwright
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULTS = REPO_ROOT / "evaluation" / "results"
 COMPOSE = ["docker", "compose", "-f", "docker/docker-compose-kafka.yaml"]
-UUID_NS = uuid.uuid5(uuid.NAMESPACE_URL, "digitaldemon:mock-service")
+UUID_NS = uuid.uuid5(uuid.NAMESPACE_URL, "heating-platform:mock-service")
 
 
 # ── protocol ─────────────────────────────────────────────────────────────────
@@ -574,8 +574,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--base-url", default="http://localhost:3000")
     p.add_argument("--email", default="admin@local")
     p.add_argument("--password", default="admin")
-    p.add_argument("--core-dsn", default="postgresql://postgres:password@localhost:5432/digital_demon")
-    p.add_argument("--ts-dsn", default="postgresql://postgres:password@localhost:5433/digital_demon_measurements")
+    p.add_argument("--core-dsn", default="postgresql://postgres:password@localhost:5432/heating_platform")
+    p.add_argument("--ts-dsn", default="postgresql://postgres:password@localhost:5433/heating_platform_measurements")
     # QS-MOD-01
     p.add_argument("--device-id", default="wmz-001")
     p.add_argument("--publish-interval", type=float, default=5.0)

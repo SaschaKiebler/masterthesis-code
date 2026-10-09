@@ -38,7 +38,7 @@ Service-Token für n8n ist als Alternative konfigurierbar, siehe
 | Flotte                  | `/fleet/status`                                                                                                                                                                                                                                            | `FleetController`                                                                                                                           |
 
 Die vollständige Liste der Methoden steht in den Klassenkommentaren der
-Controller unter `src/main/java/com/digitaldemon/core/`.
+Controller unter `src/main/java/com/heatingplatform/core/`.
 
 ## Was die API nicht liefert
 

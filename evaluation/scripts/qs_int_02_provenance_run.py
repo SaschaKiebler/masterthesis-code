@@ -117,9 +117,9 @@ def main() -> int:
     ap.add_argument("--start", help="explicit window start, e.g. '2026-09-02 11:06:34+00'")
     ap.add_argument("--end", help="explicit window end")
     ap.add_argument("--master-dsn",
-                    default="postgresql://postgres:password@localhost:5432/digital_demon")
+                    default="postgresql://postgres:password@localhost:5432/heating_platform")
     ap.add_argument("--measurement-dsn",
-                    default="postgresql://postgres:password@localhost:5433/digital_demon_measurements")
+                    default="postgresql://postgres:password@localhost:5433/heating_platform_measurements")
     ap.add_argument("--results-dir",
                     default=str(REPO_ROOT / "evaluation" / "results" / "qs-int-02"))
     args = ap.parse_args()

@@ -35,7 +35,7 @@ Dockerfile nur die eigenen Dateien kopiert. Der Einstiegspunkt ist
 
 ```bash
 docker build -t mock-service applications/mock-service
-docker run --rm mock-service seed --dsn postgresql://postgres:password@stammdaten-db:5432/digital_demon
+docker run --rm mock-service seed --dsn postgresql://postgres:password@stammdaten-db:5432/heating_platform
 docker run --rm mock-service run --broker mosquitto:1883 --sites 10 --rooms 3
 ```
 

@@ -13,7 +13,7 @@ Nur lesend, Schema und Migrationen gehören core.
 | ------------- | ----------------- | --------- |
 | `DB_HOST`     | `localhost`       |           |
 | `DB_PORT`     | `5432`            |           |
-| `DB_NAME`     | `digital_demon`   |           |
+| `DB_NAME`     | `heating_platform`   |           |
 | `DB_USER`     | `postgres`        |           |
 | `DB_PASSWORD` | `password`        |           |
 

@@ -81,7 +81,7 @@ from dataclasses import dataclass, field
 
 import requests
 
-UUID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "digitaldemon:mock-service")
+UUID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "heating-platform:mock-service")
 
 
 @dataclass

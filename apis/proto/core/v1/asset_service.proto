@@ -12,7 +12,7 @@ package core.v1;
 import "core/v1/common.proto";
 import "google/protobuf/timestamp.proto";
 
-option java_package = "com.digitaldemon.core.proto.v1";
+option java_package = "com.heatingplatform.core.proto.v1";
 option java_multiple_files = true;
 option java_outer_classname = "AssetServiceProto";
 

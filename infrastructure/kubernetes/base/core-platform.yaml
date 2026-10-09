@@ -36,7 +36,7 @@ spec:
             - containerPort: 9090
           env:
             - name: SPRING_DATASOURCE_URL
-              value: jdbc:postgresql://stammdaten-db:5432/digital_demon
+              value: jdbc:postgresql://stammdaten-db:5432/heating_platform
             - name: SPRING_DATASOURCE_USERNAME
               value: postgres
             - name: SPRING_DATASOURCE_PASSWORD
@@ -46,7 +46,7 @@ spec:
                   key: DB_PASSWORD
             # Read-only measurement access for the privacy package (QS-SEC-02).
             - name: MEASUREMENT_DB_URL
-              value: jdbc:postgresql://measurement-db:5432/digital_demon_measurements
+              value: jdbc:postgresql://measurement-db:5432/heating_platform_measurements
             - name: MEASUREMENT_DB_USERNAME
               value: postgres
             - name: MEASUREMENT_DB_PASSWORD

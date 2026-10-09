@@ -12,7 +12,7 @@
 -- that is exactly the failure this scenario looks for.
 --
 -- Usage (psql against the MEASUREMENT store):
---   psql -U postgres -d digital_demon_measurements \
+--   psql -U postgres -d heating_platform_measurements \
 --     -v device="'mock-ht-001-01'" -v metric=1 \
 --     -v start="'2026-08-11 10:00:00+02'" -v end="'2026-08-11 10:30:00+02'" \
 --     -f evaluation/sql/gap-check.sql

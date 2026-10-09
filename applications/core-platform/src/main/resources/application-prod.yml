@@ -11,7 +11,7 @@ spring:
 logging:
   level:
     root: INFO
-    com.digitaldemon: INFO
+    com.heatingplatform: INFO
     org.springframework: WARN
     org.hibernate: WARN
     org.hibernate.SQL: WARN

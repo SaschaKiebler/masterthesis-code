@@ -1,0 +1,24 @@
+package com.heatingplatform.core.invitation;
+
+import com.heatingplatform.core.invitation.Invitation;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Repository
+public interface InvitationRepository extends JpaRepository<Invitation, UUID> {
+
+    Optional<Invitation> findByToken(String token);
+
+    List<Invitation> findByEmailAndAcceptedAtIsNull(String email);
+
+    /** All invitations for this address, used by the GDPR export and erasure. */
+    List<Invitation> findByEmail(String email);
+
+    List<Invitation> findByTenantId(UUID tenantId);
+
+    List<Invitation> findByTenantIdIn(List<UUID> tenantIds);
+}

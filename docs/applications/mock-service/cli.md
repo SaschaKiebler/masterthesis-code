@@ -31,7 +31,7 @@ anderen Geräte-IDs, als angelegt wurden.
 | `--rogue`    | `0`                                                         | Zusätzliche Geräte, die senden, aber nie angelegt werden                     |
 | `--persons`  | `0`                                                         | Personen je Standort mit Wohnsitz in einem Raum, für den Datenschutz-Pfad    |
 | `--seed`     | `42`                                                        | Startwert des Zufallsgenerators, gleicher Wert ergibt gleiche Kurven         |
-| `--dsn`      | `postgresql://postgres:password@localhost:5432/digital_demon` | Stammdaten-DB für `seed`                                                   |
+| `--dsn`      | `postgresql://postgres:password@localhost:5432/heating_platform` | Stammdaten-DB für `seed`                                                   |
 | `--scenario` |                                                             | JSON-Datei mit denselben Schlüsseln, Flags überschreiben die Datei           |
 
 ## Optionen für `run`

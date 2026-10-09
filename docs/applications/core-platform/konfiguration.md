@@ -10,10 +10,10 @@ Service-Ordner eingelesen. Im Cluster setzt
 
 | Variable                     | Standard                                                        | Bedeutung                                          |
 | ---------------------------- | --------------------------------------------------------------- | -------------------------------------------------- |
-| `SPRING_DATASOURCE_URL`      | `jdbc:postgresql://localhost:5432/digital_demon`                | Stammdaten-DB, Schema gehört core                  |
+| `SPRING_DATASOURCE_URL`      | `jdbc:postgresql://localhost:5432/heating_platform`                | Stammdaten-DB, Schema gehört core                  |
 | `SPRING_DATASOURCE_USERNAME` | `postgres`                                                      |                                                    |
 | `SPRING_DATASOURCE_PASSWORD` | `password`                                                      |                                                    |
-| `MEASUREMENT_DB_URL`         | `jdbc:postgresql://localhost:5433/digital_demon_measurements`   | Messwertspeicher, nur lesend für den DSGVO-Export  |
+| `MEASUREMENT_DB_URL`         | `jdbc:postgresql://localhost:5433/heating_platform_measurements`   | Messwertspeicher, nur lesend für den DSGVO-Export  |
 | `MEASUREMENT_DB_USERNAME`    | `postgres`                                                      |                                                    |
 | `MEASUREMENT_DB_PASSWORD`    | `password`                                                      |                                                    |
 

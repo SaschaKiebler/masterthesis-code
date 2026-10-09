@@ -36,7 +36,7 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-UUID_NS = uuid.uuid5(uuid.NAMESPACE_URL, "digitaldemon:mock-service")
+UUID_NS = uuid.uuid5(uuid.NAMESPACE_URL, "heating-platform:mock-service")
 
 
 def asset_id(prefix: str, device_id: str) -> str:

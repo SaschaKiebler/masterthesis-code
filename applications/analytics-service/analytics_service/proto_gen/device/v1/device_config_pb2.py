@@ -25,14 +25,14 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1d\x64\x65vice/v1/device_config.proto\x12\tdevice.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xff\x01\n\x0c\x44\x65viceConfig\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x02 \x01(\x08\x12\x10\n\x08protocol\x18\x03 \x01(\t\x12*\n\x07signals\x18\x04 \x03(\x0b\x32\x19.device.v1.SignalMapEntry\x12.\n\nupdated_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x1a\n\rsite_latitude\x18\x06 \x01(\x01H\x00\x88\x01\x01\x12\x1b\n\x0esite_longitude\x18\x07 \x01(\x01H\x01\x88\x01\x01\x42\x10\n\x0e_site_latitudeB\x11\n\x0f_site_longitude\"\xaa\x01\n\x0eSignalMapEntry\x12\x11\n\tmetric_id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04unit\x18\x03 \x01(\t\x12\x0e\n\x06source\x18\x04 \x01(\t\x12\r\n\x05\x66ield\x18\x05 \x01(\t\x12\x16\n\tmin_value\x18\x06 \x01(\x01H\x00\x88\x01\x01\x12\x16\n\tmax_value\x18\x07 \x01(\x01H\x01\x88\x01\x01\x42\x0c\n\n_min_valueB\x0c\n\n_max_valueB7\n com.digitaldemon.device.proto.v1B\x11\x44\x65viceConfigProtoP\x01\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1d\x64\x65vice/v1/device_config.proto\x12\tdevice.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\xff\x01\n\x0c\x44\x65viceConfig\x12\x11\n\tdevice_id\x18\x01 \x01(\t\x12\x10\n\x08\x61\x63\x63\x65pted\x18\x02 \x01(\x08\x12\x10\n\x08protocol\x18\x03 \x01(\t\x12*\n\x07signals\x18\x04 \x03(\x0b\x32\x19.device.v1.SignalMapEntry\x12.\n\nupdated_at\x18\x05 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12\x1a\n\rsite_latitude\x18\x06 \x01(\x01H\x00\x88\x01\x01\x12\x1b\n\x0esite_longitude\x18\x07 \x01(\x01H\x01\x88\x01\x01\x42\x10\n\x0e_site_latitudeB\x11\n\x0f_site_longitude\"\xaa\x01\n\x0eSignalMapEntry\x12\x11\n\tmetric_id\x18\x01 \x01(\x05\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0c\n\x04unit\x18\x03 \x01(\t\x12\x0e\n\x06source\x18\x04 \x01(\t\x12\r\n\x05\x66ield\x18\x05 \x01(\t\x12\x16\n\tmin_value\x18\x06 \x01(\x01H\x00\x88\x01\x01\x12\x16\n\tmax_value\x18\x07 \x01(\x01H\x01\x88\x01\x01\x42\x0c\n\n_min_valueB\x0c\n\n_max_valueB:\n#com.heatingplatform.device.proto.v1B\x11\x44\x65viceConfigProtoP\x01\x62\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'device.v1.device_config_pb2', _globals)
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
-  _globals['DESCRIPTOR']._serialized_options = b'\n com.digitaldemon.device.proto.v1B\021DeviceConfigProtoP\001'
+  _globals['DESCRIPTOR']._serialized_options = b'\n#com.heatingplatform.device.proto.v1B\021DeviceConfigProtoP\001'
   _globals['_DEVICECONFIG']._serialized_start=78
   _globals['_DEVICECONFIG']._serialized_end=333
   _globals['_SIGNALMAPENTRY']._serialized_start=336

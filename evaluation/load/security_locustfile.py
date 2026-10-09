@@ -116,7 +116,7 @@ THROUGHPUT_PER_USER = float(os.environ.get("THROUGHPUT_PER_USER", "2.0"))
 
 # Same namespace mock-service uses for every uuid5, so tenant B's ids need no
 # lookup. See applications/mock-service/src/mock_service/fleet.py.
-UUID_NS = uuid.uuid5(uuid.NAMESPACE_URL, "digitaldemon:mock-service")
+UUID_NS = uuid.uuid5(uuid.NAMESPACE_URL, "heating-platform:mock-service")
 
 BOILER_METRIC_IDS = (1, 2, 3, 4)   # flow, return, power, pump
 HT_METRIC_IDS = (1, 2, 3)          # temperature, humidity, battery

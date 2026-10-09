@@ -1,9 +1,9 @@
 [project]
 name = "simulation-engine"
 version = "0.1.0"
-description = "Digital Demon Simulation Engine"
+description = "Simulation Engine"
 authors = [
-    {name = "Digital Demon",email = "dev@digitaldemon.com"}
+    {name = "Sascha Kiebler", email = "saschakiebler@gmail.com"}
 ]
 requires-python = ">=3.10"
 dependencies = [

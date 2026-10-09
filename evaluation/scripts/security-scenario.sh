@@ -147,7 +147,7 @@ report=$OUT/qs-sec-01-$STAMP.txt
   fi
   echo
   echo "######## audit coverage ########"
-  kubectl -n $NS exec -i stammdaten-db-0 -- psql -U postgres -d digital_demon \
+  kubectl -n $NS exec -i stammdaten-db-0 -- psql -U postgres -d heating_platform \
     -v start="'$start'" -v end="'$end'" -f - < "$ROOT/evaluation/sql/audit-coverage.sql"
 } | tee "$report"
 rm -f "$logs"

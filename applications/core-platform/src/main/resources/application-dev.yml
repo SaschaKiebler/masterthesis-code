@@ -11,7 +11,7 @@ spring:
 
 logging:
   level:
-    com.digitaldemon: DEBUG
+    com.heatingplatform: DEBUG
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.orm.jdbc.bind: TRACE

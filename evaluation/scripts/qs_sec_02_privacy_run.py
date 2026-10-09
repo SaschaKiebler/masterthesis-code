@@ -70,7 +70,7 @@ COMPOSE_FILE = "docker/docker-compose-kafka.yaml"
 RESIDUAL_SQL = REPO_ROOT / "evaluation" / "sql" / "privacy-residual-check.sql"
 
 # Same namespace as mock-service, so the subject id needs no lookup.
-UUID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "digitaldemon:mock-service")
+UUID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "heating-platform:mock-service")
 
 # The sections of privacy-residual-check.sql whose hits are findings, and the
 # one whose hits are expected (audit trail, retained by design).
@@ -309,7 +309,7 @@ def run_residual_check(subject_id: uuid.UUID, name: str, email: str) -> tuple[st
     sql = RESIDUAL_SQL.read_text(encoding="utf-8")
     proc = subprocess.run(
         ["docker", "compose", "-f", COMPOSE_FILE, "exec", "-T", "stammdaten-db",
-         "psql", "-U", "postgres", "-d", "digital_demon", "-A", "-t",
+         "psql", "-U", "postgres", "-d", "heating_platform", "-A", "-t",
          "-v", f"subject_name={name}",
          "-v", f"subject_email={email}",
          "-v", f"subject_id='{subject_id}'",
@@ -350,9 +350,9 @@ def main() -> int:
     ap.add_argument("--core-host", default="http://localhost:8080")
     ap.add_argument("--admin-email", default="admin@local")
     ap.add_argument("--admin-password", default="admin")
-    ap.add_argument("--master-dsn", default="postgresql://postgres:password@localhost:5432/digital_demon")
+    ap.add_argument("--master-dsn", default="postgresql://postgres:password@localhost:5432/heating_platform")
     ap.add_argument("--measurement-dsn",
-                    default="postgresql://postgres:password@localhost:5433/digital_demon_measurements")
+                    default="postgresql://postgres:password@localhost:5433/heating_platform_measurements")
     ap.add_argument("--results-dir",
                     default=str(REPO_ROOT / "evaluation" / "results" / "qs-sec-02"),
                     help="one folder per scenario, each with its own README")

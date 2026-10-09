@@ -119,7 +119,7 @@ report=$OUT/qs-per-03-$STAMP.txt
   echo "######## ingest alongside ########"
   for sql in loss-rate latency-percentiles; do
     echo "-------- $sql --------"
-    kubectl -n $NS exec -i measurement-db-0 -- psql -U postgres -d digital_demon_measurements \
+    kubectl -n $NS exec -i measurement-db-0 -- psql -U postgres -d heating_platform_measurements \
       -v start="'$start'" -v end="'$end'" -f - < "$ROOT/evaluation/sql/$sql.sql"
   done
 } | tee "$report"

@@ -14,7 +14,7 @@
 --
 -- Usage (psql against the MASTER-DATA store):
 --   docker compose -f docker/docker-compose-kafka.yaml exec -T stammdaten-db \
---     psql -U postgres -d digital_demon \
+--     psql -U postgres -d heating_platform \
 --     -v subject_id="'<person-object-uuid>'" \
 --     -f - < evaluation/sql/privacy-inventory.sql
 --

@@ -54,7 +54,7 @@ dient die jüngste gespeicherte Meldung als Rückfallwert.
 
 | Variable                        | Standard                                   | Bedeutung                                                        |
 | ------------------------------- | ------------------------------------------ | ---------------------------------------------------------------- |
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | `localhost`, `5432`, `digital_demon`, `postgres`, `password` | Geteilte Stammdaten-DB |
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | `localhost`, `5432`, `heating_platform`, `postgres`, `password` | Geteilte Stammdaten-DB |
 | `KAFKA_BOOTSTRAP_SERVERS`       | `localhost:9092`                           |                                                                  |
 | `KAFKA_TOPIC_PARTITIONS`, `KAFKA_TOPIC_REPLICAS` | `3`, `1`                  | Für die angelegten `.dlq`-Topics                                 |
 | `NOTIFICATION_TOPICS`           | `threshold.breached,anomaly.detected`      | Konsumierte Topics, ein neuer Detektor erweitert nur diese Liste |

@@ -3,7 +3,7 @@
 -- exceptions listed at the bottom.
 --
 -- Usage (psql against the master-data DB, e.g. via docker compose):
---   psql -U postgres -d digital_demon \
+--   psql -U postgres -d heating_platform \
 --     -v subject_name="Mock Person 001-01" \
 --     -v subject_email="person-001-01@mock.example.org" \
 --     -v subject_id="'<person-object-uuid>'" \

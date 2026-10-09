@@ -5,8 +5,8 @@
 #   Kafka          localhost:9092   (inter-service events, see docs/architecture/event-catalog.md)
 #   Kafka UI       localhost:8081
 #   Mosquitto      localhost:1883   (edge device transport)
-#   stammdaten-db  localhost:5432   (PostgreSQL, db digital_demon, schema via core-platform Flyway)
-#   measurement-db localhost:5433   (TimescaleDB, db digital_demon_measurements, schema via init SQL)
+#   stammdaten-db  localhost:5432   (PostgreSQL, db heating_platform, schema via core-platform Flyway)
+#   measurement-db localhost:5433   (TimescaleDB, db heating_platform_measurements, schema via init SQL)
 #
 # Separate stores per the thesis design (ch. 4.4.6): master data in plain
 # PostgreSQL, raw measurements in TimescaleDB with analytics as the single
@@ -60,7 +60,7 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_DB: digital_demon
+      POSTGRES_DB: heating_platform
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     volumes:
@@ -71,7 +71,7 @@ services:
     ports:
       - "5433:5432"
     environment:
-      POSTGRES_DB: digital_demon_measurements
+      POSTGRES_DB: heating_platform_measurements
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     volumes:

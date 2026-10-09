@@ -52,7 +52,7 @@ spec:
             - name: DB_PORT
               value: "5432"
             - name: DB_NAME
-              value: digital_demon_measurements
+              value: heating_platform_measurements
             # Connection budget. The store runs with max_connections=100 and is
             # shared with analytics and core, so the ingestion tier at its
             # autoscaler ceiling of 10 replicas may claim at most 6 each, i.e.

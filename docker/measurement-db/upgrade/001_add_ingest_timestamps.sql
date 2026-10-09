@@ -10,7 +10,7 @@
 --
 -- Usage:
 --   docker compose -f docker/docker-compose-kafka.yaml exec -T measurement-db \
---     psql -U postgres -d digital_demon_measurements \
+--     psql -U postgres -d heating_platform_measurements \
 --     < docker/measurement-db/upgrade/001_add_ingest_timestamps.sql
 --
 -- The GKE evaluation environment does not need this: terraform apply creates a

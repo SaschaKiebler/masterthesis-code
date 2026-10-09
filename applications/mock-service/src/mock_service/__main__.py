@@ -20,7 +20,7 @@ def _add_fleet_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--rogue", type=int, help="extra UNSEEDED devices (discovery/drop path, default 0)")
     parser.add_argument("--persons", type=int, dest="persons_per_site", help="PERSON objects per site with RESIDES_IN links (GDPR reference inventory, default 0)")
     parser.add_argument("--seed", type=int, help="RNG seed (default 42)")
-    parser.add_argument("--dsn", help="Postgres DSN (default postgresql://postgres:password@localhost:5432/digital_demon)")
+    parser.add_argument("--dsn", help="Postgres DSN (default postgresql://postgres:password@localhost:5432/heating_platform)")
 
 
 def _add_run_args(parser: argparse.ArgumentParser) -> None:

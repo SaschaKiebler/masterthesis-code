@@ -15,7 +15,7 @@ from typing import Optional
 from .scenario import Scenario
 
 # Fixed namespace for all mock-service uuid5 ids
-UUID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "digitaldemon:mock-service")
+UUID_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "heating-platform:mock-service")
 
 KIND_SHELLY_HT = "shelly-ht"
 KIND_BOILER = "boiler"

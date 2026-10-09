@@ -2,11 +2,11 @@
 
 Fünf Stellen tragen die Architekturentscheidungen des Services. Die Auszüge
 sind gekürzt, die Zeilenangaben führen zur vollständigen Fassung. Alle Pfade
-liegen unter `src/main/java/com/digitaldemon/core/`.
+liegen unter `src/main/java/com/heatingplatform/core/`.
 
 ## 1. Mandantenprüfung `TenantScopeInterceptor.preHandle`
 
-[tenancy/TenantScopeInterceptor.java#L55-L95](../../../applications/core-platform/src/main/java/com/digitaldemon/core/tenancy/TenantScopeInterceptor.java#L55-L95)
+[tenancy/TenantScopeInterceptor.java#L55-L95](../../../applications/core-platform/src/main/java/com/heatingplatform/core/tenancy/TenantScopeInterceptor.java#L55-L95)
 
 ```java
 public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -46,12 +46,12 @@ adressierte Ressource, Admin). Erst danach wird je Ressource entschieden, und
 ein einziges `DENY` genügt. Auch im Erlaubnisfall hinterlegt `markScope` den
 Mandanten, damit der Audit-Filter ihn lesen kann. Welche Ressourcen die URL
 adressiert, bestimmt
-[`TenantResolverRegistry.resourcesIn`](../../../applications/core-platform/src/main/java/com/digitaldemon/core/tenancy/TenantResolverRegistry.java#L76-L103)
+[`TenantResolverRegistry.resourcesIn`](../../../applications/core-platform/src/main/java/com/heatingplatform/core/tenancy/TenantResolverRegistry.java#L76-L103)
 über das literale Segment vor jeder Pfadvariable.
 
 ## 2. Zugriffspolicy `TenantAccessEvaluator.decide`
 
-[tenancy/TenantAccessEvaluator.java#L49-L77](../../../applications/core-platform/src/main/java/com/digitaldemon/core/tenancy/TenantAccessEvaluator.java#L49-L77)
+[tenancy/TenantAccessEvaluator.java#L49-L77](../../../applications/core-platform/src/main/java/com/heatingplatform/core/tenancy/TenantAccessEvaluator.java#L49-L77)
 
 ```java
 public Decision decide(Membership membership, TenantScope scope, String method) {
@@ -83,9 +83,9 @@ dem heißen Pfad nichts und kann die Mandantenregel nicht aufweichen.
 
 ## 3. Zugriffs-Audit `AccessAuditFilter`
 
-[audit/AccessAuditFilter.java#L71-L90](../../../applications/core-platform/src/main/java/com/digitaldemon/core/audit/AccessAuditFilter.java#L71-L90)
+[audit/AccessAuditFilter.java#L71-L90](../../../applications/core-platform/src/main/java/com/heatingplatform/core/audit/AccessAuditFilter.java#L71-L90)
 und
-[#L119-L134](../../../applications/core-platform/src/main/java/com/digitaldemon/core/audit/AccessAuditFilter.java#L119-L134)
+[#L119-L134](../../../applications/core-platform/src/main/java/com/heatingplatform/core/audit/AccessAuditFilter.java#L119-L134)
 
 ```java
 protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) {
@@ -118,7 +118,7 @@ darf keine Anfrage scheitern lassen.
 
 ## 4. Regel-Projektion `ThresholdRuleConfigProjection.sweep`
 
-[thresholdrule/ThresholdRuleConfigProjection.java#L52-L101](../../../applications/core-platform/src/main/java/com/digitaldemon/core/thresholdrule/ThresholdRuleConfigProjection.java#L52-L101)
+[thresholdrule/ThresholdRuleConfigProjection.java#L52-L101](../../../applications/core-platform/src/main/java/com/heatingplatform/core/thresholdrule/ThresholdRuleConfigProjection.java#L52-L101)
 
 ```java
 @Scheduled(fixedDelayString = "${kafka.rule-projection.sweep-interval-ms:30000}", initialDelay = 2000)
@@ -159,9 +159,9 @@ demselben Muster.
 
 ## 5. Aktuelle Werte `LatestValueProjection.apply`
 
-[measurement/LatestValueProjection.java#L34-L54](../../../applications/core-platform/src/main/java/com/digitaldemon/core/measurement/LatestValueProjection.java#L34-L54),
+[measurement/LatestValueProjection.java#L34-L54](../../../applications/core-platform/src/main/java/com/heatingplatform/core/measurement/LatestValueProjection.java#L34-L54),
 aufgerufen aus
-[`MeasurementBatchListener.onMessage`](../../../applications/core-platform/src/main/java/com/digitaldemon/core/measurement/MeasurementBatchListener.java#L43-L58)
+[`MeasurementBatchListener.onMessage`](../../../applications/core-platform/src/main/java/com/heatingplatform/core/measurement/MeasurementBatchListener.java#L43-L58)
 
 ```java
 public void apply(MeasurementBatch batch) {

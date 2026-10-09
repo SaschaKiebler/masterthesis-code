@@ -97,7 +97,7 @@ impl Default for DatabaseConfig {
             port: 5433,
             user: "postgres".to_string(),
             password: "password".to_string(),
-            dbname: "digital_demon_measurements".to_string(),
+            dbname: "heating_platform_measurements".to_string(),
             max_connections: DEFAULT_DB_MAX_CONNECTIONS,
         }
     }
@@ -174,7 +174,7 @@ pub fn load_config() -> Result<AppConfig> {
             .unwrap_or(5433),
         user: std::env::var("DB_USER").unwrap_or_else(|_| "postgres".to_string()),
         password: std::env::var("DB_PASSWORD").unwrap_or_else(|_| "password".to_string()),
-        dbname: std::env::var("DB_NAME").unwrap_or_else(|_| "digital_demon_measurements".to_string()),
+        dbname: std::env::var("DB_NAME").unwrap_or_else(|_| "heating_platform_measurements".to_string()),
         max_connections: std::env::var("DB_MAX_CONNECTIONS")
             .ok()
             .and_then(|v| v.parse().ok())

@@ -3,9 +3,9 @@
 -- Runs against the MASTER-DATA store after a security run. The window comes
 -- from the runner as :start / :end, the same window the locust run covered.
 --
--- Usage (psql against digital_demon):
+-- Usage (psql against heating_platform):
 --   kubectl -n heating-platform exec -i stammdaten-db-0 -- \
---     psql -U postgres -d digital_demon \
+--     psql -U postgres -d heating_platform \
 --     -v start="'2026-09-02 16:00:00+00'" -v end="'2026-09-02 16:10:00+00'" \
 --     -f - < evaluation/sql/audit-coverage.sql
 --

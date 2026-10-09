@@ -10,8 +10,8 @@ selbst, `scripts/dev.sh` lädt sie vor dem Start. Im Cluster setzt
 
 | Variable                | Standard                                                                   | Bedeutung                                       |
 | ----------------------- | -------------------------------------------------------------------------- | ----------------------------------------------- |
-| `DATABASE_URL`          | `postgresql://postgres:password@localhost:5433/digital_demon_measurements` | Messwertspeicher                                |
-| `REGISTRY_DATABASE_URL` | `postgresql://postgres:password@localhost:5432/digital_demon`              | Stammdaten-DB, Registry und Mitgliedschaften    |
+| `DATABASE_URL`          | `postgresql://postgres:password@localhost:5433/heating_platform_measurements` | Messwertspeicher                                |
+| `REGISTRY_DATABASE_URL` | `postgresql://postgres:password@localhost:5432/heating_platform`              | Stammdaten-DB, Registry und Mitgliedschaften    |
 | `DB_MIN_POOL`           | `2`                                                                        | Untergrenze des Messwert-Pools                  |
 | `DB_MAX_POOL`           | `10`                                                                       | Obergrenze beider Pools                         |
 

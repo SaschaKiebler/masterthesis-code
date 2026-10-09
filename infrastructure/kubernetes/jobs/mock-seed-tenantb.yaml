@@ -25,7 +25,7 @@ spec:
             - --prefix=tenantb
             - --sites=2
             - --rooms=2
-            - --dsn=postgresql://postgres:$(DB_PASSWORD)@stammdaten-db:5432/digital_demon
+            - --dsn=postgresql://postgres:$(DB_PASSWORD)@stammdaten-db:5432/heating_platform
           env:
             - name: DB_PASSWORD
               valueFrom:

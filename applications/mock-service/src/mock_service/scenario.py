@@ -92,7 +92,7 @@ class Scenario:
     broker_host: str = "localhost"
     broker_port: int = 1883
     connections: int = 2      # MQTT publisher connections (fleet is multiplexed over them)
-    dsn: str = "postgresql://postgres:password@localhost:5432/digital_demon"
+    dsn: str = "postgresql://postgres:password@localhost:5432/heating_platform"
 
     # Environment model
     mean_outdoor_c: float = 8.0

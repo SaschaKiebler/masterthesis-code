@@ -10,7 +10,7 @@
 --   loss rate = 1 - (persisted measurements / published measurements)
 --
 -- Usage (psql against the MEASUREMENT store):
---   psql -U postgres -d digital_demon_measurements \
+--   psql -U postgres -d heating_platform_measurements \
 --     -v start="'2026-08-11 10:00:00+02'" -v end="'2026-08-11 10:30:00+02'" \
 --     -f evaluation/sql/loss-rate.sql
 --

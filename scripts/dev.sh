@@ -109,14 +109,14 @@ cmd_up() {
   # infra readiness
   local waited=0
   printf '[dev] waiting for stammdaten-db '
-  until docker compose -f "$COMPOSE_FILE" exec -T stammdaten-db pg_isready -U postgres -d digital_demon >/dev/null 2>&1; do
+  until docker compose -f "$COMPOSE_FILE" exec -T stammdaten-db pg_isready -U postgres -d heating_platform >/dev/null 2>&1; do
     sleep 2; waited=$((waited + 2)); printf '.'
     if (( waited >= 60 )); then printf '\n'; err "stammdaten-db not ready after 60s"; exit 1; fi
   done
   printf ' up\n'
   waited=0
   printf '[dev] waiting for measurement-db '
-  until docker compose -f "$COMPOSE_FILE" exec -T measurement-db pg_isready -U postgres -d digital_demon_measurements >/dev/null 2>&1; do
+  until docker compose -f "$COMPOSE_FILE" exec -T measurement-db pg_isready -U postgres -d heating_platform_measurements >/dev/null 2>&1; do
     sleep 2; waited=$((waited + 2)); printf '.'
     if (( waited >= 60 )); then printf '\n'; err "measurement-db not ready after 60s"; exit 1; fi
   done

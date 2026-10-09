@@ -149,7 +149,7 @@ def publish_telemetry(device_id: str, attempts: int = 12) -> bool:
         found = subprocess.run([
             "docker", "compose", "-f", "docker/docker-compose-kafka.yaml",
             "exec", "-T", "measurement-db", "psql", "-U", "postgres",
-            "-d", "digital_demon_measurements", "-t", "-A", "-c",
+            "-d", "heating_platform_measurements", "-t", "-A", "-c",
             f"SELECT count(*) FROM measurements WHERE device_id = '{device_id}'",
         ], cwd=REPO_ROOT, capture_output=True, text=True, check=False)
         if found.stdout.strip().isdigit() and int(found.stdout.strip()) > 0:

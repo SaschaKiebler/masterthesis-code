@@ -3,10 +3,10 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Measurement store (TimescaleDB) — analytics is its single reader.
-    database_url: str = "postgresql://postgres:password@localhost:5433/digital_demon_measurements"
+    database_url: str = "postgresql://postgres:password@localhost:5433/heating_platform_measurements"
     # Master-data store (PostgreSQL) — read-only registry lookups for
     # transitional endpoints that still resolve metric-point ids themselves.
-    registry_database_url: str = "postgresql://postgres:password@localhost:5432/digital_demon"
+    registry_database_url: str = "postgresql://postgres:password@localhost:5432/heating_platform"
     db_min_pool: int = 2
     db_max_pool: int = 10
     log_level: str = "info"

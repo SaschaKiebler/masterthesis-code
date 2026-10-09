@@ -3,7 +3,7 @@ spring:
     name: core-platform
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/digital_demon
+    url: jdbc:postgresql://localhost:5432/heating_platform
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver
@@ -83,7 +83,7 @@ service-auth:
     enabled: ${N8N_SERVICE_TOKEN_ENABLED:false}
     token: ${N8N_SERVICE_TOKEN:}
     subject: ${N8N_SERVICE_SUBJECT:service:n8n}
-    email: ${N8N_SERVICE_EMAIL:n8n@digitaldemon.local}
+    email: ${N8N_SERVICE_EMAIL:n8n@heating-platform.local}
     display-name: ${N8N_SERVICE_DISPLAY_NAME:n8n Service User}
     global-role: ${N8N_SERVICE_GLOBAL_ROLE:system_admin}
 
@@ -108,7 +108,7 @@ device-management:
 
 logging:
   level:
-    com.digitaldemon: INFO
+    com.heatingplatform: INFO
     org.springframework.web: INFO
     org.hibernate.SQL: WARN
     org.hibernate.orm.jdbc.bind: WARN
@@ -119,7 +119,7 @@ logging:
 # spring: block.
 measurement:
   datasource:
-    url: ${MEASUREMENT_DB_URL:jdbc:postgresql://localhost:5433/digital_demon_measurements}
+    url: ${MEASUREMENT_DB_URL:jdbc:postgresql://localhost:5433/heating_platform_measurements}
     username: ${MEASUREMENT_DB_USERNAME:postgres}
     password: ${MEASUREMENT_DB_PASSWORD:password}
 

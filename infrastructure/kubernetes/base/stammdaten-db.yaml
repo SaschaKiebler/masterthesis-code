@@ -36,7 +36,7 @@ spec:
             - containerPort: 5432
           env:
             - name: POSTGRES_DB
-              value: digital_demon
+              value: heating_platform
             - name: POSTGRES_USER
               value: postgres
             - name: POSTGRES_PASSWORD
@@ -52,7 +52,7 @@ spec:
               mountPath: /var/lib/postgresql/data
           readinessProbe:
             exec:
-              command: ["pg_isready", "-U", "postgres", "-d", "digital_demon"]
+              command: ["pg_isready", "-U", "postgres", "-d", "heating_platform"]
             initialDelaySeconds: 10
             periodSeconds: 5
           resources:

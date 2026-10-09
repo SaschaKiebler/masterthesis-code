@@ -5,9 +5,9 @@ plugins {
 	id("com.google.protobuf") version "0.9.4"
 }
 
-group = "com.digitaldemon"
+group = "com.heatingplatform"
 version = "0.0.1-SNAPSHOT"
-description = "Digital Demon Device Management"
+description = "Device Management"
 
 java {
 	toolchain {

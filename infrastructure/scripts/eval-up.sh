@@ -125,13 +125,13 @@ printf '%s\n' "$topic_info" | sed -n '1,2p'
 
 if [ "$SMOKE" = "--smoke" ]; then
   step "Smoke: 60 s of telemetry, then count what landed"
-  before=$(kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d digital_demon_measurements -tAc "select count(*) from measurements;")
+  before=$(kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d heating_platform_measurements -tAc "select count(*) from measurements;")
   smoke_log=$(kubectl -n $NS run mock-smoke --rm -i --restart=Never --image="$REGISTRY/mock-service:latest" -- \
     run --prefix=tenanta --sites=25 --rooms=3 --interval=2 --duration=60 --broker=mosquitto:1883 --connections=4 2>&1 || true)
   printf '%s\n' "$smoke_log" | tail -3
-  after=$(kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d digital_demon_measurements -tAc "select count(*) from measurements;")
+  after=$(kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d heating_platform_measurements -tAc "select count(*) from measurements;")
   note "new rows: $((after - before))  (expect roughly 60 s x 125 measurements/s at interval 2)"
-  kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d digital_demon_measurements -tAc \
+  kubectl -n $NS exec measurement-db-0 -- psql -U postgres -d heating_platform_measurements -tAc \
     "select 'p95_ms=' || round((percentile_cont(0.95) within group (order by extract(epoch from persisted_at - received_at)*1000))::numeric,1) from measurements where received_at > now() - interval '3 minutes';"
 fi
 

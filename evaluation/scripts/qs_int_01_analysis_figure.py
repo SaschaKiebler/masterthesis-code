@@ -47,7 +47,7 @@ import psycopg
 from playwright.sync_api import sync_playwright
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-UUID_NS = uuid.uuid5(uuid.NAMESPACE_URL, "digitaldemon:mock-service")
+UUID_NS = uuid.uuid5(uuid.NAMESPACE_URL, "heating-platform:mock-service")
 
 # Widest interval on the faulted channel counts as the outage, measured
 # against its own cadence. Same rule the measured run applies.
@@ -114,7 +114,7 @@ def main() -> int:
     ap.add_argument("--email", default="admin@local")
     ap.add_argument("--password", default="admin")
     ap.add_argument("--measurement-dsn",
-                    default="postgresql://postgres:password@localhost:5433/digital_demon_measurements")
+                    default="postgresql://postgres:password@localhost:5433/heating_platform_measurements")
     ap.add_argument("--out", default=str(REPO_ROOT / "evaluation" / "results"
                                          / "qs-int-01" / "screenshots"))
     ap.add_argument("--headed", action="store_true")

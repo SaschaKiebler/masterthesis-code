@@ -268,7 +268,7 @@ beliebiges Fenster fahren lassen.
 
 ```bash
 kubectl -n heating-platform exec -i measurement-db-0 -- \
-  psql -U postgres -d digital_demon_measurements \
+  psql -U postgres -d heating_platform_measurements \
   -v start="'2026-09-01 16:00:00+00'" -v end="'2026-09-01 16:30:00+00'" \
   -f - < evaluation/sql/loss-rate.sql
 ```

@@ -2,11 +2,11 @@
 
 Fünf Stellen tragen die Logik des Services. Die Auszüge sind gekürzt, die
 Zeilenangaben führen zur vollständigen Fassung. Alle Pfade liegen unter
-`src/main/java/com/digitaldemon/devicemanagement/`.
+`src/main/java/com/heatingplatform/devicemanagement/`.
 
 ## 1. Sweep der Projektion `DeviceConfigProjection.sweep`
 
-[projection/DeviceConfigProjection.java#L64-L121](../../../applications/device-management/src/main/java/com/digitaldemon/devicemanagement/projection/DeviceConfigProjection.java#L64-L121)
+[projection/DeviceConfigProjection.java#L64-L121](../../../applications/device-management/src/main/java/com/heatingplatform/devicemanagement/projection/DeviceConfigProjection.java#L64-L121)
 
 ```java
 @Scheduled(fixedDelayString = "${device-management.projection.sweep-interval-ms:30000}", initialDelay = 2000)
@@ -51,7 +51,7 @@ trauen darf.
 
 ## 2. Standort aus dem Graph `DeviceConfigProjection.applySiteCoordinates`
 
-[projection/DeviceConfigProjection.java#L187-L244](../../../applications/device-management/src/main/java/com/digitaldemon/devicemanagement/projection/DeviceConfigProjection.java#L187-L244)
+[projection/DeviceConfigProjection.java#L187-L244](../../../applications/device-management/src/main/java/com/heatingplatform/devicemanagement/projection/DeviceConfigProjection.java#L187-L244)
 
 ```sql
 WITH RECURSIVE lt AS (
@@ -97,7 +97,7 @@ Außentemperatur am richtigen Ort.
 
 ## 3. Unbekannte Geräte melden `BrokerWatcher.onMessage`
 
-[watcher/BrokerWatcher.java#L63-L100](../../../applications/device-management/src/main/java/com/digitaldemon/devicemanagement/watcher/BrokerWatcher.java#L63-L100)
+[watcher/BrokerWatcher.java#L63-L100](../../../applications/device-management/src/main/java/com/heatingplatform/devicemanagement/watcher/BrokerWatcher.java#L63-L100)
 
 ```java
 void onMessage(String topic, String payload) {
@@ -129,7 +129,7 @@ void onMessage(String topic, String payload) {
 Vier Filter hintereinander, jeder billig. Ohne abgeschlossenen ersten Sweep
 gilt nichts als unbekannt, sonst würde nach jedem Neustart die ganze Flotte
 gemeldet. Die Geräte-ID kommt aus
-[`DeviceTopicParser.extractDeviceId`](../../../applications/device-management/src/main/java/com/digitaldemon/devicemanagement/watcher/DeviceTopicParser.java#L16-L46),
+[`DeviceTopicParser.extractDeviceId`](../../../applications/device-management/src/main/java/com/heatingplatform/devicemanagement/watcher/DeviceTopicParser.java#L16-L46),
 der dieselben Topic-Konventionen kennt wie die Parser im ingestion-service,
 damit beide Dienste dasselbe Gerät meinen. Bekannte Geräte kosten nur einen
 Map-Lookup. Die Drosselung je Gerät hält gesprächige Geräte vom Topic fern,
@@ -139,9 +139,9 @@ Template-Erstellung.
 
 ## 4. Eine Verbindung für alle `MqttConnection.connect`
 
-[mqtt/MqttConnection.java#L48-L108](../../../applications/device-management/src/main/java/com/digitaldemon/devicemanagement/mqtt/MqttConnection.java#L48-L108)
+[mqtt/MqttConnection.java#L48-L108](../../../applications/device-management/src/main/java/com/heatingplatform/devicemanagement/mqtt/MqttConnection.java#L48-L108)
 und
-[`registerHandler`](../../../applications/device-management/src/main/java/com/digitaldemon/devicemanagement/mqtt/MqttConnection.java#L114-L136)
+[`registerHandler`](../../../applications/device-management/src/main/java/com/heatingplatform/devicemanagement/mqtt/MqttConnection.java#L114-L136)
 
 ```java
 @EventListener(ApplicationReadyEvent.class)
@@ -187,7 +187,7 @@ einen echten Fehler zeigt statt still nichts zu sammeln.
 
 ## 5. Signal-Map vorschlagen `DeviceDiscoveryService.analyzePayloads`
 
-[discovery/DeviceDiscoveryService.java#L95-L157](../../../applications/device-management/src/main/java/com/digitaldemon/devicemanagement/discovery/DeviceDiscoveryService.java#L95-L157)
+[discovery/DeviceDiscoveryService.java#L95-L157](../../../applications/device-management/src/main/java/com/heatingplatform/devicemanagement/discovery/DeviceDiscoveryService.java#L95-L157)
 
 ```java
 public Map<String, Object> analyzePayloads(UUID sessionId) {
