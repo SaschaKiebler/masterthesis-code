@@ -85,7 +85,14 @@ Weitere Fakten zu Variante A.
   LoadBalancern (5 Forwarding Rules) rund 380 (442 ohne Gutschrift).
 - Lastgenerator `mock-load` als Cloud-Run-Job (2 vCPU, 2 GiB) im Dauerbetrieb
   rund 105 zusätzlich, nicht Teil der Plattform.
-- Je Standort der Flotte (25 Standorte) 305 / 25 = 12,20 €, je Gerät rund 3 €.
+- Je Anlage und Wohneinheit nach der Umrechnung in Kapitel 3 der Arbeit, die
+  Grundlast von 500 Messwerten/s entspricht rund 2.100 realen Anlagen mit
+  15.000 Wohneinheiten bei minütlichem Takt, 305 / 2.100 = rund 0,15 € je
+  Anlage und 305 / 15.000 = rund 0,02 € je Wohneinheit. Die 25 simulierten
+  Standorte senden alle 0,5 s und tragen je die Last von rund 88 realen
+  Anlagen, 305 / 25 = 12,20 € je simuliertem Standort ist deshalb keine
+  Stückkostenangabe. Bei Grundlast ist die Umgebung zudem kaum ausgelastet,
+  die 305 € sind ein fester Sockel und keine Grenzkosten.
 
 ## 5 Variante B, Messwertspeicher in Tiger Cloud
 
