@@ -13,7 +13,7 @@ die Ergebnisse.
 | [ramp](ramp) | Laststufenlauf, Kalibrierung der Erfassungskette | Voraussetzung, kein Szenario | Sättigung bei rund 1.400 Messwerten/s mit 500 Millicores im Speicher |
 | [qs-per-01](qs-per-01) | Ingest-Durchsatz im Dauerbetrieb | erfüllt | Verlust 0 %, p95 Persistierung 7,7 ms, p95 Bereitstellung 231 ms |
 | [qs-per-02](qs-per-02) | Lastspitze im Ingest | erfüllt | 2.575 Messwerte/s, Verlust 0 %, Skalierung 2 auf 8 Instanzen |
-| [qs-per-03](qs-per-03) | Abfrage-APIs unter Last | teilweise erfüllt | p95 7.600 ms gegen 300 ms, Fehlerrate 0,51 % eingehalten |
+| [qs-per-03](qs-per-03) | Abfrage-APIs unter Last | nicht erfüllt | p95 7.600 ms gegen 300 ms, 24,2 statt 100 Anfragen/s durchgesetzt, Fehlerrate 0,51 % eingehalten |
 | [qs-sec-01](qs-sec-01) | mandantenübergreifender Zugriffsversuch | erfüllt | 0 Lecks aus 122.787 Versuchen, 107.401 Audit-Einträge |
 | [qs-sec-02](qs-sec-02) | Auskunft und Löschung nach DSGVO | erfüllt | 100 % Abdeckung, 0 Treffer nach dem Löschlauf, 0,8 s |
 | [qs-int-01](qs-int-01) | Messlücke bei Sensorausfall | erfüllt | Verlust 0 %, 0 Werte in der Lücke in Speicher, API und Analyse-Ansicht |

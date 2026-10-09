@@ -91,3 +91,7 @@ Sie gehören zur Zahl und stehen deshalb auch im Bericht selbst.
 4. Gemessen wurde gegen eine unbelastete Auswertungs-API. Die Kombination aus
    Bereitstellungslatenz und der Abfragelast von QS-PER-03 wurde nicht
    gemessen.
+5. Die um den Uhrenversatz korrigierten Mediane von 3 und 14 ms liegen unter
+   der Tunnel-Latenz aus Punkt 3 und sind deshalb nicht interpretierbar, die
+   Korrektur ist um mindestens den halben Tunnelweg zu klein. Belastbar ist
+   allein der p95 als Obergrenze, Kapitel 6 nennt die Mediane nicht mehr.

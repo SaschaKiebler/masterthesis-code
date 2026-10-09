@@ -31,13 +31,13 @@ eine, die das reine SQL-Skript nicht leisten kann.
 **Die Rückverfolgung endet an Topic und Feld.** Für einen erfolgreich
 verarbeiteten Wert bewahrt die Plattform die Roh-Bytes nicht auf, wohl aber den
 Weg dorthin. Aus dem Messpunkt folgen Quelle und Feld, daraus das MQTT-Topic
-und der JSON-Schlüssel. Ein Beispiel aus dem Lauf.
+und der JSON-Schlüssel. Ein Beispiel aus der Stichprobe des Laufs.
 
 ```
-value        19.7 celsius
-measured     2026-09-03T12:20:31.411774+00:00
-received     2026-09-03T12:20:31.411774+00:00
-persisted    2026-09-03T12:20:31.415331+00:00
+value        20.5 celsius
+measured     2026-09-03T12:16:56.910931+00:00
+received     2026-09-03T12:16:56.910931+00:00
+persisted    2026-09-03T12:16:56.912086+00:00
 device       gap-ht-001-03, metric 1
 metric point 08877adc-19e4-5c96-a1b8-9224ba0476c0
 arrived on   gap-ht-001-03/status/temperature:0  field 'tC'

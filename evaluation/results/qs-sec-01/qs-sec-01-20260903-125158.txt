@@ -142,3 +142,10 @@ Method,Name,Error,Occurrences,First Seen,Last Seen
  t              | 100518
 (2 rows)
 
+######## note (added after the run) ########
+load line above: 25 users x 2 TASKS/s, not requests. Each task fires 2 to 8
+requests, so the measured rate was ~204 requests/s (mean over stats_history),
+four times the 50 req/s base load the scenario asks for.
+Totals: probe counter 122787 (authoritative, the outcome split and the audit
+comparison use it), locust stats.csv 122623, per-pattern list above 122598.
+The locust statistics miss the last requests of the run.

@@ -24,7 +24,10 @@ staute sich stattdessen in der Latenz. Der Engpass war durchgehend die
 Rechenzeit des Messwertspeichers und nicht die Erfassung.
 
 Gemessene Ausstattung zu diesem Zeitpunkt war ein Messwertspeicher mit 500
-Millicores und eine Autoskalierung der Erfassung bis sechs Instanzen. Als
+Millicores und eine Autoskalierung der Erfassung bis sechs Instanzen, im Lauf
+ging sie auf fünf. Ein zweiter Lauf mit 2 CPU sättigte bei rund 2.300
+Messwerten/s, er wurde nicht als Bericht gesichert und ist nur als
+Konsolenwert in `infrastructure/README.md` festgehalten. Als
 Konsequenz wurde der Speicher auf 4 CPU angehoben und die Decke der
 Autoskalierung auf zehn Instanzen gesetzt. Erst damit lag die geforderte
 Spitze im erreichbaren Bereich, was der spätere Lauf von QS-PER-02 mit 2.575

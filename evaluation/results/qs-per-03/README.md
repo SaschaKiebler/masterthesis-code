@@ -9,17 +9,20 @@ gemessenen Pfad liegt. Ein Systemadministrator beendet die Prüfung in ihrer
 ersten Zeile, ein Lauf unter seinem Konto würde ihre Kosten als null
 ausweisen.
 
-## Ergebnis vom 02.09.2026, teilweise erfüllt
+## Ergebnis vom 02.09.2026, nicht erfüllt
 
 | Kenngröße | Zielwert | Gemessen |
 |---|---|---|
 | Antwortzeit p95 | unter 300 ms | **7.600 ms**, p50 1.300 ms, p90 5.100 ms, p99 11.000 ms, max 16.000 ms |
 | Fehlerrate | unter 1 % | 0,51 %, 73 von 14.450 Requests |
+| Durchgesetzte Anfragerate | 100/s angeboten | 24,2/s im Mittel, 14.450 Requests in 598 s |
 | Ingest während der Abfragelast | | 307.914 Messwerte, p95 der Persistierung 23,2 ms |
 
-Das Szenario ist teilweise erfüllt. Die Antwortzeit verfehlt ihren Sollwert um
-etwa den Faktor 25, Fehlerrate und Verlustrate der Erfassung halten ihre
-Sollwerte. Entscheidend für die Einordnung ist die Aufteilung je Endpunkt.
+Das Szenario ist nicht erfüllt. Die Antwortzeit verfehlt ihren Sollwert um
+etwa den Faktor 25, und von den angebotenen 100 Anfragen je Sekunde wurden nur
+24,2 durchgesetzt, weil die Nutzer auf ihre Antworten warteten. Fehlerrate und
+Verlustrate der Erfassung halten ihre Sollwerte, mit einer verfehlten
+Kenngröße gilt das Szenario dennoch als nicht erfüllt. Entscheidend für die Einordnung ist die Aufteilung je Endpunkt.
 
 | Endpunkt | Requests | Fehler | Median |
 |---|---|---|---|

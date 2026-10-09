@@ -158,7 +158,9 @@ Zwei Zuteilungen sind bewusst gewählt und nicht beliebig.
 
 - **Die CPU des Messwertspeichers** ist der wirksamste Stellhebel der ganzen
   Kette. Mit 500m sättigt die Kette bei rund 1.400 Messwerten/s, mit 2 CPU bei
-  rund 2.300. Der Zusammenhang ist deutlich sublinear.
+  rund 2.300. Der Zusammenhang ist deutlich sublinear. Nur der Lauf mit 500m
+  liegt als Bericht unter `results/ramp`, die 2.300 stammen aus der
+  Konsolenausgabe eines nicht gesicherten Laufs.
 - **Das Verbindungsbudget** ergibt sich aus `max_connections`. Zehn Instanzen zu
   je sechs Verbindungen belegen höchstens 60 von 100, der Rest bleibt für
   Analytics, Core und die Superuser-Reserve. Ohne diese Grenze bemisst der Pool
@@ -199,7 +201,9 @@ Anfragen je Sekunde und Nutzer, bei 50 Nutzern also 100 je Sekunde). Die
 angebotene Last hängt damit nicht von der Antwortzeit ab, ein Nutzer hat aber
 nie mehr als eine Anfrage offen. Antwortet das System langsamer als der Takt,
 sinkt die durchgesetzte Rate unter die angebotene, und der Bericht weist beide
-aus. Bei QS-PER-03 waren es 24,9 von 100 je Sekunde.
+aus. Bei QS-PER-03 waren es im Mittel 24,2 von 100 je Sekunde, 14.450 Anfragen
+in 598 s. Die 24,9 in der letzten Zeile von `stats_history.csv` sind Locusts
+Momentanwert der letzten zehn Sekunden.
 
 Die Anmeldung bei QS-PER-03 erfolgt voreingestellt als
 `probe-tenanta@example.org`, also mandantengebunden. Diesen Nutzer legt
@@ -519,8 +523,9 @@ Tabelle je Namen ist die Abdeckungskarte mit einer Zeile je OWASP-Muster.
 ### Die Grundlast entsteht aus dem Angriff selbst
 
 Das Szenario verlangt eine parallele Grundlast von 50 Requests/s. Bei 25
-Nutzern mit je zwei Anfragen pro Sekunde erzeugen die Angriffe genau diese
-Rate, ein zweiter Generator ist deshalb nicht nötig. Über zehn Minuten laufen
+Nutzern mit je zwei Aufgaben pro Sekunde, von denen jede zwei bis acht
+Anfragen feuert, erzeugen die Angriffe rund 200 Requests/s, also das Vierfache
+dieser Rate, ein zweiter Generator ist deshalb nicht nötig. Über zehn Minuten laufen
 so mehrere zehntausend Versuche statt der geforderten 100, und jedes Muster
 wird tausendfach unter Nebenläufigkeit geprüft.
 

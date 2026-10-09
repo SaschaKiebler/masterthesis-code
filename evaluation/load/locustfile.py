@@ -14,7 +14,7 @@ detail views.
 
 Rates are driven by constant_throughput, so requests per second stay fixed
 per user regardless of response time: 50 users x 2/s = 100 req/s (QS-PER-03),
-25 users x 2/s = 50 req/s (QS-SEC-01 background load).
+25 users x 2 tasks/s, 2 to 8 requests each, about 200 req/s (QS-SEC-01).
 
     CORE_HOST=http://<core-lb>:8080 ANALYTICS_HOST=http://<analytics-lb>:8100 \
       locust -f locustfile.py --headless -u 50 -r 10 --run-time 10m \

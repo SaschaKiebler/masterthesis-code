@@ -202,7 +202,8 @@ Kurzfassung gehört hierher, weil jeder Punkt eine Betriebsfalle ist.
   einem p95 von 15 ms.
 - **Die CPU des Speichers ist der Durchsatzhebel der ganzen Kette**, weil
   ingestion je Messwert einmal committet. Bei 500m sättigt die Kette um 1400
-  Messwerte je Sekunde, bei 2 CPU um 2300, viermal so viel CPU bringt also
+  Messwerte je Sekunde, bei 2 CPU um 2300 (Konsolenwert, der Bericht dieses
+  Laufs wurde nicht gesichert), viermal so viel CPU bringt also
   den Faktor 1,6. Der Speicher hat jetzt 4 CPU statt der 2, weil der Pod bei
   2 CPU 2472 Millicores zog, also über seine eigene Anforderung hinaus, und
   die Messung sich auf Kapazität stützte, die ihr nicht garantiert war.

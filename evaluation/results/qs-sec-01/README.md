@@ -45,9 +45,11 @@ Kategorien bleiben mit Begründung außen vor, siehe Abschnitt 10 von
 
 ## Ergebnis vom 03.09.2026, bestanden
 
-Zehn Minuten, 25 Nutzer mit je zwei Anfragen pro Sekunde, Schreibversuche
-eingeschaltet. Die Angriffe erzeugen die geforderte Grundlast von 50 Requests
-pro Sekunde selbst, ein zweiter Generator ist nicht nötig.
+Zehn Minuten, 25 Nutzer mit je zwei Aufgaben pro Sekunde, Schreibversuche
+eingeschaltet. Jede Aufgabe feuert zwei bis acht Anfragen, gemessen waren es
+im Mittel 204 Anfragen pro Sekunde, das Vierfache der geforderten Grundlast
+von 50. Die Angriffe erzeugen diese Grundlast also selbst, ein zweiter
+Generator ist nicht nötig.
 
 | Kenngröße | Zielwert | Gemessen |
 |---|---|---|
@@ -59,7 +61,10 @@ pro Sekunde selbst, ein zweiter Generator ist nicht nötig.
 | Audit-Einträge | 1 je Versuch mit Mandantenbezug | 107.401, davon 100.518 mit adressiertem Mandanten |
 
 Die Ausgänge verteilen sich auf 115.131 abgewiesene, 4.914 eingeengte und
-2.742 mit 404 beantwortete Versuche. Die 14 Muster der Körper-Familie mit je rund 850 Versuchen wurden
+2.742 mit 404 beantwortete Versuche. Die Locust-Statistik je Muster summiert
+auf 122.623 in `stats.csv` und 122.598 in der Liste des Berichts, weil sie
+die letzten Anfragen des Laufs nicht mehr enthält, maßgeblich ist der Zähler
+der Sonde. Die 14 Muster der Körper-Familie mit je rund 850 Versuchen wurden
 vollständig abgewiesen. Im Log des Core lassen sich die Abweisungen der
 abweisenden Stelle zuordnen, nach zwei Minuten standen dort 8.545 Abweisungen
 des Interceptors und 1.412 des Guards. Der Analytics-Dienst schrieb seine

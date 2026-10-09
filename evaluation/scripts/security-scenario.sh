@@ -19,14 +19,15 @@
 #   - exposed surface: API9 probes that answered 2xx, reported apart from leaks
 #   - audit coverage: access_audit rows for the window (target: one per attempt
 #     that named a tenant; see evaluation/sql/audit-coverage.sql)
-#   - the attack traffic IS the scenario's 50 requests/s base load
+#   - the attack traffic IS the scenario's 50 requests/s base load, and more:
+#     each task fires 2 to 8 requests, measured ~200 req/s at 25 users
 #
 # INCLUDE_WRITES=true adds destructive API5 attempts against tenant B. Off by
 # default; reseed tenant B afterwards when you use it.
 set -uo pipefail
 
 RUN_TIME=${1:-10m}
-USERS=${USERS:-25}          # 25 users x 2 req/s = 50 req/s, the required base load
+USERS=${USERS:-25}          # 25 users x 2 tasks/s, 2 to 8 requests each, ~200 req/s
 SPAWN=${SPAWN:-5}
 PROJECT=${PROJECT:-heating-platform-eval}
 REGION=${REGION:-europe-west3}
@@ -79,7 +80,7 @@ gcloud run jobs deploy locust-load \
   --quiet >/dev/null || { echo "deploy of locust-load failed"; exit 1; }
 
 start=$(utc)
-step "Run: $USERS users, spawn $SPAWN/s, $RUN_TIME, i.e. ~$((USERS * 2)) req/s of attacks"
+step "Run: $USERS users, spawn $SPAWN/s, $RUN_TIME, i.e. ~$((USERS * 2)) tasks/s of attacks"
 err=$(mktemp)
 exec_failed=0
 exec_name=$(gcloud run jobs execute locust-load --region="$REGION" --project="$PROJECT" \
@@ -122,7 +123,7 @@ report=$OUT/qs-sec-01-$STAMP.txt
   echo "surface   : $FRONTEND_HOST (frontend proxy only, no backend service addressed)"
   echo "attacker  : $LOGIN_EMAIL (tenant-bound, NOT the bootstrap admin)"
   echo "target    : tenant '$TARGET_PREFIX', $TARGET_SITES sites x $TARGET_ROOMS rooms"
-  echo "load      : $USERS users x 2 req/s = $((USERS * 2)) req/s for $RUN_TIME"
+  echo "load      : $USERS users x 2 tasks/s = $((USERS * 2)) tasks/s (2 to 8 requests each) for $RUN_TIME"
   echo "writes    : $INCLUDE_WRITES"
   echo
   echo "######## outcome summary (from the generator) ########"

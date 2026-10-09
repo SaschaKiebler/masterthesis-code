@@ -64,9 +64,10 @@ Outcome of a single attempt:
 
 Locust's failure count is therefore the QS-SEC-01 leak count, and the per-name
 stats table is the coverage map (one row per OWASP-tagged attack pattern). The
-sustained rate is the scenario's parallel base load: at -u 25 and two requests
-per user per second the attacks themselves offer 50 requests/s, so no separate
-legitimate generator is needed.
+sustained rate is the scenario's parallel base load: at -u 25 and two tasks
+per user per second, each firing 2 to 8 requests, the attacks themselves offer
+about 200 requests/s, well above the 50 requests/s the scenario asks for, so no
+separate legitimate generator is needed.
 
 Writes (API5) are destructive on tenant B's synthetic fixtures and are OFF by
 default. Set INCLUDE_WRITES=true to add them, and reseed tenant B afterwards.
