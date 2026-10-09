@@ -92,8 +92,9 @@ beiden Speicher fahren, dann mit `--master-dsn` und `--measurement-dsn`.
 
 ## Grenzen
 
-Die Eichung nach RB-REG-04 lässt sich mit simulierten Geräten grundsätzlich
-nicht zeigen. Sie ist im Datenmodell vorgesehen und wird als konstruktiv
-erfüllt und ungemessen geführt. Die Stichprobe umfasst wie gefordert 100 Werte
-und ist deterministisch nach Empfangszeit geordnet, also keine Zufallsstichprobe
-im statistischen Sinn.
+Das Szenario prüft die Herkunftskette der Monitoring-Werte. Eichstatus und
+Eichfrist nach RB-REG-04 gehören zur Abrechnung, die der Prototyp nicht
+umsetzt, und sind deshalb kein Teil des Szenarios. Die Strukturanalyse der
+Anschlussfähigkeit in der Arbeit prüft sie als Posten der Abrechnung. Die
+Stichprobe umfasst wie gefordert 100 Werte und ist deterministisch nach
+Empfangszeit geordnet, also keine Zufallsstichprobe im statistischen Sinn.
